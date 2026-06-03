@@ -15,9 +15,11 @@
   --color-secondary-container: #A8275A;
   --font-headline: "Space Grotesk", sans-serif;
   --font-body: "Space Grotesk", sans-serif;
+  --font-luxury: "Playfair Display", Georgia, serif;
 }
 
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
 
 @layer base {
   html {

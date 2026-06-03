@@ -13,6 +13,7 @@ import { Analytics } from './components/Analytics';
 import { Onboarding } from './components/Onboarding';
 import { ProfileSetup } from './components/ProfileSetup';
 import { CourseDetail } from './components/CourseDetail';
+import { AcademicCalendar } from './components/AcademicCalendar';
 import { PostAuthGate } from './components/PostAuthGate';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicOnlyRoute } from './components/PublicOnlyRoute';
@@ -91,6 +92,16 @@ export default function App() {
             <ProtectedRoute>
               <Layout>
                 <CourseDetail />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/calendar" 
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <AcademicCalendar />
               </Layout>
             </ProtectedRoute>
           } 

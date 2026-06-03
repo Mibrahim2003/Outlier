@@ -46,3 +46,34 @@ export interface OnboardingState {
   committedAt?: string;
   version: number;
 }
+
+export interface SemesterBreak {
+  name: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface SemesterInfo {
+  name: string;
+  startDate: string;
+  endDate: string;
+  breaks: SemesterBreak[];
+  examPeriod?: { startDate: string; endDate: string };
+}
+
+export interface AcademicCalendarData {
+  id: string;
+  semesters: SemesterInfo[];
+  rawText?: string;
+  uploadedAt: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  date: string;
+  type: 'deadline' | 'exam' | 'break' | 'holiday' | 'custom';
+  courseId?: string;
+  weekNumber?: number;
+}
+

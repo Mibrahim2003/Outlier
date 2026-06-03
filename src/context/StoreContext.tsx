@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
-import { Course, Deadline, UserProfile, OnboardingState } from '../types';
+import { Course, Deadline, UserProfile, OnboardingState, AcademicCalendarData } from '../types';
 
 interface StoreContextType {
   userProfile: UserProfile | null;
@@ -12,9 +12,12 @@ interface StoreContextType {
   removeCourse: (courseId: string) => void;
   deadlines: Deadline[];
   setDeadlines: (deadlines: Deadline[]) => void;
+  addDeadline: (deadline: Deadline) => void;
   onboardingState: OnboardingState;
   commitLoadout: () => void;
   resetLoadoutCommit: () => void;
+  academicCalendar: AcademicCalendarData | null;
+  setAcademicCalendar: (calendar: AcademicCalendarData | null) => void;
   isHydrating: boolean;
   syncError: string | null;
 }
@@ -69,6 +72,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [courses, setCoursesState] = useState<Course[]>([]);
   const [deadlines, setDeadlinesState] = useState<Deadline[]>([]);
   const [onboardingState, setOnboardingState] = useState<OnboardingState>(DEFAULT_ONBOARDING_STATE);
+  const [academicCalendar, setAcademicCalendarState] = useState<AcademicCalendarData | null>(() => {
+    try {
+      const stored = localStorage.getItem('academic_calendar');
+      return stored ? JSON.parse(stored) : null;
+    } catch { return null; }
+  });
   const [isHydrating, setIsHydrating] = useState(true);
   const [syncError, setSyncError] = useState<string | null>(null);
 
@@ -355,6 +364,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     void syncDeadlines(nextDeadlines, snapshotPrev);
   };
 
+  const addDeadline = (deadline: Deadline) => {
+    setDeadlines([...deadlines, deadline]);
+  };
+
   const commitLoadout = () => {
     const next = {
       ...onboardingState,
@@ -407,6 +420,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       });
   };
 
+  const setAcademicCalendar = (calendar: AcademicCalendarData | null) => {
+    setAcademicCalendarState(calendar);
+    try {
+      if (calendar) {
+        localStorage.setItem('academic_calendar', JSON.stringify(calendar));
+      } else {
+        localStorage.removeItem('academic_calendar');
+      }
+    } catch (e) {
+      console.warn('Failed to persist academic calendar to localStorage', e);
+    }
+  };
+
   return (
     <StoreContext.Provider
       value={{
@@ -418,9 +444,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         removeCourse,
         deadlines,
         setDeadlines,
+        addDeadline,
         onboardingState,
         commitLoadout,
         resetLoadoutCommit,
+        academicCalendar,
+        setAcademicCalendar,
         isHydrating,
         syncError,
       }}
