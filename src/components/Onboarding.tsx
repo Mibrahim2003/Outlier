@@ -2,24 +2,22 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { Course } from '../types';
-import { getImpactStyles } from '../utils/impactStyles';
+import { getImpactStyles, ThemeColor, getThemeBgClass } from '../utils/impactStyles';
 
 export const Onboarding = () => {
   const navigate = useNavigate();
   const { courses, addCourse, removeCourse, commitLoadout, onboardingState } = useStore();
   
-  useEffect(() => {
-    if (onboardingState.loadoutCommitted) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [onboardingState.loadoutCommitted, navigate]);
+  // User can revisit this page to add courses, so no auto-redirect here.
+
 
   // Track form state
   const [newCourse, setNewCourse] = useState<Partial<Course>>({
     code: '',
     name: '',
     credits: 3,
-    weightage: { quizzes: 10, assignments: 20, midterm: 25, final: 35, project: 10 }
+    weightage: { quizzes: 10, assignments: 20, midterm: 25, final: 35, project: 10 },
+    themeColor: 'yellow'
   });
 
   // Explicit State Machine Logic
@@ -53,6 +51,7 @@ export const Onboarding = () => {
       name: newCourse.name!.toUpperCase(),
       credits: Number(newCourse.credits),
       impactLevel: getImpactLevel(Number(newCourse.credits)),
+      themeColor: newCourse.themeColor || 'yellow',
       gradeProgress: 0,
       grade: 'N/A',
       weightage: newCourse.weightage || { quizzes: 10, assignments: 20, midterm: 25, final: 35, project: 10 }
@@ -136,8 +135,8 @@ export const Onboarding = () => {
                   />
                 </div>
               </div>
-              <div className="md:col-span-1">
-                 <div>
+              <div className="md:col-span-1 space-y-8">
+                <div>
                   <label className="block font-headline text-lg font-bold uppercase mb-2 text-on-background/80">CREDITS</label>
                   <input 
                     required 
@@ -147,6 +146,19 @@ export const Onboarding = () => {
                     value={newCourse.credits || ''}
                     onChange={(e) => setNewCourse({ ...newCourse, credits: parseInt(e.target.value) || 0 })}
                   />
+                </div>
+                <div>
+                  <label className="block font-headline text-lg font-bold uppercase mb-2 text-on-background/80">THEME</label>
+                  <div className="flex gap-2 mt-4">
+                    {(['yellow', 'pink', 'green', 'blue'] as ThemeColor[]).map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setNewCourse({ ...newCourse, themeColor: color })}
+                        className={`w-8 h-8 rounded-full border-4 shadow-sm ${newCourse.themeColor === color ? 'border-ink scale-125' : 'border-transparent opacity-80 hover:opacity-100'} ${getThemeBgClass(color)} transition-all`}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -269,7 +281,9 @@ export const Onboarding = () => {
           >
             <div className={`absolute inset-0 translate-x-2 translate-y-2 ${courses.length === 0 ? 'bg-on-background/30' : 'bg-on-background'}`}></div>
             <div className={`relative border-4 border-on-background p-6 md:p-8 flex items-center justify-center gap-8 transition-transform ${courses.length === 0 ? 'bg-background opacity-50 cursor-not-allowed' : 'bg-primary-container group-hover:-translate-x-1 group-hover:-translate-y-1'}`}>
-              <span className="font-headline font-bold text-3xl md:text-5xl uppercase tracking-tighter">COMMIT_ALL_UNITS</span>
+              <span className="font-headline font-bold text-3xl md:text-5xl uppercase tracking-tighter">
+                {onboardingState.loadoutCommitted ? 'RETURN_TO_DASHBOARD' : 'COMMIT_ALL_UNITS'}
+              </span>
               <span className="material-symbols-outlined text-4xl md:text-5xl font-bold group-hover:translate-x-4 transition-transform block">arrow_forward</span>
             </div>
           </button>

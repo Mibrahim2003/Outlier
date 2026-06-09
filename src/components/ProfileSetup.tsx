@@ -8,6 +8,7 @@ export const ProfileSetup = () => {
 
   const [formData, setFormData] = useState({
     name: userProfile?.name || '',
+    registrationNumber: userProfile?.registrationNumber || '',
     degree: userProfile?.degree || '',
     universityName: userProfile?.universityName || '',
     graduationYear: userProfile?.graduationYear || '',
@@ -64,16 +65,29 @@ export const ProfileSetup = () => {
 
             <div className="space-y-8">
               {/* Full Identity */}
-              <div>
-                <label className="block font-headline text-lg md:text-xl font-bold uppercase mb-2 text-on-background/80">FULL LEGAL ALIAS</label>
-                <input
-                  required
-                  className="w-full bg-background/50 border-b-4 border-on-background p-3 text-2xl md:text-4xl font-bold uppercase placeholder:text-on-background/20 focus:bg-primary-container focus:outline-none transition-all"
-                  placeholder="USER_IDENTIFICATION"
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <label className="block font-headline text-lg md:text-xl font-bold uppercase mb-2 text-on-background/80">FULL LEGAL ALIAS</label>
+                  <input
+                    required
+                    className="w-full bg-background/50 border-b-4 border-on-background p-3 text-2xl md:text-4xl font-bold uppercase placeholder:text-on-background/20 focus:bg-primary-container focus:outline-none transition-all"
+                    placeholder="USER_IDENTIFICATION"
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block font-headline text-lg md:text-xl font-bold uppercase mb-2 text-on-background/80">REGISTRATION NUMBER</label>
+                  <input
+                    required
+                    className="w-full bg-background/50 border-b-4 border-on-background p-3 text-2xl md:text-4xl font-bold uppercase placeholder:text-on-background/20 focus:bg-primary-container focus:outline-none transition-all"
+                    placeholder="E.G. 2021034"
+                    type="text"
+                    value={formData.registrationNumber}
+                    onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
+                  />
+                </div>
               </div>
 
               {/* Focus and Institution */}

@@ -1,38 +1,35 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Stat } from '../types';
-import { Sparkles, ArrowRight, AlertCircle, Clock, CheckCircle2, Calendar, Loader2, Plus } from 'lucide-react';
+import { Sparkles, ArrowRight, AlertCircle, Clock, CheckCircle2, Calendar, Loader2, Plus, ListChecks, Target } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { useAI } from '../hooks/useAI';
 import { useEffect, useState } from 'react';
-import { getDashboardImpactStyles } from '../utils/impactStyles';
-import { calculateGPA } from '../utils/gradeUtils';
-import { getGreeting, getDeadlineStatus } from '../utils/dateUtils';
+import { getThemeBgClass } from '../utils/impactStyles';
+import { getGreeting, getDeadlineStatus, isSameDay } from '../utils/dateUtils';
 
 export const Dashboard = () => {
-  const { userProfile, courses, deadlines } = useStore();
+  const { userProfile, courses, deadlines, todos, toggleTodo } = useStore();
   const { getDashboardInsight, loading } = useAI();
   const [insight, setInsight] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (courses.length > 0) {
-      getDashboardInsight(courses, deadlines).then(res => {
-        if (res) setInsight(res);
-      });
-    }
-  }, [courses, deadlines]);
-
-  const userName = userProfile?.name?.split(' ')[0] || 'Student';
+  const userName = userProfile?.name || 'Student';
   const greeting = getGreeting();
 
-  const currentGPA = parseFloat(calculateGPA(courses));
-  const targetGPA = userProfile?.targetGpa || 4.0;
-  const gpaProgress = Math.min((currentGPA / targetGPA) * 100, 100);
+
+  // Today's todos
+  const today = new Date();
+  const todayTodos = todos.filter(t => {
+    const td = new Date(t.dueDate + 'T00:00:00');
+    return isSameDay(td, today);
+  });
+  const uncompletedTodayTodos = todayTodos.filter(t => !t.completed);
+  const completedTodayTodos = todayTodos.filter(t => t.completed);
 
   const dynamicStats: Stat[] = [
-    { label: 'Active Courses', value: courses.length.toString(), color: 'bg-tertiary' },
-    { label: 'Pending Tasks', value: deadlines.length.toString(), color: 'bg-secondary' },
+    { label: 'Pending Tasks', value: uncompletedTodayTodos.length.toString(), color: 'bg-secondary' },
+    { label: 'Deadlines', value: deadlines.length.toString(), color: 'bg-primary' },
   ];
 
   return (
@@ -50,13 +47,7 @@ export const Dashboard = () => {
             You have <span className="underline decoration-4 decoration-secondary">{deadlines.length} upcoming {deadlines.length === 1 ? 'deadline' : 'deadlines'}</span> this week.
           </p>
         </div>
-        <div className="hidden lg:block w-48 h-48 border-3 border-ink shadow-[3px_3px_0px_#1A1A1A] bg-white rotate-3 overflow-hidden">
-          <img 
-            alt="Abstract academic" 
-            className="w-full h-full object-cover grayscale contrast-125" 
-            src="https://picsum.photos/seed/study/300/300"
-            referrerPolicy="no-referrer"
-          />
+        <div className="hidden lg:block absolute right-[-20px] top-[-20px] bottom-[-20px] w-64 border-l-4 border-ink shadow-[-6px_0px_0px_rgba(0,0,0,0.1)] hazard-stripes skew-x-[-15deg]">
         </div>
       </section>
 
@@ -64,20 +55,7 @@ export const Dashboard = () => {
         {/* Left: Main Dashboard Content */}
         <div className="lg:col-span-8 space-y-12">
           {/* Quick Stats Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-            {/* GPA Custom Card */}
-            <div className="bg-white border-3 border-ink shadow-[3px_3px_0px_#1A1A1A] group hover:translate-y-[-2px] transition-all flex flex-col">
-              <div className="h-3 bg-primary-container border-b-4 border-ink"></div>
-              <div className="p-4 flex flex-col flex-1 justify-center">
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-[10px] font-black uppercase tracking-widest opacity-60">GPA Progress</p>
-                  <p className="text-[10px] font-black uppercase tracking-widest">{currentGPA.toFixed(2)} / {targetGPA.toFixed(2)}</p>
-                </div>
-                <div className="w-full h-4 bg-background border-2 border-ink mt-auto">
-                  <div className="h-full bg-primary-container" style={{ width: `${gpaProgress}%` }}></div>
-                </div>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             
             {dynamicStats.map((stat) => (
               <div key={stat.label} className="bg-white border-3 border-ink shadow-[3px_3px_0px_#1A1A1A] group hover:translate-y-[-2px] transition-all">
@@ -123,7 +101,7 @@ export const Dashboard = () => {
                       whileHover={{ y: -4, x: -4, boxShadow: '10px 10px 0px #1A1A1A' }}
                       className="bg-white border-3 border-ink shadow-[6px_6px_0px_#1A1A1A] flex flex-col cursor-pointer h-full"
                     >
-                      <div className={`h-4 ${getDashboardImpactStyles(course.impactLevel)} border-b-4 border-ink`}></div>
+                      <div className={`h-4 ${getThemeBgClass(course.themeColor)} border-b-4 border-ink`}></div>
                       <div className="p-6 flex-1 space-y-4">
                         <div className="flex justify-between items-start">
                           <span className="bg-ink text-white px-2 py-1 text-[10px] font-black uppercase">{course.code}</span>
@@ -136,7 +114,7 @@ export const Dashboard = () => {
                             <span>{course.gradeProgress}%</span>
                           </div>
                           <div className="w-full h-3 bg-background border-2 border-ink">
-                            <div className={`h-full ${getDashboardImpactStyles(course.impactLevel)}`} style={{ width: `${course.gradeProgress}%` }}></div>
+                            <div className={`h-full ${getThemeBgClass(course.themeColor)}`} style={{ width: `${course.gradeProgress}%` }}></div>
                           </div>
                         </div>
                       </div>
@@ -160,29 +138,106 @@ export const Dashboard = () => {
                   <span>Connecting to Gemini 2.5 Flash...</span>
                 </div>
               ) : insight ? (
-                <p className="text-xl md:text-2xl font-medium leading-snug">
-                  {insight}
-                </p>
+                <div className="w-full">
+                  <p className="text-xl md:text-2xl font-medium leading-snug mb-4">
+                    {insight}
+                  </p>
+                  <button 
+                    onClick={() => getDashboardInsight(courses, deadlines).then(res => { if (res) setInsight(res); })}
+                    className="bg-white text-ink border-2 border-ink px-4 py-2 text-xs font-black uppercase tracking-widest shadow-[3px_3px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                  >
+                    Regenerate Insight
+                  </button>
+                </div>
               ) : (
-                <p className="text-xl md:text-2xl font-medium">
-                  "Focus on <span className="font-black bg-primary-container px-2">CS-201</span> — your Quiz 1 score was <span className="italic underline">below average</span>. Try the 'Binary Tree' review set in your library."
-                </p>
+                <div className="w-full flex flex-col items-start gap-4">
+                  <p className="text-xl md:text-2xl font-medium opacity-60 italic">
+                    Click below to generate your daily AI insight based on your current courses and deadlines.
+                  </p>
+                  <button 
+                    onClick={() => getDashboardInsight(courses, deadlines).then(res => { if (res) setInsight(res); })}
+                    className="bg-secondary text-white border-3 border-ink px-6 py-3 text-sm font-black uppercase tracking-widest shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2"
+                  >
+                    <Sparkles size={16} /> Generate Insight
+                  </button>
+                </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Right Sidebar: Upcoming Deadlines */}
+        {/* Right Sidebar: Today's Tasks + Upcoming Deadlines */}
         <div className="lg:col-span-4">
           <div className="bg-white border-3 border-ink shadow-[6px_6px_0px_#1A1A1A] sticky top-28">
+            {/* Today's Tasks Section */}
             <div className="p-6 border-b-4 border-ink flex justify-between items-center">
-              <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter">Upcoming Deadlines</h2>
+              <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter flex items-center gap-2">
+                <ListChecks size={22} strokeWidth={3} />
+                Today's Tasks
+              </h2>
               <button 
-                  onClick={() => alert('Quick Add Deadline functionality would open a modal here!')}
-                  className="bg-secondary text-white border-2 border-ink p-1 shadow-[2px_2px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-                >
-                  <Plus size={18} />
+                onClick={() => navigate('/calendar?action=add-task')}
+                className="bg-primary-container border-2 border-ink p-1 shadow-[2px_2px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+              >
+                <Plus size={18} />
               </button>
+            </div>
+            <div className="p-6 space-y-3 bg-[#FFF6E3]">
+              {todayTodos.length === 0 ? (
+                <div className="text-center p-6 border-2 border-dashed border-ink opacity-40 font-bold">
+                  <CheckCircle2 className="mx-auto mb-2" size={28} />
+                  <p className="uppercase tracking-widest text-xs">No tasks for today</p>
+                  <button
+                    onClick={() => navigate('/calendar?action=add-task')}
+                    className="mt-3 text-[10px] font-black uppercase tracking-widest underline decoration-2 hover:text-secondary transition-colors"
+                  >
+                    Add a task →
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {uncompletedTodayTodos.map(todo => (
+                    <div
+                      key={todo.id}
+                      onClick={() => toggleTodo(todo.id)}
+                      className="flex items-center gap-3 p-3 bg-white border-3 border-ink shadow-[2px_2px_0px_#1A1A1A] cursor-pointer hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#1A1A1A] transition-all"
+                    >
+                      <div className="w-5 h-5 border-3 border-ink flex-shrink-0 bg-white" />
+                      <span className="font-bold text-sm flex-1">{todo.text}</span>
+                      {todo.course && <span className="text-[9px] font-black uppercase opacity-30">{todo.course}</span>}
+                    </div>
+                  ))}
+                  {completedTodayTodos.map(todo => (
+                    <div
+                      key={todo.id}
+                      onClick={() => toggleTodo(todo.id)}
+                      className="flex items-center gap-3 p-3 bg-white/50 border-2 border-ink/15 cursor-pointer hover:border-ink/30 transition-all"
+                    >
+                      <div className="w-5 h-5 border-3 border-ink/30 flex-shrink-0 flex items-center justify-center bg-[#FFDE59]/50">
+                        <span className="text-[10px] font-black">✓</span>
+                      </div>
+                      <span className="font-bold text-sm flex-1 line-through opacity-30">{todo.text}</span>
+                    </div>
+                  ))}
+                  {/* Progress indicator */}
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest opacity-40">
+                      Done today: {completedTodayTodos.length}/{todayTodos.length}
+                    </span>
+                    <div className="w-24 h-2 bg-white border-2 border-ink">
+                      <div 
+                        className="h-full bg-[#FFDE59] transition-all" 
+                        style={{ width: `${todayTodos.length > 0 ? (completedTodayTodos.length / todayTodos.length) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Upcoming Deadlines Section */}
+            <div className="p-6 border-t-4 border-ink flex justify-between items-center">
+              <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter">📅 Deadlines</h2>
             </div>
             <div className="p-6 space-y-6">
               {deadlines.length === 0 ? (

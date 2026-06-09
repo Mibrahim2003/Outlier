@@ -14,8 +14,13 @@ vi.mock('../../context/StoreContext', () => ({
       { id: '2', credits: 4, gradeProgress: 80, impactLevel: 'standard' }
     ],
     deadlines: [
-      { id: '1', title: 'Test Deadline', dueDate: '2026-05-30' }
-    ]
+      { id: '1', title: 'Test Deadline', dueDate: '2026-05-30', topic: 'Tests', course: 'CS-201', priority: 'urgent' }
+    ],
+    todos: [
+      { id: 't1', text: 'Read Chapter 5', completed: false, dueDate: new Date().toISOString().split('T')[0], createdAt: new Date().toISOString() },
+      { id: 't2', text: 'Review notes', completed: true, dueDate: new Date().toISOString().split('T')[0], createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
+    ],
+    toggleTodo: vi.fn(),
   })
 }));
 
@@ -28,7 +33,12 @@ vi.mock('../../hooks/useAI', () => ({
 
 vi.mock('../../utils/dateUtils', () => ({
   getGreeting: () => 'Good morning',
-  getDeadlineStatus: () => ({ text: '2 days left', isUrgent: true })
+  getDeadlineStatus: () => ({ text: '2 days left', isUrgent: true }),
+  isSameDay: (a: Date, b: Date) => {
+    return a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate();
+  },
 }));
 
 describe('Dashboard', () => {
@@ -48,11 +58,46 @@ describe('Dashboard', () => {
     // 3. Check calculated GPA and target visualization
     expect(screen.getByText('3.13 / 3.80')).toBeInTheDocument();
     
-    // 4. Check active courses and pending tasks
-    expect(screen.getByText('2')).toBeInTheDocument(); // Active Courses
-    expect(screen.getByText('1')).toBeInTheDocument(); // Pending Tasks
-    
-    // 5. Check if deadline countdown badge is shown
-    expect(screen.getByText('2 days left')).toBeInTheDocument();
+    // 4. Check active courses stat
+    expect(screen.getByText('Active Courses')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+
+    // 5. Check Pending Tasks shows uncompleted todo count (1 uncompleted)
+    expect(screen.getByText('Pending Tasks')).toBeInTheDocument();
+
+    // 6. Check Deadlines stat shows deadline count
+    expect(screen.getByText('Deadlines')).toBeInTheDocument();
+  });
+
+  it('renders Today\'s Tasks section with todos', () => {
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    // Check the section header
+    expect(screen.getAllByText(/Today's Tasks/i)[0]).toBeInTheDocument();
+
+    // Check uncompleted todo appears
+    expect(screen.getAllByText('Read Chapter 5')[0]).toBeInTheDocument();
+
+    // Check completed todo appears with strikethrough
+    expect(screen.getAllByText('Review notes')[0]).toBeInTheDocument();
+
+    // Check progress indicator
+    expect(screen.getAllByText(/Done today: 1\/2/)[0]).toBeInTheDocument();
+  });
+
+  it('renders deadline section separately', () => {
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    // Check deadline appears in the deadlines section
+    expect(screen.getAllByText('Test Deadline')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('2 days left')[0]).toBeInTheDocument();
   });
 });

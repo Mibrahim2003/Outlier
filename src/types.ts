@@ -1,3 +1,5 @@
+export type ThemeColor = 'yellow' | 'pink' | 'green' | 'blue';
+
 export interface Course {
   id: string;
   code: string;
@@ -5,6 +7,7 @@ export interface Course {
   credits: number;
   gradeProgress: number;
   impactLevel: 'heavy' | 'standard' | 'minimal';
+  themeColor?: ThemeColor;
   grade: string;
   weightage: {
     quizzes: number;
@@ -24,6 +27,16 @@ export interface Deadline {
   priority: 'urgent' | 'moderate' | 'normal';
 }
 
+export interface Todo {
+  id: string;
+  text: string;
+  completed: boolean;
+  dueDate: string;        // ISO date string (YYYY-MM-DD) — links to calendar
+  createdAt: string;      // ISO datetime string
+  completedAt?: string;   // ISO datetime string, set when checked off
+  course?: string;        // optional course association
+}
+
 export interface Stat {
   label: string;
   value: string;
@@ -32,6 +45,7 @@ export interface Stat {
 
 export interface UserProfile {
   name: string;
+  registrationNumber?: string;
   degree: string;
   universityName: string;
   graduationYear: string;
@@ -75,5 +89,27 @@ export interface CalendarEvent {
   type: 'deadline' | 'exam' | 'break' | 'holiday' | 'custom';
   courseId?: string;
   weekNumber?: number;
+}
+
+export interface CourseDeliverable {
+  id: string;
+  courseId: string;
+  type: 'quiz' | 'assignment' | 'midterm' | 'final' | 'project';
+  title: string;
+  date: string;
+  score?: string;
+  status: string;
+  metadata?: {
+    classAvg?: string;
+    progress?: number;
+    topics?: string;
+    highestScore?: number;
+    toppersCount?: number;
+    // Project specific metadata
+    projectIdea?: string;
+    scopeFeedback?: string;
+    milestonesGenerated?: boolean;
+    totalMarks?: number;
+  };
 }
 

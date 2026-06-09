@@ -68,6 +68,23 @@
   writing-mode: vertical-rl;
 }
 
+@keyframes hazard-scroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 70.7px 0; }
+}
+
+@utility hazard-stripes {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--color-ink),
+    var(--color-ink) 25px,
+    var(--color-primary-container) 25px,
+    var(--color-primary-container) 50px
+  );
+  background-size: 70.7px 70.7px;
+  animation: hazard-scroll 1.5s linear infinite;
+}
+
 @keyframes marquee {
   0% {
     transform: translateX(0%);

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Upload, ChevronLeft, ChevronRight, Calendar, Loader2, AlertCircle, Flame, Plus, Download, Settings, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useCalendarParser } from '../hooks/useCalendarParser';
@@ -10,16 +10,18 @@ import {
   isSameDay, 
   formatDateShort 
 } from '../utils/dateUtils';
-import { SemesterInfo, Deadline } from '../types';
+import { SemesterInfo, Deadline, Todo } from '../types';
 import { exportToICS } from '../utils/icsExport';
+import { useSearchParams } from 'react-router-dom';
 
 const DAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 export const AcademicCalendar = () => {
-  const { academicCalendar, setAcademicCalendar, deadlines, addDeadline, courses } = useStore();
+  const { academicCalendar, setAcademicCalendar, deadlines, addDeadline, todos, addTodo, toggleTodo, courses } = useStore();
   const { parseCalendarImage, parsing, parseError } = useCalendarParser();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Calendar View State
   const today = new Date();
@@ -40,6 +42,21 @@ export const AcademicCalendar = () => {
   const [newDlCourse, setNewDlCourse] = useState('');
   const [newDlTopic, setNewDlTopic] = useState('');
   const [newDlPriority, setNewDlPriority] = useState<'urgent' | 'moderate' | 'normal'>('moderate');
+
+  // Unified modal: Task vs Deadline mode
+  const [eventType, setEventType] = useState<'task' | 'deadline'>('task');
+
+  // Handle ?action=add-task query param from Dashboard navigation
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'add-task' && academicCalendar) {
+      setSelectedDate(today);
+      setEventType('task');
+      setIsAddModalOpen(true);
+      // Clear the param so it doesn't re-trigger
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, academicCalendar]);
 
   const allSemesters = academicCalendar?.semesters ?? [];
 
@@ -126,6 +143,13 @@ export const AcademicCalendar = () => {
     });
   };
 
+  const getTodosForDate = (date: Date) => {
+    return todos.filter(t => {
+      const td = new Date(t.dueDate + 'T00:00:00');
+      return isSameDay(td, date);
+    });
+  };
+
   const getWeekForDate = (date: Date): number | null => {
     const sem = findSemesterForDate(date);
     if (!sem) return null;
@@ -134,28 +158,45 @@ export const AcademicCalendar = () => {
   };
 
   // Handlers for forms
-  const handleAddDeadline = (e: React.FormEvent) => {
+  const handleAddEvent = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedDate || !newDlTitle || !newDlCourse) return;
+    if (!selectedDate || !newDlTitle) return;
 
     // ISO string handling, avoiding timezone shift
     const d = new Date(selectedDate);
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     const dueDateStr = d.toISOString().split('T')[0];
 
-    const newDeadline: Deadline = {
-      id: crypto.randomUUID(),
-      title: newDlTitle,
-      course: newDlCourse,
-      topic: newDlTopic,
-      dueDate: dueDateStr,
-      priority: newDlPriority,
-    };
-    addDeadline(newDeadline);
+    if (eventType === 'task') {
+      const newTodo: Todo = {
+        id: crypto.randomUUID(),
+        text: newDlTitle,
+        completed: false,
+        dueDate: dueDateStr,
+        createdAt: new Date().toISOString(),
+        course: newDlCourse || undefined,
+      };
+      addTodo(newTodo);
+    } else {
+      if (!newDlCourse) return;
+      const newDeadline: Deadline = {
+        id: crypto.randomUUID(),
+        title: newDlTitle,
+        course: newDlCourse,
+        topic: newDlTopic,
+        dueDate: dueDateStr,
+        priority: newDlPriority,
+      };
+      addDeadline(newDeadline);
+    }
+
     setIsAddModalOpen(false);
-    // Reset
+    // Reset all form fields
     setNewDlTitle('');
     setNewDlTopic('');
+    setNewDlCourse('');
+    setNewDlPriority('moderate');
+    setEventType('task');
   };
 
   const handleEditSemester = (e: React.FormEvent) => {
@@ -399,6 +440,7 @@ export const AcademicCalendar = () => {
                       s.examPeriod && isDateInRange(date, new Date(s.examPeriod.startDate), new Date(s.examPeriod.endDate))
                     );
                     const dayDeadlines = getDeadlinesForDate(date);
+                    const dayTodos = getTodosForDate(date);
                     const isInSemester = findSemesterForDate(date) !== null;
 
                     return (
@@ -465,6 +507,24 @@ export const AcademicCalendar = () => {
                           {dayDeadlines.length > 3 && (
                             <span className="text-[7px] font-bold opacity-60">+{dayDeadlines.length - 3}</span>
                           )}
+
+                          {/* Todo Circles */}
+                          {dayTodos.filter(t => !t.completed).slice(0, 3).map(todo => (
+                            <div
+                              key={todo.id}
+                              title={todo.text}
+                              className="w-2 h-2 rounded-full border-[1.5px] border-[#1A1A1A] bg-white"
+                            />
+                          ))}
+                          {dayTodos.filter(t => t.completed).length > 0 && dayTodos.filter(t => !t.completed).length < 3 && (
+                            dayTodos.filter(t => t.completed).slice(0, 3 - dayTodos.filter(t => !t.completed).length).map(todo => (
+                              <div
+                                key={todo.id}
+                                title={`✓ ${todo.text}`}
+                                className="w-2 h-2 rounded-full border-[1.5px] border-ink/30 bg-[#FFDE59]/60"
+                              />
+                            ))
+                          )}
                         </div>
                         
                         {/* Hover Add Button (subtle) */}
@@ -515,18 +575,24 @@ export const AcademicCalendar = () => {
             <div className="p-6 space-y-4 bg-[#FFF6E3] flex-1 overflow-y-auto">
               {selectedDate && (() => {
                 const dayDeadlines = getDeadlinesForDate(selectedDate);
+                const dayTodos = getTodosForDate(selectedDate);
                 const breakName = allSemesters.reduce<string | null>((found, s) => found || isBreakDay(selectedDate, s.breaks), null);
                 const isExamDay = showExams && allSemesters.some(s =>
                   s.examPeriod && isDateInRange(selectedDate, new Date(s.examPeriod.startDate), new Date(s.examPeriod.endDate))
                 );
 
-                if (dayDeadlines.length === 0 && !breakName && !isExamDay) {
+                const hasAnything = dayDeadlines.length > 0 || dayTodos.length > 0 || breakName || isExamDay;
+
+                if (!hasAnything) {
                   return (
                     <div className="text-center p-6 border-4 border-dashed border-[#1A1A1A] opacity-30 font-black text-sm uppercase tracking-[0.15em]">
                       No events
                     </div>
                   );
                 }
+
+                const uncompletedTodos = dayTodos.filter(t => !t.completed);
+                const completedTodos = dayTodos.filter(t => t.completed);
 
                 return (
                   <>
@@ -545,17 +611,60 @@ export const AcademicCalendar = () => {
                         <h4 className="text-xl font-black tracking-tight mt-1">Finals</h4>
                       </div>
                     )}
-                    {dayDeadlines.map(dl => (
-                      <div key={dl.id} className={`p-5 border-3 border-ink border-l-[10px] shadow-[4px_4px_0px_#1A1A1A] bg-white ${
-                        dl.priority === 'urgent' ? 'border-l-[#A8275A]' :
-                        dl.priority === 'moderate' ? 'border-l-[#FFDE59]' :
-                        'border-l-ink'
-                      }`}>
-                        <p className="text-[10px] font-black uppercase tracking-[0.15em] opacity-50">{dl.course}</p>
-                        <h4 className="text-lg font-black tracking-tight">{dl.title}</h4>
-                        {dl.topic && <p className="text-xs font-bold opacity-50 mt-1">Topic: {dl.topic}</p>}
+
+                    {/* Tasks Section */}
+                    {dayTodos.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-ink/50 flex items-center gap-2">
+                          📋 Tasks ({uncompletedTodos.length}/{dayTodos.length})
+                        </p>
+                        {uncompletedTodos.map(todo => (
+                          <div
+                            key={todo.id}
+                            className="flex items-center gap-3 p-4 bg-white border-3 border-ink shadow-[3px_3px_0px_#1A1A1A] cursor-pointer hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_#1A1A1A] transition-all"
+                            onClick={() => toggleTodo(todo.id)}
+                          >
+                            <div className="w-5 h-5 border-3 border-ink flex-shrink-0 flex items-center justify-center bg-white" />
+                            <span className="font-bold text-sm flex-1">{todo.text}</span>
+                            {todo.course && <span className="text-[9px] font-black uppercase opacity-40">{todo.course}</span>}
+                          </div>
+                        ))}
+                        {completedTodos.map(todo => (
+                          <div
+                            key={todo.id}
+                            className="flex items-center gap-3 p-4 bg-white/50 border-2 border-ink/20 cursor-pointer hover:border-ink/40 transition-all"
+                            onClick={() => toggleTodo(todo.id)}
+                          >
+                            <div className="w-5 h-5 border-3 border-ink/40 flex-shrink-0 flex items-center justify-center bg-[#FFDE59]/60">
+                              <span className="text-[10px] font-black">✓</span>
+                            </div>
+                            <span className="font-bold text-sm flex-1 line-through opacity-40">{todo.text}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
+
+                    {/* Deadlines Section */}
+                    {dayDeadlines.length > 0 && (
+                      <div className="space-y-2">
+                        {dayTodos.length > 0 && (
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-ink/50 mt-2">
+                            📅 Deadlines ({dayDeadlines.length})
+                          </p>
+                        )}
+                        {dayDeadlines.map(dl => (
+                          <div key={dl.id} className={`p-5 border-3 border-ink border-l-[10px] shadow-[4px_4px_0px_#1A1A1A] bg-white ${
+                            dl.priority === 'urgent' ? 'border-l-[#A8275A]' :
+                            dl.priority === 'moderate' ? 'border-l-[#FFDE59]' :
+                            'border-l-ink'
+                          }`}>
+                            <p className="text-[10px] font-black uppercase tracking-[0.15em] opacity-50">{dl.course}</p>
+                            <h4 className="text-lg font-black tracking-tight">{dl.title}</h4>
+                            {dl.topic && <p className="text-xs font-bold opacity-50 mt-1">Topic: {dl.topic}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </>
                 );
               })()}
@@ -569,82 +678,129 @@ export const AcademicCalendar = () => {
                 className="w-full bg-[#FFDE59] border-4 border-[#1A1A1A] py-4 font-black uppercase tracking-[0.15em] shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <Plus strokeWidth={3} size={20} />
-                Add Deadline
+                Add Event
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Add Deadline Modal */}
+      {/* Unified Add Event Modal */}
       {isAddModalOpen && selectedDate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1A1A1A]/80 backdrop-blur-sm">
           <div className="bg-white border-4 border-[#1A1A1A] shadow-[12px_12px_0px_#FFDE59] w-full max-w-md">
             <div className="bg-[#1A1A1A] text-white p-4 flex justify-between items-center border-b-4 border-[#1A1A1A]">
-              <h2 className="text-2xl font-black uppercase tracking-widest">New Deadline</h2>
+              <h2 className="text-2xl font-black uppercase tracking-widest">New Event</h2>
               <button onClick={() => setIsAddModalOpen(false)} className="hover:text-[#A8275A] transition-colors">
                 <X strokeWidth={3} />
               </button>
             </div>
-            <form onSubmit={handleAddDeadline} className="p-6 space-y-6">
+            <form onSubmit={handleAddEvent} className="p-6 space-y-6">
+              {/* Task / Deadline Toggle */}
+              <div className="flex border-3 border-[#1A1A1A]">
+                <button
+                  type="button"
+                  onClick={() => setEventType('task')}
+                  className={`flex-1 py-3 font-black text-xs uppercase tracking-widest transition-all ${
+                    eventType === 'task'
+                      ? 'bg-[#FFDE59] text-[#1A1A1A] shadow-[inset_0_-3px_0px_#1A1A1A]'
+                      : 'bg-white text-ink/40 hover:bg-[#FFF6E3]'
+                  }`}
+                >
+                  📋 Task
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEventType('deadline')}
+                  className={`flex-1 py-3 font-black text-xs uppercase tracking-widest border-l-3 border-[#1A1A1A] transition-all ${
+                    eventType === 'deadline'
+                      ? 'bg-[#A8275A] text-white shadow-[inset_0_-3px_0px_#1A1A1A]'
+                      : 'bg-white text-ink/40 hover:bg-[#FFF6E3]'
+                  }`}
+                >
+                  📅 Deadline
+                </button>
+              </div>
+
               <div className="bg-[#FFDE59]/30 p-3 border-l-4 border-[#FFDE59]">
                 <p className="text-[10px] font-black uppercase tracking-[0.1em] opacity-60">Selected Date</p>
                 <p className="text-lg font-black">{formatDateShort(selectedDate)}</p>
               </div>
               
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.1em]">Title</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.1em]">
+                  {eventType === 'task' ? 'What do you need to do?' : 'Title'}
+                </label>
                 <input 
                   required
                   value={newDlTitle}
                   onChange={e => setNewDlTitle(e.target.value)}
                   className="w-full bg-[#FFF6E3] border-3 border-[#1A1A1A] p-3 font-bold focus:outline-none focus:ring-4 focus:ring-[#FFDE59]/50" 
-                  placeholder="e.g. Midterm Report"
+                  placeholder={eventType === 'task' ? 'e.g. Read Chapter 3' : 'e.g. Midterm Report'}
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.1em]">Course</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.1em]">
+                  Course {eventType === 'task' && <span className="opacity-40">(optional)</span>}
+                </label>
                 <select 
-                  required
+                  required={eventType === 'deadline'}
                   value={newDlCourse}
                   onChange={e => setNewDlCourse(e.target.value)}
                   className="w-full bg-[#FFF6E3] border-3 border-[#1A1A1A] p-3 font-bold focus:outline-none focus:ring-4 focus:ring-[#FFDE59]/50"
                 >
-                  <option value="" disabled>Select a course</option>
+                  <option value="">{eventType === 'task' ? 'No course (general)' : 'Select a course'}</option>
                   {courses.map(c => <option key={c.id} value={c.code}>{c.code} - {c.name}</option>)}
-                  <option value="GENERAL">General</option>
+                  {eventType === 'deadline' && <option value="GENERAL">General</option>}
                 </select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.1em]">Priority</label>
-                <div className="flex gap-4">
-                  {(['urgent', 'moderate', 'normal'] as const).map(p => (
-                    <label key={p} className="flex-1 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name="priority" 
-                        className="sr-only peer"
-                        checked={newDlPriority === p}
-                        onChange={() => setNewDlPriority(p)}
-                      />
-                      <div className={`text-center py-2 border-3 border-[#1A1A1A] font-black text-xs uppercase tracking-widest transition-all
-                        peer-checked:shadow-[3px_3px_0px_#1A1A1A] peer-checked:translate-x-[-3px] peer-checked:translate-y-[-3px]
-                        ${p === 'urgent' ? 'peer-checked:bg-[#A8275A] peer-checked:text-white' : 
-                          p === 'moderate' ? 'peer-checked:bg-[#FFDE59]' : 
-                          'peer-checked:bg-ink peer-checked:text-white'}
-                        bg-white opacity-60 peer-checked:opacity-100
-                      `}>
-                        {p}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
+              {/* Deadline-only fields */}
+              {eventType === 'deadline' && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.1em]">Topic</label>
+                    <input 
+                      value={newDlTopic}
+                      onChange={e => setNewDlTopic(e.target.value)}
+                      className="w-full bg-[#FFF6E3] border-3 border-[#1A1A1A] p-3 font-bold focus:outline-none focus:ring-4 focus:ring-[#FFDE59]/50" 
+                      placeholder="e.g. Binary Trees"
+                    />
+                  </div>
 
-              <button type="submit" className="w-full bg-[#FFDE59] border-4 border-[#1A1A1A] py-4 font-black uppercase tracking-widest shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all">
-                Commit Deadline
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.1em]">Priority</label>
+                    <div className="flex gap-4">
+                      {(['urgent', 'moderate', 'normal'] as const).map(p => (
+                        <label key={p} className="flex-1 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name="priority" 
+                            className="sr-only peer"
+                            checked={newDlPriority === p}
+                            onChange={() => setNewDlPriority(p)}
+                          />
+                          <div className={`text-center py-2 border-3 border-[#1A1A1A] font-black text-xs uppercase tracking-widest transition-all
+                            peer-checked:shadow-[3px_3px_0px_#1A1A1A] peer-checked:translate-x-[-3px] peer-checked:translate-y-[-3px]
+                            ${p === 'urgent' ? 'peer-checked:bg-[#A8275A] peer-checked:text-white' : 
+                              p === 'moderate' ? 'peer-checked:bg-[#FFDE59]' : 
+                              'peer-checked:bg-ink peer-checked:text-white'}
+                            bg-white opacity-60 peer-checked:opacity-100
+                          `}>
+                            {p}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <button type="submit" className={`w-full border-4 border-[#1A1A1A] py-4 font-black uppercase tracking-widest shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all ${
+                eventType === 'task' ? 'bg-[#FFDE59]' : 'bg-[#A8275A] text-white'
+              }`}>
+                {eventType === 'task' ? 'Add Task' : 'Commit Deadline'}
               </button>
             </form>
           </div>

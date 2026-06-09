@@ -7,6 +7,8 @@ import { AcademicCalendar } from '../AcademicCalendar';
 
 // Mock function definitions
 const mockAddDeadline = vi.fn();
+const mockAddTodo = vi.fn();
+const mockToggleTodo = vi.fn();
 const mockSetAcademicCalendar = vi.fn();
 
 // Mock store context with test parameters
@@ -31,6 +33,12 @@ vi.mock('../../context/StoreContext', () => ({
       { id: 'd2', title: 'Normal HW', course: 'CS-201', topic: 'Homework', dueDate: '2026-10-15', priority: 'normal' },
     ],
     addDeadline: mockAddDeadline,
+    todos: [
+      { id: 't1', text: 'Study Chapter 8', completed: false, dueDate: '2026-10-12', createdAt: '2026-10-10T10:00:00Z' },
+      { id: 't2', text: 'Review slides', completed: true, dueDate: '2026-10-12', createdAt: '2026-10-10T10:00:00Z', completedAt: '2026-10-12T15:00:00Z' },
+    ],
+    addTodo: mockAddTodo,
+    toggleTodo: mockToggleTodo,
     courses: [
       { id: 'c1', code: 'CS-201', name: 'Data Structures', credits: 3, gradeProgress: 88, impactLevel: 'standard', grade: 'B+', weightage: {} }
     ]
@@ -97,20 +105,65 @@ describe('AcademicCalendar - Loaded State & Actions', () => {
     expect(mockSetAcademicCalendar).toHaveBeenCalled();
   });
 
-  it('triggers Add Deadline modal and registers a new event', async () => {
+  it('opens unified modal with Task/Deadline toggle', async () => {
     render(
       <MemoryRouter>
         <AcademicCalendar />
       </MemoryRouter>
     );
 
-    // Select date in the grid first or click default Add Deadline
-    const addBtn = screen.getAllByRole('button', { name: /Add Deadline/i })[0];
+    // Click the Add Event button
+    const addBtn = screen.getAllByRole('button', { name: /Add Event/i })[0];
     fireEvent.click(addBtn);
 
-    // Modal title should appear
-    expect(screen.getByRole('heading', { name: 'New Deadline' })).toBeInTheDocument();
+    // Modal title should appear as "New Event"
+    expect(screen.getByRole('heading', { name: 'New Event' })).toBeInTheDocument();
 
+    // Both toggle buttons should exist
+    expect(screen.getByRole('button', { name: /📋 Task/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /📅 Deadline/i })).toBeInTheDocument();
+  });
+
+  it('submits a task via the unified modal', async () => {
+    render(
+      <MemoryRouter>
+        <AcademicCalendar />
+      </MemoryRouter>
+    );
+
+    const addBtn = screen.getAllByRole('button', { name: /Add Event/i })[0];
+    fireEvent.click(addBtn);
+
+    // Default mode should be "Task" — fill in title
+    const titleInput = screen.getByPlaceholderText('e.g. Read Chapter 3');
+    fireEvent.change(titleInput, { target: { value: 'Practice Problems Set 4' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Add Task/i });
+    fireEvent.click(submitBtn);
+
+    // addTodo should be called (not addDeadline)
+    expect(mockAddTodo).toHaveBeenCalled();
+    expect(mockAddDeadline).not.toHaveBeenCalled();
+  });
+
+  it('submits a deadline via the unified modal in Deadline mode', async () => {
+    mockAddDeadline.mockClear();
+    mockAddTodo.mockClear();
+
+    render(
+      <MemoryRouter>
+        <AcademicCalendar />
+      </MemoryRouter>
+    );
+
+    const addBtn = screen.getAllByRole('button', { name: /Add Event/i })[0];
+    fireEvent.click(addBtn);
+
+    // Switch to Deadline mode
+    const deadlineTab = screen.getByRole('button', { name: /Deadline/i });
+    fireEvent.click(deadlineTab);
+
+    // Fill in required fields
     const titleInput = screen.getByPlaceholderText('e.g. Midterm Report');
     fireEvent.change(titleInput, { target: { value: 'Term Assignment' } });
 
@@ -120,7 +173,8 @@ describe('AcademicCalendar - Loaded State & Actions', () => {
     const commitBtn = screen.getByRole('button', { name: /Commit Deadline/i });
     fireEvent.click(commitBtn);
 
-    // Verify callback is fired
+    // addDeadline should be called (not addTodo)
     expect(mockAddDeadline).toHaveBeenCalled();
+    expect(mockAddTodo).not.toHaveBeenCalled();
   });
 });

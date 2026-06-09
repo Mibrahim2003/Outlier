@@ -13,6 +13,7 @@ import { Analytics } from './components/Analytics';
 import { Onboarding } from './components/Onboarding';
 import { ProfileSetup } from './components/ProfileSetup';
 import { CourseDetail } from './components/CourseDetail';
+import { CourseList } from './components/CourseList';
 import { AcademicCalendar } from './components/AcademicCalendar';
 import { PostAuthGate } from './components/PostAuthGate';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -78,10 +79,7 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Layout>
-                <div className="py-12 text-center">
-                  <h2 className="text-4xl font-black uppercase tracking-tighter">My Courses</h2>
-                  <p className="mt-4 text-xl font-medium opacity-60 italic">Course listing view coming soon...</p>
-                </div>
+                <CourseList />
               </Layout>
             </ProtectedRoute>
           } 
