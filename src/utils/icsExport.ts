@@ -1,4 +1,4 @@
-import { Deadline, AcademicCalendarData, SemesterInfo } from '../types';
+import { Deadline, AcademicCalendarData } from '../types';
 
 function formatDateToICS(dateStr: string): string {
   // Assuming dateStr is YYYY-MM-DD

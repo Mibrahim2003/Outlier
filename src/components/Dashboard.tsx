@@ -1,10 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Stat } from '../types';
-import { Sparkles, ArrowRight, AlertCircle, Clock, CheckCircle2, Calendar, Loader2, Plus, ListChecks, Target } from 'lucide-react';
+import { Sparkles, AlertCircle, Clock, CheckCircle2, Calendar, Loader2, Plus, ListChecks } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { useAI } from '../hooks/useAI';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { getThemeBgClass } from '../utils/impactStyles';
 import { getGreeting, getDeadlineStatus, isSameDay } from '../utils/dateUtils';
 

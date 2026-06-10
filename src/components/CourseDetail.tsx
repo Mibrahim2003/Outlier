@@ -1,4 +1,4 @@
-import React, { useState, FormEvent, ChangeEvent } from 'react';
+import { useState, FormEvent, ChangeEvent } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAI } from '../hooks/useAI';
 import { CourseDeliverable } from '../types';
@@ -6,19 +6,14 @@ import {
   ArrowLeft, 
   Sparkles, 
   FileText, 
-  CheckCircle2, 
-  Clock, 
-  AlertCircle,
-  ChevronRight,
+  CheckCircle2,
   Target,
-  Trophy,
   Calendar,
   Star,
   Upload,
   Plus,
   Settings
 } from 'lucide-react';
-import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { getThemeBgClass, getThemeTextClass } from '../utils/impactStyles';
 import { calculateCourseStatus } from '../utils/gpaEngine';
@@ -100,7 +95,7 @@ export const CourseDetail = () => {
       classAvgsSum += avg;
       classAvgsCount++;
     }
-    const stdDev = parseFloat(d.metadata?.classStdDev as unknown as string || d.metadata?.stdDev as string || 'NaN');
+    const stdDev = parseFloat(d.metadata?.classStdDev as unknown as string || 'NaN');
     if (!isNaN(stdDev)) {
       stdDevSum += stdDev;
       stdDevCount++;
@@ -318,7 +313,7 @@ export const CourseDetail = () => {
       metadata: {
         ...deliverable.metadata,
         classAvg: isNaN(finalAvg) ? undefined : finalAvg.toFixed(1),
-        classStdDev: isNaN(finalStdDev) || finalStdDev === 0 ? undefined : finalStdDev.toFixed(2),
+        classStdDev: isNaN(finalStdDev) || finalStdDev === 0 ? undefined : Number(finalStdDev.toFixed(2)),
         progress: isNaN(progress) ? undefined : progress,
         highestScore: highest,
         toppersCount: toppers

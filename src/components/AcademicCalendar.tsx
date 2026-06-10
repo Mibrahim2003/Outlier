@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { Upload, ChevronLeft, ChevronRight, Calendar, Loader2, AlertCircle, Flame, Plus, Download, Settings, X } from 'lucide-react';
+import { Upload, ChevronLeft, ChevronRight, Loader2, AlertCircle, Flame, Plus, Download, Settings, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useCalendarParser } from '../hooks/useCalendarParser';
 import { 
@@ -50,13 +50,15 @@ export const AcademicCalendar = () => {
   useEffect(() => {
     const action = searchParams.get('action');
     if (action === 'add-task' && academicCalendar) {
-      setSelectedDate(today);
-      setEventType('task');
-      setIsAddModalOpen(true);
-      // Clear the param so it doesn't re-trigger
-      setSearchParams({}, { replace: true });
+      setTimeout(() => {
+        setSelectedDate(new Date());
+        setEventType('task');
+        setIsAddModalOpen(true);
+        // Clear the param so it doesn't re-trigger
+        setSearchParams({}, { replace: true });
+      }, 0);
     }
-  }, [searchParams, academicCalendar]);
+  }, [searchParams, academicCalendar, setSearchParams]);
 
   const allSemesters = academicCalendar?.semesters ?? [];
 
@@ -67,8 +69,12 @@ export const AcademicCalendar = () => {
   };
 
   const activeSemester: SemesterInfo | null = useMemo(() => {
+    const semesters = academicCalendar?.semesters ?? [];
     const viewDate = new Date(viewYear, viewMonth, 15);
-    return findSemesterForDate(viewDate) || allSemesters[0] || null;
+    const found = semesters.find(s =>
+      isDateInRange(viewDate, new Date(s.startDate), new Date(s.endDate))
+    );
+    return found || semesters[0] || null;
   }, [academicCalendar, viewYear, viewMonth]);
 
   // Edit Semester Form State
@@ -81,7 +87,7 @@ export const AcademicCalendar = () => {
   const weeksRemaining = useMemo(() => {
     if (!activeSemester) return null;
     const end = new Date(activeSemester.endDate);
-    const diffMs = end.getTime() - today.getTime();
+    const diffMs = end.getTime() - new Date().getTime();
     if (diffMs < 0) return 0;
     return Math.max(0, Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000)));
   }, [activeSemester]);

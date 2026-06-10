@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { BookOpen, AlertCircle, TrendingUp } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
-import { getThemeBorderClass, getThemeBgClass, getThemeBottomBorderClass } from '../utils/impactStyles';
+import { getThemeBgClass, getThemeBottomBorderClass } from '../utils/impactStyles';
 
 export const CourseList = () => {
   const { courses } = useStore();

@@ -83,8 +83,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       todoDomain.reset();
       deliverableDomain.reset();
       onboardingDomain.reset();
-      setSyncError(null);
-      setIsHydrating(false);
+      setTimeout(() => {
+        setSyncError(null);
+        setIsHydrating(false);
+      }, 0);
       return;
     }
 
@@ -179,6 +181,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useStore = () => {
   const context = useContext(StoreContext);
   if (context === undefined) {

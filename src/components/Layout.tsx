@@ -13,7 +13,6 @@ import {
   LogOut,
   Search,
   Bell,
-  History,
   Menu,
   X
 } from 'lucide-react';
