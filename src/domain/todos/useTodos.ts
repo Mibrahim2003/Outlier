@@ -49,10 +49,12 @@ export function useTodos(userId: string | undefined, reportSyncError: (msg: stri
   };
 
   const toggleTodo = (id: string) => {
+    let originalTodo: Todo | undefined;
     let updatedTodo: Todo | undefined;
     setTodosState((prev) =>
       prev.map((t) => {
         if (t.id === id) {
+          originalTodo = { ...t };
           updatedTodo = {
             ...t,
             completed: !t.completed,
@@ -64,7 +66,7 @@ export function useTodos(userId: string | undefined, reportSyncError: (msg: stri
       }),
     );
 
-    if (!userId || !updatedTodo) return;
+    if (!userId || !updatedTodo || !originalTodo) return;
 
     void supabase
       .from('todos')
@@ -75,7 +77,10 @@ export function useTodos(userId: string | undefined, reportSyncError: (msg: stri
       .eq('user_id', userId)
       .eq('id', id)
       .then(({ error }) => {
-        if (error) reportSyncError(`Failed to toggle todo: ${error.message}`);
+        if (error) {
+          reportSyncError(`Failed to toggle todo: ${error.message}`);
+          setTodosState((prev) => prev.map((t) => (t.id === id ? originalTodo! : t)));
+        }
       });
   };
 
@@ -103,8 +108,10 @@ export function useTodos(userId: string | undefined, reportSyncError: (msg: stri
 
   const clearCompletedTodos = () => {
     let completedIds: string[] = [];
+    let completedItems: Todo[] = [];
     setTodosState((prev) => {
-      completedIds = prev.filter((t) => t.completed).map((t) => t.id);
+      completedItems = prev.filter((t) => t.completed);
+      completedIds = completedItems.map((t) => t.id);
       return prev.filter((t) => !t.completed);
     });
 
@@ -116,7 +123,10 @@ export function useTodos(userId: string | undefined, reportSyncError: (msg: stri
       .eq('user_id', userId)
       .in('id', completedIds)
       .then(({ error }) => {
-        if (error) reportSyncError(`Failed to clear completed todos: ${error.message}`);
+        if (error) {
+          reportSyncError(`Failed to clear completed todos: ${error.message}`);
+          setTodosState((prev) => [...prev, ...completedItems]);
+        }
       });
   };
 

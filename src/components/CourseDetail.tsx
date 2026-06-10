@@ -54,6 +54,12 @@ export const CourseDetail = () => {
   const [extractedHighestScore, setExtractedHighestScore] = useState<number | undefined>();
   const [extractedToppersCount, setExtractedToppersCount] = useState<number | undefined>();
 
+  const [initProjectTitle, setInitProjectTitle] = useState('');
+  const [initProjectIdea, setInitProjectIdea] = useState('');
+  const [initProjectDeadline, setInitProjectDeadline] = useState('');
+  
+  const { analyzeProjectScope, generateProjectMilestones } = useAI();
+
   const localCourse = courses.find((c) => c.id === id);
 
   if (!localCourse) {
@@ -80,7 +86,7 @@ export const CourseDetail = () => {
   // Use the new gpaEngine for all calculations
   const courseStatus = calculateCourseStatus(course, courseDeliverables);
   
-  let statYourAverage = courseStatus.coveredWeight > 0 ? courseStatus.projectedScore.toFixed(1) + '%' : 'N/A';
+  const statYourAverage = courseStatus.coveredWeight > 0 ? courseStatus.projectedScore.toFixed(1) + '%' : 'N/A';
   
   // Calculate class average (basic average of all entered classAvgs)
   let classAvgsCount = 0;
@@ -101,11 +107,11 @@ export const CourseDetail = () => {
     }
   });
   
-  let statClassAverage = classAvgsCount > 0 ? (classAvgsSum / classAvgsCount).toFixed(1) + '%' : 'N/A';
-  let statStdDeviation = stdDevCount > 0 ? (stdDevSum / stdDevCount).toFixed(1) : 'N/A';
+  const statClassAverage = classAvgsCount > 0 ? (classAvgsSum / classAvgsCount).toFixed(1) + '%' : 'N/A';
+  const statStdDeviation = stdDevCount > 0 ? (stdDevSum / stdDevCount).toFixed(1) : 'N/A';
   
-  let statProjectedGrade = courseStatus.estimatedGrade;
-  let statProjectedNote = `Based on weightage (${courseStatus.coveredWeight}% of final grade accounted for)`;
+  const statProjectedGrade = courseStatus.estimatedGrade;
+  const statProjectedNote = `Based on weightage (${courseStatus.coveredWeight}% of final grade accounted for)`;
   
   let statDistanceTopper = 'N/A';
   let maxGapSum = 0;
@@ -159,9 +165,6 @@ export const CourseDetail = () => {
   };
 
   // Project Functions
-  const [initProjectTitle, setInitProjectTitle] = useState('');
-  const [initProjectIdea, setInitProjectIdea] = useState('');
-  const [initProjectDeadline, setInitProjectDeadline] = useState('');
 
   const handleInitializeProject = (e: FormEvent) => {
     e.preventDefault();
@@ -181,7 +184,6 @@ export const CourseDetail = () => {
     });
   };
 
-  const { analyzeProjectScope, generateProjectMilestones } = useAI();
 
   const handleAnalyzeScope = async () => {
     const project = projects[0];
@@ -316,7 +318,7 @@ export const CourseDetail = () => {
       metadata: {
         ...deliverable.metadata,
         classAvg: isNaN(finalAvg) ? undefined : finalAvg.toFixed(1),
-        stdDev: isNaN(finalStdDev) || finalStdDev === 0 ? undefined : finalStdDev.toFixed(2),
+        classStdDev: isNaN(finalStdDev) || finalStdDev === 0 ? undefined : finalStdDev.toFixed(2),
         progress: isNaN(progress) ? undefined : progress,
         highestScore: highest,
         toppersCount: toppers

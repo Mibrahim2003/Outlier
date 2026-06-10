@@ -1,47 +1,28 @@
 import { useState } from 'react';
 import { Course, Deadline } from '../types';
+import { supabase } from '../lib/supabase';
 
-// Using fetch directly to avoid browser polyfill issues with the official SDK
-const generateContent = async (prompt: string, apiKey: string, inlineData?: { mimeType: string; data: string }) => {
-  const parts: any[] = [{ text: prompt }];
-  if (inlineData) {
-    parts.push({ inlineData });
+const generateContent = async (prompt: string, inlineData?: { mimeType: string; data: string }) => {
+  const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+    body: { prompt, ...inlineData }
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Failed to fetch from proxy');
   }
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: {
-          temperature: inlineData ? 0.1 : 0.7,
-        },
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch from Gemini API');
+  if (data.error) {
+    throw new Error(data.error);
   }
 
-  const data = await response.json();
-  return data.candidates[0].content.parts[0].text;
+  return data.text;
 };
 
 export function useAI() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // We check specifically for VITE_ prefixed keys, but fallback to runtime injection logic.
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-
   const getDashboardInsight = async (courses: Course[], deadlines: Deadline[]) => {
-    if (!apiKey) {
-      setError('Missing VITE_GEMINI_API_KEY');
-      return null;
-    }
     setLoading(true);
     try {
       const prompt = `You are "Outlier," a high-precision academic command system. Your only job is to assess the user's current academic state and upcoming deadlines, then deliver the most urgent, actionable guidance for today.
@@ -74,7 +55,7 @@ User Data:
 Courses: ${JSON.stringify(courses)}
 Deadlines: ${JSON.stringify(deadlines)}`;
       
-      const insight = await generateContent(prompt, apiKey);
+      const insight = await generateContent(prompt);
       return insight;
     } catch (e: any) {
       setError(e.message);
@@ -85,10 +66,6 @@ Deadlines: ${JSON.stringify(deadlines)}`;
   };
 
   const getStudyPriorities = async (courses: Course[], deadlines: Deadline[]) => {
-    if (!apiKey) {
-      setError('Missing VITE_GEMINI_API_KEY');
-      return null;
-    }
     setLoading(true);
     try {
       const prompt = `You are an AI study assistant. Generate exactly 3 study priority tasks based on this data:
@@ -104,9 +81,9 @@ Return ONLY valid JSON in this exact structure:
   }
 ]`;
       
-      let res = await generateContent(prompt, apiKey);
-      res = res.replace(/```json/g, '').replace(/```/g, '').trim();
-      return JSON.parse(res);
+      const res = await generateContent(prompt);
+      const cleanedRes = res.replace(/```json/g, '').replace(/```/g, '').trim();
+      return JSON.parse(cleanedRes);
     } catch (e: any) {
       console.error(e);
       setError(e.message);
@@ -117,10 +94,6 @@ Return ONLY valid JSON in this exact structure:
   };
 
   const extractClassMarks = async (base64Data: string, mimeType: string, registrationNumber: string | undefined, totalMarks: number) => {
-    if (!apiKey) {
-      setError('Missing VITE_GEMINI_API_KEY');
-      return null;
-    }
     setLoading(true);
     try {
       const prompt = `You are a data extraction AI. Extract the class marks from this document/image.
@@ -137,7 +110,7 @@ Return ONLY valid JSON in this exact structure. Do not use markdown blocks.
   "toppersCount": [number of students who achieved the highest score]
 }`;
       
-      let result = await generateContent(prompt, apiKey, { mimeType, data: base64Data });
+      let result = await generateContent(prompt, { mimeType, data: base64Data });
       result = result.replace(/```json/g, '').replace(/```/g, '').trim();
       return JSON.parse(result) as { myScore: number | null; allScores: number[]; highestScore: number; toppersCount: number };
     } catch (e: any) {
@@ -149,10 +122,6 @@ Return ONLY valid JSON in this exact structure. Do not use markdown blocks.
   };
 
   const getCourseInsight = async (course: Course, deliverables: any[]) => {
-    if (!apiKey) {
-      setError('Missing VITE_GEMINI_API_KEY');
-      return null;
-    }
     setLoading(true);
     try {
       const prompt = `You are an academic performance analyst inside a study dashboard. Your job is to evaluate one specific course using the course record and the student's recent deliverables, then produce a single paragraph that is brutally honest, highly analytical, and directly useful.
@@ -193,7 +162,7 @@ Cold, precise, direct, and constructive.
 Sound like a high-level academic analyst, not a friendly tutor.
 Be honest without being dramatic.`;
       
-      const insight = await generateContent(prompt, apiKey);
+      const insight = await generateContent(prompt);
       return insight;
     } catch (e: any) {
       setError(e.message);
@@ -204,10 +173,6 @@ Be honest without being dramatic.`;
   };
 
   const getCourseCriticalAction = async (course: Course, deliverables: any[]) => {
-    if (!apiKey) {
-      setError('Missing VITE_GEMINI_API_KEY');
-      return null;
-    }
     setLoading(true);
     try {
       const prompt = `You are a high-level academic performance analyst.
@@ -246,7 +211,7 @@ Output rules:
 - Do not add extra keys.
 - Do not add commentary before or after the JSON.`;
       
-      let res = await generateContent(prompt, apiKey);
+      let res = await generateContent(prompt);
       res = res.replace(/```json/g, '').replace(/```/g, '').trim();
       return JSON.parse(res) as { topic: string, insight: string };
     } catch (e: any) {
@@ -258,10 +223,6 @@ Output rules:
   };
 
   const generateCourseStudyPlan = async (course: Course, deliverables: any[], topic: string) => {
-    if (!apiKey) {
-      setError('Missing VITE_GEMINI_API_KEY');
-      return null;
-    }
     setLoading(true);
     try {
       const prompt = `You are a tactical academic planner.
@@ -307,7 +268,7 @@ Required output format:
   "Task 3 description"
 ]`;
       
-      let res = await generateContent(prompt, apiKey);
+      let res = await generateContent(prompt);
       res = res.replace(/```json/g, '').replace(/```/g, '').trim();
       return JSON.parse(res) as string[];
     } catch (e: any) {
@@ -319,10 +280,6 @@ Required output format:
   };
 
   const analyzeProjectScope = async (idea: string, deadline: string) => {
-    if (!apiKey) {
-      setError('Missing VITE_GEMINI_API_KEY');
-      return null;
-    }
     setLoading(true);
     try {
       const prompt = `You are a ruthless Senior Tech Lead and Academic Evaluator.
@@ -368,7 +325,7 @@ Output rules:
 - No bullet points.
 - No prefacing text.
 - No conclusion outside the JSON.`;
-      let res = await generateContent(prompt, apiKey);
+      let res = await generateContent(prompt);
       res = res.replace(/```json/g, '').replace(/```/g, '').trim();
       return JSON.parse(res) as { feedback: string };
     } catch (e: any) {
@@ -380,10 +337,6 @@ Output rules:
   };
 
   const generateProjectMilestones = async (idea: string, deadline: string) => {
-    if (!apiKey) {
-      setError('Missing VITE_GEMINI_API_KEY');
-      return null;
-    }
     setLoading(true);
     try {
       const prompt = `You are a tactical project manager.
@@ -429,7 +382,7 @@ Output rules:
 - Do not use markdown.
 - Do not use code fences.
 - Do not include explanatory text outside the JSON.`;
-      let res = await generateContent(prompt, apiKey);
+      let res = await generateContent(prompt);
       res = res.replace(/```json/g, '').replace(/```/g, '').trim();
       return JSON.parse(res) as { title: string, daysFromNow: number }[];
     } catch (e: any) {

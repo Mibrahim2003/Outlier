@@ -80,7 +80,11 @@ export function useDeliverables(userId: string | undefined, reportSyncError: (ms
   };
 
   const updateDeliverable = (deliverable: CourseDeliverable) => {
-    setDeliverablesState((prev) => prev.map((d) => (d.id === deliverable.id ? deliverable : d)));
+    let originalDeliverable: CourseDeliverable | undefined;
+    setDeliverablesState((prev) => {
+      originalDeliverable = prev.find((d) => d.id === deliverable.id);
+      return prev.map((d) => (d.id === deliverable.id ? deliverable : d));
+    });
 
     if (!userId) return;
 
@@ -88,7 +92,12 @@ export function useDeliverables(userId: string | undefined, reportSyncError: (ms
       .from('course_deliverables')
       .upsert(toPayload(deliverable, userId), { onConflict: 'user_id,id' })
       .then(({ error }) => {
-        if (error) reportSyncError(`Failed to update deliverable: ${error.message}`);
+        if (error) {
+          reportSyncError(`Failed to update deliverable: ${error.message}`);
+          if (originalDeliverable) {
+            setDeliverablesState((prev) => prev.map((d) => (d.id === deliverable.id ? originalDeliverable! : d)));
+          }
+        }
       });
   };
 

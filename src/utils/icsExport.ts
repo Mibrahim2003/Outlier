@@ -14,7 +14,7 @@ function generateTimestamp(): string {
 }
 
 export function generateICS(deadlines: Deadline[], calendar: AcademicCalendarData | null): string {
-  let icsLines = [
+  const icsLines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//AI Study Dashboard//Neo-Brutalist Edition//EN',

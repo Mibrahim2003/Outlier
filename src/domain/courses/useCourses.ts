@@ -6,7 +6,7 @@ import { DbCourseRow } from '../db-types';
 export const normalizeCourse = (course: DbCourseRow): Course => {
   const legacyColor = typeof course?.color === 'string' ? course.color : '';
 
-  let impactLevel: Course['impactLevel'] = course?.impactLevel as Course['impactLevel'];
+  let impactLevel: Course['impactLevel'] = (course?.impactLevel || course?.impact_level) as Course['impactLevel'];
   if (!impactLevel || !['heavy', 'standard', 'minimal'].includes(impactLevel)) {
     if (legacyColor.includes('secondary')) impactLevel = 'heavy';
     else if (legacyColor.includes('primary')) impactLevel = 'standard';
@@ -20,7 +20,7 @@ export const normalizeCourse = (course: DbCourseRow): Course => {
     code: String(course?.code ?? 'UNKNOWN'),
     name: String(course?.name ?? 'UNKNOWN COURSE'),
     credits: Number(course?.credits ?? 0),
-    gradeProgress: Number(course?.gradeProgress ?? 0),
+    gradeProgress: Number(course?.gradeProgress ?? course?.grade_progress ?? 0),
     impactLevel,
     themeColor: (course?.themeColor || course?.theme_color || 'yellow') as ThemeColor,
     grade: String(course?.grade ?? 'N/A'),
