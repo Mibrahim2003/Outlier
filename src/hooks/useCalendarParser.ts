@@ -1,53 +1,67 @@
 import { useState } from 'react';
 import { SemesterInfo } from '../types';
+import { supabase } from '../lib/supabase';
+import { z } from 'zod';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 const MAX_RETRIES = 3;
 
-async function fetchWithRetry(url: string, options: RequestInit, retries = MAX_RETRIES): Promise<Response> {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    const response = await fetch(url, options);
-    
-    const retryable = [429, 500, 503];
-    if (retryable.includes(response.status) && attempt < retries) {
-      // Exponential backoff: 3s, 6s, 12s
-      const delay = Math.pow(2, attempt) * 3000;
-      console.warn(`Gemini API ${response.status}. Retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${retries})`);
-      await new Promise(r => setTimeout(r, delay));
-      continue;
-    }
-
-    return response;
-  }
-  // Should not reach here, but just in case:
-  throw new Error('Max retries exceeded');
+function parseAIResponse<T>(text: string, schema: z.ZodType<T>): T {
+  const cleanedText = text.replace(/```json/i, '').replace(/```json/g, '').replace(/```/g, '').trim();
+  const rawJson = JSON.parse(cleanedText);
+  return schema.parse(rawJson);
 }
 
-function friendlyError(status: number): string {
-  switch (status) {
-    case 429: return 'Gemini API is rate limited. Please wait a minute and try again.';
-    case 401: case 403: return 'Invalid or missing Gemini API key. Check your .env file.';
-    case 500: case 503: return 'Gemini API is temporarily unavailable. Try again shortly.';
-    default: return `Gemini API returned error ${status}. Please try again.`;
+async function invokeWithRetry(prompt: string, mimeType: string, base64: string, retries = MAX_RETRIES): Promise<string> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const { data, error } = await supabase.functions.invoke('gemini-proxy', {
+      body: { prompt, mimeType, data: base64 }
+    });
+    
+    // Supabase invoke returns error for non-2xx status, or inside data.error
+    const isError = error || (data && data.error);
+    const errorMessage = error?.message || data?.error;
+    
+    // Simple retry check for rate limits or server errors
+    if (isError && (errorMessage?.toLowerCase().includes('rate limit') || errorMessage?.includes('500') || errorMessage?.includes('503'))) {
+      if (attempt < retries) {
+        const delay = Math.pow(2, attempt) * 3000;
+        console.warn(`Proxy returned error. Retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${retries})`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+    }
+
+    if (error) {
+      if (error.message === 'Failed to send a request to the Edge Function') {
+        throw new Error('Network error or file too large for proxy. Please try a smaller file (< 4MB) or check your connection.');
+      }
+      throw new Error(error.message || 'Failed to fetch from proxy');
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data.text;
   }
+  throw new Error('Max retries exceeded');
 }
 
 export function useCalendarParser() {
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
 
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-
   const parseCalendarImage = async (file: File): Promise<SemesterInfo[] | null> => {
-    if (!apiKey) {
-      setParseError('Missing VITE_GEMINI_API_KEY. Add it to your .env file.');
-      return null;
-    }
 
     setParsing(true);
     setParseError(null);
 
     try {
+      // Validate file size early to prevent connection drops by API gateway
+      if (file.size > 4 * 1024 * 1024) {
+        throw new Error('File is too large (max 4MB). Please compress the PDF or use an image snippet.');
+      }
+
       // Convert file to base64
       const base64 = await fileToBase64(file);
       const mimeType = file.type || 'image/png';
@@ -76,40 +90,25 @@ Rules:
 - If a date is ambiguous, make your best estimate based on typical academic schedules
 - Return an array even if there's only one semester`;
 
-      const body = JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType,
-                data: base64,
-              },
-            },
-          ],
-        }],
-        generationConfig: {
-          temperature: 0.2,
-        },
-      });
-
-      const response = await fetchWithRetry(
-        `${GEMINI_API_URL}?key=${apiKey}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }
-      );
-
-      if (!response.ok) {
-        throw new Error(friendlyError(response.status));
-      }
-
-      const data = await response.json();
-      let text = data.candidates[0].content.parts[0].text;
+      const textResult = await invokeWithRetry(prompt, mimeType, base64);
       
-      // Strip markdown code fences if present
-      text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      const schema = z.array(z.object({
+        name: z.string(),
+        startDate: z.string(),
+        endDate: z.string(),
+        breaks: z.array(z.object({
+          name: z.string(),
+          startDate: z.string(),
+          endDate: z.string()
+        })).optional(),
+        examPeriod: z.object({
+          startDate: z.string(),
+          endDate: z.string()
+        }).optional()
+      }).passthrough());
       
-      const semesters: SemesterInfo[] = JSON.parse(text);
-      return semesters;
+      const semesters = parseAIResponse(textResult, schema);
+      return semesters as SemesterInfo[];
     } catch (e: any) {
       console.error('Calendar parsing error:', e);
       setParseError(e.message || 'Failed to parse calendar. Please try again.');

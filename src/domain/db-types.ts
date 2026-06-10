@@ -73,3 +73,12 @@ export interface DbProfileRow {
   semester: string;
   course_count?: number;
 }
+
+export interface DbAcademicCalendarRow {
+  id: string;
+  user_id: string;
+  semesters: any[];
+  raw_text?: string | null;
+  uploaded_at: string;
+  created_at: string;
+}

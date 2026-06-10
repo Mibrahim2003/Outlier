@@ -1,6 +1,13 @@
 import { useState, useCallback } from 'react';
 import { Course, Deadline } from '../types';
 import { supabase } from '../lib/supabase';
+import { z } from 'zod';
+
+function parseAIResponse<T>(text: string, schema: z.ZodType<T>): T {
+  const cleanedText = text.replace(/```json/i, '').replace(/```json/g, '').replace(/```/g, '').trim();
+  const rawJson = JSON.parse(cleanedText);
+  return schema.parse(rawJson);
+}
 
 const generateContent = async (prompt: string, inlineData?: { mimeType: string; data: string }) => {
   const { data, error } = await supabase.functions.invoke('gemini-proxy', {
@@ -82,8 +89,15 @@ Return ONLY valid JSON in this exact structure:
 ]`;
       
       const res = await generateContent(prompt);
-      const cleanedRes = res.replace(/```json/g, '').replace(/```/g, '').trim();
-      return JSON.parse(cleanedRes);
+      const schema = z.array(z.object({
+        title: z.string().optional(),
+        desc: z.string().optional(),
+        priority: z.string().optional(),
+        courseId: z.string().optional(),
+        task: z.string().optional(),
+        reason: z.string().optional()
+      }).passthrough());
+      return parseAIResponse(res, schema) as any;
     } catch (e: any) {
       console.error(e);
       setError(e.message);
@@ -110,9 +124,14 @@ Return ONLY valid JSON in this exact structure. Do not use markdown blocks.
   "toppersCount": [number of students who achieved the highest score]
 }`;
       
-      let result = await generateContent(prompt, { mimeType, data: base64Data });
-      result = result.replace(/```json/g, '').replace(/```/g, '').trim();
-      return JSON.parse(result) as { myScore: number | null; allScores: number[]; highestScore: number; toppersCount: number };
+      const result = await generateContent(prompt, { mimeType, data: base64Data });
+      const schema = z.object({
+        myScore: z.number().nullable(),
+        allScores: z.array(z.number()),
+        highestScore: z.number(),
+        toppersCount: z.number()
+      });
+      return parseAIResponse(result, schema);
     } catch (e: any) {
       setError(e.message);
       return null;
@@ -211,9 +230,9 @@ Output rules:
 - Do not add extra keys.
 - Do not add commentary before or after the JSON.`;
       
-      let res = await generateContent(prompt);
-      res = res.replace(/```json/g, '').replace(/```/g, '').trim();
-      return JSON.parse(res) as { topic: string, insight: string };
+      const res = await generateContent(prompt);
+      const schema = z.object({ topic: z.string(), insight: z.string() });
+      return parseAIResponse(res, schema);
     } catch (e: any) {
       setError(e.message);
       return null;
@@ -268,9 +287,9 @@ Required output format:
   "Task 3 description"
 ]`;
       
-      let res = await generateContent(prompt);
-      res = res.replace(/```json/g, '').replace(/```/g, '').trim();
-      return JSON.parse(res) as string[];
+      const res = await generateContent(prompt);
+      const schema = z.array(z.string());
+      return parseAIResponse(res, schema);
     } catch (e: any) {
       setError(e.message);
       return null;
@@ -325,9 +344,9 @@ Output rules:
 - No bullet points.
 - No prefacing text.
 - No conclusion outside the JSON.`;
-      let res = await generateContent(prompt);
-      res = res.replace(/```json/g, '').replace(/```/g, '').trim();
-      return JSON.parse(res) as { feedback: string };
+      const res = await generateContent(prompt);
+      const schema = z.object({ feedback: z.string() });
+      return parseAIResponse(res, schema);
     } catch (e: any) {
       setError(e.message);
       return null;
@@ -382,9 +401,9 @@ Output rules:
 - Do not use markdown.
 - Do not use code fences.
 - Do not include explanatory text outside the JSON.`;
-      let res = await generateContent(prompt);
-      res = res.replace(/```json/g, '').replace(/```/g, '').trim();
-      return JSON.parse(res) as { title: string, daysFromNow: number }[];
+      const res = await generateContent(prompt);
+      const schema = z.array(z.object({ title: z.string(), daysFromNow: z.number() }));
+      return parseAIResponse(res, schema);
     } catch (e: any) {
       setError(e.message);
       return null;

@@ -1,11 +1,28 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000'
+];
+
+const getCorsHeaders = (req: Request) => {
+  const origin = req.headers.get('origin') || '';
+  const isAllowed = ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.vercel.app') || origin.endsWith('.netlify.app');
+  return {
+    'Access-Control-Allow-Origin': isAllowed ? origin : ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
 };
 
+const rateLimit = new Map<string, { count: number, reset: number }>();
+const MAX_REQUESTS_PER_MINUTE = 15;
+const WINDOW_MS = 60 * 1000;
+
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -21,16 +38,86 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { prompt, mimeType, data } = await req.json();
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    let userId = 'anonymous';
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        userId = payload.sub || 'anonymous';
+      } catch (e) {
+        // invalid token
+      }
+    }
 
-    if (!prompt) {
+    if (userId === 'anonymous') {
       return new Response(
-        JSON.stringify({ error: 'Prompt is required' }),
+        JSON.stringify({ error: 'Unauthorized: Missing or invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const now = Date.now();
+    const userLimit = rateLimit.get(userId) || { count: 0, reset: now + WINDOW_MS };
+    if (now > userLimit.reset) {
+      userLimit.count = 1;
+      userLimit.reset = now + WINDOW_MS;
+    } else {
+      userLimit.count++;
+      if (userLimit.count > MAX_REQUESTS_PER_MINUTE) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+    rateLimit.set(userId, userLimit);
+
+    const bodyText = await req.text();
+    if (!bodyText) {
+      return new Response(JSON.stringify({ error: 'Empty request body' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    let payloadObj;
+    try {
+      payloadObj = JSON.parse(bodyText);
+    } catch (e) {
+      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const { prompt, mimeType, data } = payloadObj;
+
+    if (!prompt || typeof prompt !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'Prompt is required and must be a string' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const model = data && mimeType ? 'gemini-1.5-flash' : 'gemini-1.5-flash'; // 1.5 flash handles both
+    if (prompt.length > 5000) {
+      return new Response(
+        JSON.stringify({ error: 'Prompt exceeds maximum length of 5000 characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (data) {
+      if (typeof data !== 'string' || data.length > 10 * 1024 * 1024) { // ~7MB decoded
+        return new Response(
+          JSON.stringify({ error: 'Image data too large (max ~7MB base64)' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+      if (!mimeType || !allowedTypes.includes(mimeType)) {
+        return new Response(
+          JSON.stringify({ error: 'Unsupported file type. Only JPEG, PNG, WEBP, and PDF are allowed.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    const model = data && mimeType ? 'gemini-2.5-flash' : 'gemini-2.5-flash'; // 2.5 flash handles both
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
     let parts = [{ text: prompt }];

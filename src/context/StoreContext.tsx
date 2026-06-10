@@ -70,11 +70,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const todoDomain = useTodos(userId, reportSyncError);
   const deliverableDomain = useDeliverables(userId, reportSyncError);
   const onboardingDomain = useOnboarding(userId, reportSyncError);
-  const calendarDomain = useCalendar();
+  const calendarDomain = useCalendar(userId, reportSyncError);
 
   // ─── Hydration ─────────────────────────────────────────────────────
   useEffect(() => {
     if (authLoading) return;
+
+    let hydrationTimeout: ReturnType<typeof setTimeout>;
 
     if (!user) {
       profile.reset();
@@ -83,11 +85,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       todoDomain.reset();
       deliverableDomain.reset();
       onboardingDomain.reset();
-      setTimeout(() => {
+      calendarDomain.reset();
+      hydrationTimeout = setTimeout(() => {
         setSyncError(null);
         setIsHydrating(false);
       }, 0);
-      return;
+      return () => {
+        if (hydrationTimeout) clearTimeout(hydrationTimeout);
+      };
     }
 
     const targetUserId = user.id;
@@ -98,13 +103,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setSyncError(null);
 
       try {
-        const [profileRes, coursesRes, deadlinesRes, todosRes, onboardingRes, deliverablesRes] = await Promise.all([
+        const [profileRes, coursesRes, deadlinesRes, todosRes, onboardingRes, deliverablesRes, calendarRes] = await Promise.all([
           supabase.from('profiles').select('*').eq('user_id', targetUserId).maybeSingle(),
           supabase.from('courses').select('*').eq('user_id', targetUserId),
           supabase.from('deadlines').select('*').eq('user_id', targetUserId),
           supabase.from('todos').select('*').eq('user_id', targetUserId),
           supabase.from('onboarding_states').select('*').eq('user_id', targetUserId).maybeSingle(),
           supabase.from('course_deliverables').select('*').eq('user_id', targetUserId),
+          supabase.from('academic_calendars').select('*').eq('user_id', targetUserId).maybeSingle(),
         ]);
 
         if (cancelled) return;
@@ -119,6 +125,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (onboardingRes.error && onboardingRes.error.code !== 'PGRST116') {
           reportSyncError(`Failed to load onboarding state from Supabase: ${onboardingRes.error.message}`);
         }
+        if (calendarRes.error && calendarRes.error.code !== 'PGRST116') {
+          reportSyncError(`Failed to load academic calendar from Supabase: ${calendarRes.error.message}`);
+        }
 
         // Hydrate each domain with typed data
         profile.hydrateProfile(profileRes.data as DbProfileRow | null);
@@ -127,6 +136,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         todoDomain.hydrateTodos((todosRes.data ?? []) as DbTodoRow[]);
         deliverableDomain.hydrateDeliverables((deliverablesRes.data ?? []) as DbDeliverableRow[]);
         onboardingDomain.hydrateOnboarding(onboardingRes.data as DbOnboardingRow | null);
+        if (!calendarRes.error) {
+          calendarDomain.hydrateCalendar(calendarRes.data as any | null);
+        }
       } catch (err) {
         if (!cancelled) {
           reportSyncError(`Failed to connect to Supabase: ${err instanceof Error ? err.message : 'Unknown error'}`);

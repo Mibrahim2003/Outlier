@@ -49,8 +49,9 @@ export const AcademicCalendar = () => {
   // Handle ?action=add-task query param from Dashboard navigation
   useEffect(() => {
     const action = searchParams.get('action');
+    let timeoutId: ReturnType<typeof setTimeout>;
     if (action === 'add-task' && academicCalendar) {
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         setSelectedDate(new Date());
         setEventType('task');
         setIsAddModalOpen(true);
@@ -58,6 +59,9 @@ export const AcademicCalendar = () => {
         setSearchParams({}, { replace: true });
       }, 0);
     }
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [searchParams, academicCalendar, setSearchParams]);
 
   const allSemesters = academicCalendar?.semesters ?? [];
