@@ -1,4 +1,4 @@
-import { Course, CourseDeliverable, GRADE_SCALE } from '../types';
+import { Course, CourseDeliverable } from '../types';
 
 /**
  * Estimates a grade based on relative grading (z-score) if class stats are available,

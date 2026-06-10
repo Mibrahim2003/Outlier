@@ -1,5 +1,4 @@
-import { TrendingUp, Calendar, Info, Target, Sparkles, AlertCircle, Clock, Loader2 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { TrendingUp, Calendar, Target, AlertCircle, Clock, Loader2 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useAI } from '../hooks/useAI';
 import { useEffect, useState } from 'react';
@@ -16,7 +15,7 @@ export const Analytics = () => {
         if (res && Array.isArray(res)) setPriorities(res);
       });
     }
-  }, [courses, deadlines]);
+  }, [courses, deadlines, getStudyPriorities]);
 
   // Use robust gpaEngine for calculations
   const { semesterGPA, courses: courseStatuses, totalCredits } = calculateSemesterGPA(courses, deliverables);
@@ -30,7 +29,7 @@ export const Analytics = () => {
   // Since we don't force them to enter past credits, we estimate based on graduation year roughly 
   // or just use a standard 60 to soften the blow.
   const pastCredits = 60; // Approximate
-  const { projectedCGPA, gap, requiredSemesterGPA } = projectCGPA(
+  const { projectedCGPA, gap } = projectCGPA(
     currentCGPA, targetCGPA, parseFloat(semesterGPA), totalCredits, pastCredits
   );
 

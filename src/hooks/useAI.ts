@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Course, Deadline } from '../types';
 import { supabase } from '../lib/supabase';
 
@@ -65,7 +65,7 @@ Deadlines: ${JSON.stringify(deadlines)}`;
     }
   };
 
-  const getStudyPriorities = async (courses: Course[], deadlines: Deadline[]) => {
+  const getStudyPriorities = useCallback(async (courses: Course[], deadlines: Deadline[]) => {
     setLoading(true);
     try {
       const prompt = `You are an AI study assistant. Generate exactly 3 study priority tasks based on this data:
@@ -91,7 +91,7 @@ Return ONLY valid JSON in this exact structure:
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const extractClassMarks = async (base64Data: string, mimeType: string, registrationNumber: string | undefined, totalMarks: number) => {
     setLoading(true);
@@ -222,7 +222,7 @@ Output rules:
     }
   };
 
-  const generateCourseStudyPlan = async (course: Course, deliverables: any[], topic: string) => {
+  const generateCourseStudyPlan = async (course: Course, _deliverables: any[], topic: string) => {
     setLoading(true);
     try {
       const prompt = `You are a tactical academic planner.
