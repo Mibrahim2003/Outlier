@@ -129,6 +129,8 @@ export const ProfileSetup = () => {
                     className="w-full bg-transparent border-b-4 border-white text-white p-2 text-3xl font-bold focus:outline-none focus:border-primary-container"
                     placeholder="202X"
                     type="number"
+                    min={2020}
+                    max={2040}
                     value={formData.graduationYear}
                     onChange={(e) => setFormData({ ...formData, graduationYear: e.target.value })}
                   />
@@ -164,6 +166,8 @@ export const ProfileSetup = () => {
                     placeholder="0.00"
                     type="number"
                     step="0.01"
+                    min={0}
+                    max={4}
                     value={formData.currentCgpa || ''}
                     onChange={(e) => setFormData({ ...formData, currentCgpa: parseFloat(e.target.value) || 0 })}
                   />
@@ -177,6 +181,8 @@ export const ProfileSetup = () => {
                     placeholder="4.00"
                     type="number"
                     step="0.01"
+                    min={0}
+                    max={4}
                     value={formData.targetGpa || ''}
                     onChange={(e) => setFormData({ ...formData, targetGpa: parseFloat(e.target.value) || 0 })}
                   />
@@ -204,7 +210,7 @@ export const ProfileSetup = () => {
               <button
                 className="bg-primary-container border-4 border-on-background w-16 h-16 flex items-center justify-center neo-shadow-sm active:translate-x-1 active:translate-y-1 active:shadow-none transition-all"
                 type="button"
-                onClick={() => setCourseVolume(formData.courseCount + 1)}
+                onClick={() => setCourseVolume(Math.min(10, formData.courseCount + 1))}
               >
                 <span className="material-symbols-outlined text-3xl font-bold">add</span>
               </button>

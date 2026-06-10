@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, FormEvent, ChangeEvent } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAI } from '../hooks/useAI';
 import { CourseDeliverable } from '../types';
@@ -21,6 +21,7 @@ import {
 import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { getThemeBgClass, getThemeTextClass } from '../utils/impactStyles';
+import { calculateCourseStatus } from '../utils/gpaEngine';
 
 const TABS = ['Quizzes', 'Assignments', 'Midterm', 'Final', 'Project', 'AI Insights'];
 
@@ -76,94 +77,51 @@ export const CourseDetail = () => {
   const finals = courseDeliverables.filter(d => d.type === 'final');
   const projects = courseDeliverables.filter(d => d.type === 'project');
 
-  // Calculation of Quick Stats (Method 2: Category-Weighted)
-  let weightedEarned = 0;
-  let weightedPossible = 0;
-  let weightedClassEarned = 0;
+  // Use the new gpaEngine for all calculations
+  const courseStatus = calculateCourseStatus(course, courseDeliverables);
   
-  const categories = ['quizzes', 'assignments', 'midterm', 'final', 'project'] as const;
+  let statYourAverage = courseStatus.coveredWeight > 0 ? courseStatus.projectedScore.toFixed(1) + '%' : 'N/A';
   
-  categories.forEach(cat => {
-    const weight = course.weightage?.[cat] || 0;
-    if (weight === 0) return;
-
-    const catTypeMap: Record<string, string> = {
-      'quizzes': 'quiz',
-      'assignments': 'assignment',
-      'midterm': 'midterm',
-      'final': 'final',
-      'project': 'project'
-    };
-    
-    const catDeliverables = courseDeliverables.filter(d => d.type === catTypeMap[cat] && d.score !== undefined && d.score !== '');
-    
-    if (catDeliverables.length > 0) {
-      let catMyPercentSum = 0;
-      let catClassPercentSum = 0;
-      let count = 0;
-      
-      catDeliverables.forEach(d => {
-        const score = parseFloat(d.score || '0');
-        const max = d.metadata?.totalMarks || 100;
-        const classAvg = parseFloat(d.metadata?.classAvg || '0');
-        
-        if (!isNaN(score) && max > 0) {
-          catMyPercentSum += (score / max);
-          catClassPercentSum += (!isNaN(classAvg) ? (classAvg / max) : (score / max));
-          count++;
-        }
-      });
-      
-      if (count > 0) {
-        weightedEarned += (catMyPercentSum / count) * weight;
-        weightedClassEarned += (catClassPercentSum / count) * weight;
-        weightedPossible += weight;
-      }
+  // Calculate class average (basic average of all entered classAvgs)
+  let classAvgsCount = 0;
+  let classAvgsSum = 0;
+  let stdDevCount = 0;
+  let stdDevSum = 0;
+  
+  courseDeliverables.forEach(d => {
+    const avg = parseFloat(d.metadata?.classAvg as string || 'NaN');
+    if (!isNaN(avg)) {
+      classAvgsSum += avg;
+      classAvgsCount++;
+    }
+    const stdDev = parseFloat(d.metadata?.classStdDev as unknown as string || d.metadata?.stdDev as string || 'NaN');
+    if (!isNaN(stdDev)) {
+      stdDevSum += stdDev;
+      stdDevCount++;
     }
   });
-
-  let statYourAverage = 'N/A';
-  let statClassAverage = 'N/A';
-  let statProjectedGrade = 'N/A';
-  let statProjectedNote = 'No data available';
-  let statStdDeviation = 'N/A';
+  
+  let statClassAverage = classAvgsCount > 0 ? (classAvgsSum / classAvgsCount).toFixed(1) + '%' : 'N/A';
+  let statStdDeviation = stdDevCount > 0 ? (stdDevSum / stdDevCount).toFixed(1) : 'N/A';
+  
+  let statProjectedGrade = courseStatus.estimatedGrade;
+  let statProjectedNote = `Based on weightage (${courseStatus.coveredWeight}% of final grade accounted for)`;
+  
   let statDistanceTopper = 'N/A';
-
-  if (weightedPossible > 0) {
-    const currentPercent = (weightedEarned / weightedPossible) * 100;
-    const currentClassPercent = (weightedClassEarned / weightedPossible) * 100;
-    
-    statYourAverage = currentPercent.toFixed(1) + '%';
-    statClassAverage = currentClassPercent.toFixed(1) + '%';
-    
-    if (currentPercent >= 90) statProjectedGrade = 'A';
-    else if (currentPercent >= 80) statProjectedGrade = 'B';
-    else if (currentPercent >= 70) statProjectedGrade = 'C';
-    else if (currentPercent >= 60) statProjectedGrade = 'D';
-    else statProjectedGrade = 'F';
-    
-    statProjectedNote = `Based on weightage (${weightedPossible}% of final grade accounted for)`;
-
-    const devs = courseDeliverables.map(d => parseFloat(d.metadata?.stdDev || '0')).filter(n => !isNaN(n) && n > 0);
-    if (devs.length > 0) {
-      statStdDeviation = (devs.reduce((a, b) => a + b, 0) / devs.length).toFixed(1);
+  let maxGapSum = 0;
+  let gapCount = 0;
+  courseDeliverables.forEach(d => {
+    const highest = d.metadata?.highestScore;
+    const score = parseFloat(d.score || '0');
+    if (highest !== undefined && !isNaN(score)) {
+       const max = d.metadata?.totalMarks || 100;
+       maxGapSum += ((highest - score) / max) * 100;
+       gapCount++;
     }
-    
-    let maxGapSum = 0;
-    let gapCount = 0;
-    courseDeliverables.forEach(d => {
-      const highest = d.metadata?.highestScore;
-      const score = parseFloat(d.score || '0');
-      if (highest !== undefined && !isNaN(score)) {
-         const max = d.metadata?.totalMarks || 100;
-         maxGapSum += ((highest - score) / max) * 100;
-         gapCount++;
-      }
-    });
-    
-    if (gapCount > 0) {
-      statDistanceTopper = '-' + (maxGapSum / gapCount).toFixed(1) + '%';
-    }
+  });
+  
+  if (gapCount > 0) {
+    statDistanceTopper = '-' + (maxGapSum / gapCount).toFixed(1) + '%';
   }
 
   const handleGenerateInsight = async () => {
@@ -205,7 +163,7 @@ export const CourseDetail = () => {
   const [initProjectIdea, setInitProjectIdea] = useState('');
   const [initProjectDeadline, setInitProjectDeadline] = useState('');
 
-  const handleInitializeProject = (e: React.FormEvent) => {
+  const handleInitializeProject = (e: FormEvent) => {
     e.preventDefault();
     if (!initProjectTitle || !initProjectDeadline) return;
 
@@ -270,7 +228,7 @@ export const CourseDetail = () => {
     }
   };
 
-  const handleAddSubmit = (e: React.FormEvent) => {
+  const handleAddSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!newTitle) return;
 
@@ -294,7 +252,7 @@ export const CourseDetail = () => {
     setNewTotalMarks('100');
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -318,7 +276,7 @@ export const CourseDetail = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleUploadMarks = (e: React.FormEvent) => {
+  const handleUploadMarks = (e: FormEvent) => {
     e.preventDefault();
     if (!uploadDeliverableId) return;
 

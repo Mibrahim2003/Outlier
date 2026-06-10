@@ -3,9 +3,10 @@ import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { useAI } from '../hooks/useAI';
 import { useEffect, useState } from 'react';
+import { calculateSemesterGPA, projectCGPA } from '../utils/gpaEngine';
 
 export const Analytics = () => {
-  const { courses, deadlines } = useStore();
+  const { courses, deadlines, deliverables, userProfile } = useStore();
   const { getStudyPriorities, loading } = useAI();
   const [priorities, setPriorities] = useState<any[] | null>(null);
 
@@ -17,23 +18,21 @@ export const Analytics = () => {
     }
   }, [courses, deadlines]);
 
-  // Rough GPA estimation based on course credits and gradeProgress
-  let totalCredits = 0;
-  let totalPoints = 0;
+  // Use robust gpaEngine for calculations
+  const { semesterGPA, courses: courseStatuses, totalCredits } = calculateSemesterGPA(courses, deliverables);
   
-  courses.forEach(c => {
-    totalCredits += c.credits;
-    // Map gradeProgress to a 4.0 scale (rough heuristic: 90=4.0, 80=3.0, 70=2.0)
-    let gpaPoints = 0;
-    if (c.gradeProgress >= 90) gpaPoints = 4.0;
-    else if (c.gradeProgress >= 80) gpaPoints = 3.3;
-    else if (c.gradeProgress >= 70) gpaPoints = 2.3;
-    else gpaPoints = 1.0;
-    
-    totalPoints += (gpaPoints * c.credits);
-  });
+  // Projection based on current CGPA
+  const currentCGPA = userProfile?.currentCgpa || 0;
+  const targetCGPA = userProfile?.targetGpa || 4.0;
   
-  const estimatedGPA = totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : '0.00';
+  // Defaulting past credits to 90 if unknown, so projection has some realistic anchor, 
+  // or 0 to let the math treat this semester as 100% of the weight if they are freshmen
+  // Since we don't force them to enter past credits, we estimate based on graduation year roughly 
+  // or just use a standard 60 to soften the blow.
+  const pastCredits = 60; // Approximate
+  const { projectedCGPA, gap, requiredSemesterGPA } = projectCGPA(
+    currentCGPA, targetCGPA, parseFloat(semesterGPA), totalCredits, pastCredits
+  );
 
   return (
     <div className="space-y-10">
@@ -63,12 +62,28 @@ export const Analytics = () => {
               </div>
             </div>
             <div className="mt-8 flex items-baseline gap-4">
-              <h3 className="text-7xl md:text-8xl font-black tracking-tighter">{estimatedGPA}</h3>
+              <h3 className="text-7xl md:text-8xl font-black tracking-tighter">{semesterGPA}</h3>
               <div className="flex flex-col">
                 <span className="text-xl font-bold uppercase tracking-tight leading-none text-ink/60">Estimated</span>
-                <span className="text-xl font-bold uppercase tracking-tight leading-none">GPA</span>
+                <span className="text-xl font-bold uppercase tracking-tight leading-none">Semester GPA</span>
               </div>
             </div>
+            
+            {/* CGPA Projection Mini-Card */}
+            {currentCGPA > 0 && (
+              <div className="mt-6 border-2 border-ink p-4 bg-white/50 flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase text-ink/60">Projected CGPA</span>
+                  <span className="text-2xl font-black">{projectedCGPA.toFixed(2)}</span>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-[10px] font-black uppercase text-ink/60">Target Gap</span>
+                  <span className={`text-lg font-black ${gap >= 0 ? 'text-primary' : 'text-secondary'}`}>
+                    {gap > 0 ? '+' : ''}{gap.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
           <div className="mt-12 space-y-4">
             <div className="flex justify-between font-black uppercase text-[10px]">
@@ -136,77 +151,41 @@ export const Analytics = () => {
       <div>
         <h3 className="text-2xl font-black uppercase tracking-tighter mb-6 border-b-4 border-ink inline-block pr-8">Performance Matrix</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Course Card: CS-201 */}
-          <div className="bg-white border-3 border-ink shadow-[6px_6px_0px_#1A1A1A]">
-            <div className="p-6 bg-ink text-white flex justify-between items-center">
-              <div>
-                <h4 className="text-2xl font-black tracking-tighter">CS-201</h4>
-                <p className="text-[10px] uppercase font-bold tracking-widest text-primary-container">Data Structures & Algorithms</p>
-              </div>
-              <div className="text-4xl font-black text-primary-container">A</div>
-            </div>
-            <div className="p-6 space-y-6">
-              <div className="flex justify-between items-end gap-2 h-24 px-4">
-                {[
-                  { label: 'Quizzes', h: '92%', c: 'bg-primary' },
-                  { label: 'Labs', h: '85%', c: 'bg-tertiary' },
-                  { label: 'Midterm', h: '78%', c: 'bg-secondary' },
-                  { label: 'Final', h: '0%', c: 'bg-ink/10' },
-                ].map((bar) => (
-                  <div key={bar.label} className="flex flex-col items-center flex-1 gap-2">
-                    <div className={`w-full ${bar.c} border-2 border-ink`} style={{ height: bar.h }}></div>
-                    <span className="text-[9px] font-bold uppercase">{bar.label}</span>
+          {courseStatuses.map((cs) => {
+            const course = courses.find(c => c.id === cs.courseId);
+            if (!course) return null;
+            return (
+              <div key={course.id} className="bg-white border-3 border-ink shadow-[6px_6px_0px_#1A1A1A] flex flex-col">
+                <div className="p-6 bg-ink text-white flex justify-between items-center">
+                  <div>
+                    <h4 className="text-2xl font-black tracking-tighter">{course.code}</h4>
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-primary-container">{course.name}</p>
                   </div>
-                ))}
-              </div>
-              <div className="pt-4 border-t-2 border-ink/10 grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-[10px] font-black uppercase text-ink/40 block mb-1">Current Score</span>
-                  <span className="text-xl font-black">88.5%</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-black uppercase text-ink/40 block mb-1">Class Avg</span>
-                  <span className="text-xl font-black text-ink/60">74.2%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Course Card: EE-101 */}
-          <div className="bg-white border-3 border-ink shadow-[6px_6px_0px_#1A1A1A]">
-            <div className="p-6 bg-ink/90 text-white flex justify-between items-center">
-              <div>
-                <h4 className="text-2xl font-black tracking-tighter">EE-101</h4>
-                <p className="text-[10px] uppercase font-bold tracking-widest text-primary-container">Circuit Theory I</p>
-              </div>
-              <div className="text-4xl font-black text-secondary">B+</div>
-            </div>
-            <div className="p-6 space-y-6">
-              <div className="flex justify-between items-end gap-2 h-24 px-4">
-                {[
-                  { label: 'Quizzes', h: '72%', c: 'bg-primary' },
-                  { label: 'Labs', h: '90%', c: 'bg-tertiary' },
-                  { label: 'Midterm', h: '65%', c: 'bg-secondary' },
-                  { label: 'Final', h: '0%', c: 'bg-ink/10' },
-                ].map((bar) => (
-                  <div key={bar.label} className="flex flex-col items-center flex-1 gap-2">
-                    <div className={`w-full ${bar.c} border-2 border-ink`} style={{ height: bar.h }}></div>
-                    <span className="text-[9px] font-bold uppercase">{bar.label}</span>
+                  <div className={`text-4xl font-black ${cs.confidence === 'low' ? 'text-ink/40' : 'text-primary-container'}`}>
+                    {cs.estimatedGrade}
                   </div>
-                ))}
-              </div>
-              <div className="pt-4 border-t-2 border-ink/10 grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-[10px] font-black uppercase text-ink/40 block mb-1">Current Score</span>
-                  <span className="text-xl font-black">79.8%</span>
                 </div>
-                <div>
-                  <span className="text-[10px] font-black uppercase text-ink/40 block mb-1">Class Avg</span>
-                  <span className="text-xl font-black text-ink/60">81.1%</span>
+                <div className="p-6 space-y-6 flex-grow flex flex-col justify-end">
+                  <div className="pt-4 border-t-2 border-ink/10 grid grid-cols-3 gap-4">
+                    <div>
+                      <span className="text-[10px] font-black uppercase text-ink/40 block mb-1">Projected</span>
+                      <span className="text-xl font-black">{cs.projectedScore > 0 ? cs.projectedScore.toFixed(1) + '%' : 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black uppercase text-ink/40 block mb-1">Weight Covered</span>
+                      <span className="text-xl font-black text-ink/60">{cs.coveredWeight}%</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black uppercase text-ink/40 block mb-1">Confidence</span>
+                      <span className={`text-sm font-black uppercase ${cs.confidence === 'high' ? 'text-primary' : cs.confidence === 'medium' ? 'text-tertiary' : 'text-secondary'}`}>
+                        {cs.confidence}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
       </div>
 

@@ -6,7 +6,7 @@ import { getImpactStyles, ThemeColor, getThemeBgClass } from '../utils/impactSty
 
 export const Onboarding = () => {
   const navigate = useNavigate();
-  const { courses, addCourse, removeCourse, commitLoadout, onboardingState } = useStore();
+  const { courses, addCourse, removeCourse, commitLoadout, onboardingState, userProfile } = useStore();
   
   // User can revisit this page to add courses, so no auto-redirect here.
 
@@ -143,6 +143,8 @@ export const Onboarding = () => {
                     className="w-full bg-background/50 border-b-4 border-on-background p-3 text-2xl md:text-4xl text-center font-bold uppercase focus:bg-primary-container focus:outline-none transition-all"
                     placeholder="3"
                     type="number"
+                    min={1}
+                    max={6}
                     value={newCourse.credits || ''}
                     onChange={(e) => setNewCourse({ ...newCourse, credits: parseInt(e.target.value) || 0 })}
                   />
@@ -185,7 +187,9 @@ export const Onboarding = () => {
                     <label className="block text-[10px] font-bold uppercase text-white tracking-widest">{item.label}</label>
                     <input 
                       className="w-full bg-transparent border-b-4 border-white text-white p-2 text-2xl font-bold focus:outline-none focus:border-primary-container text-center" 
-                      type="number" 
+                      type="number"
+                      min={0}
+                      max={100}
                       value={newCourse.weightage?.[item.key as keyof typeof newCourse.weightage] || ''}
                       onChange={(e) => setNewCourse({
                         ...newCourse,
@@ -219,7 +223,7 @@ export const Onboarding = () => {
               <h3 className="font-headline text-2xl font-bold uppercase tracking-tighter mb-6 border-b-4 border-on-background pb-2 flex items-center justify-between">
                 LOADOUT_STATE
                 <span className="text-xs bg-on-background text-white px-3 py-1 font-body tracking-[0.3em] font-bold">
-                  {courses.length.toString().padStart(2, '0')} UNITS
+                  {courses.length.toString().padStart(2, '0')}{userProfile?.courseCount ? ` / ${String(userProfile.courseCount).padStart(2, '0')}` : ''} UNITS
                 </span>
               </h3>
 

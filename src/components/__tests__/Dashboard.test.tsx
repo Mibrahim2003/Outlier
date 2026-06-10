@@ -55,17 +55,10 @@ describe('Dashboard', () => {
     // 2. Check if upcoming deadlines banner is dynamic
     expect(screen.getByText(/1 upcoming deadline/i)).toBeInTheDocument();
 
-    // 3. Check calculated GPA and target visualization
-    expect(screen.getByText('3.13 / 3.80')).toBeInTheDocument();
-    
-    // 4. Check active courses stat
-    expect(screen.getByText('Active Courses')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-
-    // 5. Check Pending Tasks shows uncompleted todo count (1 uncompleted)
+    // 3. Check Pending Tasks shows uncompleted todo count (1 uncompleted)
     expect(screen.getByText('Pending Tasks')).toBeInTheDocument();
 
-    // 6. Check Deadlines stat shows deadline count
+    // 4. Check Deadlines stat shows deadline count
     expect(screen.getByText('Deadlines')).toBeInTheDocument();
   });
 

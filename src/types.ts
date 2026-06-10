@@ -1,5 +1,19 @@
 export type ThemeColor = 'yellow' | 'pink' | 'green' | 'blue';
 
+export const GRADE_SCALE: { grade: string; gpc: number }[] = [
+  { grade: 'A',  gpc: 4.00 },
+  { grade: 'A-', gpc: 3.67 },
+  { grade: 'B+', gpc: 3.33 },
+  { grade: 'B',  gpc: 3.00 },
+  { grade: 'B-', gpc: 2.67 },
+  { grade: 'C+', gpc: 2.33 },
+  { grade: 'C',  gpc: 2.00 },
+  { grade: 'C-', gpc: 1.67 },
+  { grade: 'D+', gpc: 1.33 },
+  { grade: 'D',  gpc: 1.00 },
+  { grade: 'F',  gpc: 0.00 },
+];
+
 export interface Course {
   id: string;
   code: string;
@@ -100,7 +114,7 @@ export interface CourseDeliverable {
   score?: string;
   status: string;
   metadata?: {
-    classAvg?: string;
+    classAvg?: string | number;
     progress?: number;
     topics?: string;
     highestScore?: number;
@@ -110,6 +124,11 @@ export interface CourseDeliverable {
     scopeFeedback?: string;
     milestonesGenerated?: boolean;
     totalMarks?: number;
+    // GPA engine fields
+    obtainedMarks?: number;
+    classStdDev?: number;
+    classSize?: number;
+    extractionSource?: 'ai' | 'manual';
   };
 }
 
