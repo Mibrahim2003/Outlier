@@ -7,6 +7,8 @@ import { useAI } from '../hooks/useAI';
 import { useState } from 'react';
 import { getThemeBgClass } from '../utils/impactStyles';
 import { getGreeting, getDeadlineStatus, isSameDay } from '../utils/dateUtils';
+import { ErrorBoundary } from 'react-error-boundary';
+import { WidgetErrorFallback } from './ErrorBoundary';
 
 export const Dashboard = () => {
   const { userProfile, courses, deadlines, todos, toggleTodo } = useStore();
@@ -126,44 +128,46 @@ export const Dashboard = () => {
           </div>
 
           {/* AI Recommendations Widget */}
-          <div className="bg-white border-3 border-ink shadow-[6px_6px_0px_#1A1A1A]">
-            <div className="bg-secondary p-4 border-b-4 border-ink flex items-center gap-3">
-              <Sparkles className="text-white" fill="currentColor" size={24} />
-              <span className="text-white font-black uppercase tracking-widest text-lg">🤖 AI Says...</span>
+          <ErrorBoundary FallbackComponent={WidgetErrorFallback}>
+            <div className="bg-white border-3 border-ink shadow-[6px_6px_0px_#1A1A1A]">
+              <div className="bg-secondary p-4 border-b-4 border-ink flex items-center gap-3">
+                <Sparkles className="text-white" fill="currentColor" size={24} />
+                <span className="text-white font-black uppercase tracking-widest text-lg">🤖 AI Says...</span>
+              </div>
+              <div className="p-8 min-h-[120px] flex items-center">
+                {loading ? (
+                  <div className="flex items-center gap-3 text-ink/60 font-medium w-full justify-center">
+                    <Loader2 className="animate-spin" />
+                    <span>Connecting to Gemini 2.5 Flash...</span>
+                  </div>
+                ) : insight ? (
+                  <div className="w-full">
+                    <p className="text-xl md:text-2xl font-medium leading-snug mb-4">
+                      {insight}
+                    </p>
+                    <button 
+                      onClick={() => getDashboardInsight(courses, deadlines).then(res => { if (res) setInsight(res); })}
+                      className="bg-white text-ink border-2 border-ink px-4 py-2 text-xs font-black uppercase tracking-widest shadow-[3px_3px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+                    >
+                      Regenerate Insight
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-full flex flex-col items-start gap-4">
+                    <p className="text-xl md:text-2xl font-medium opacity-60 italic">
+                      Click below to generate your daily AI insight based on your current courses and deadlines.
+                    </p>
+                    <button 
+                      onClick={() => getDashboardInsight(courses, deadlines).then(res => { if (res) setInsight(res); })}
+                      className="bg-secondary text-white border-3 border-ink px-6 py-3 text-sm font-black uppercase tracking-widest shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2"
+                    >
+                      <Sparkles size={16} /> Generate Insight
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="p-8 min-h-[120px] flex items-center">
-              {loading ? (
-                <div className="flex items-center gap-3 text-ink/60 font-medium w-full justify-center">
-                  <Loader2 className="animate-spin" />
-                  <span>Connecting to Gemini 2.5 Flash...</span>
-                </div>
-              ) : insight ? (
-                <div className="w-full">
-                  <p className="text-xl md:text-2xl font-medium leading-snug mb-4">
-                    {insight}
-                  </p>
-                  <button 
-                    onClick={() => getDashboardInsight(courses, deadlines).then(res => { if (res) setInsight(res); })}
-                    className="bg-white text-ink border-2 border-ink px-4 py-2 text-xs font-black uppercase tracking-widest shadow-[3px_3px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
-                  >
-                    Regenerate Insight
-                  </button>
-                </div>
-              ) : (
-                <div className="w-full flex flex-col items-start gap-4">
-                  <p className="text-xl md:text-2xl font-medium opacity-60 italic">
-                    Click below to generate your daily AI insight based on your current courses and deadlines.
-                  </p>
-                  <button 
-                    onClick={() => getDashboardInsight(courses, deadlines).then(res => { if (res) setInsight(res); })}
-                    className="bg-secondary text-white border-3 border-ink px-6 py-3 text-sm font-black uppercase tracking-widest shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2"
-                  >
-                    <Sparkles size={16} /> Generate Insight
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          </ErrorBoundary>
         </div>
 
         {/* Right Sidebar: Today's Tasks + Upcoming Deadlines */}

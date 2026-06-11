@@ -16,6 +16,8 @@ import {
   X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { ErrorBoundary } from 'react-error-boundary';
+import { LayoutErrorFallback } from './ErrorBoundary';
 
 interface SidebarItemProps {
   to: string;
@@ -156,7 +158,9 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
               transition={{ duration: 0.2 }}
               className="max-w-7xl mx-auto"
             >
-              {children}
+              <ErrorBoundary FallbackComponent={LayoutErrorFallback} resetKeys={[location.pathname]}>
+                {children}
+              </ErrorBoundary>
             </motion.div>
           </AnimatePresence>
         </main>

@@ -17,11 +17,12 @@ import { AcademicCalendar } from './components/AcademicCalendar';
 import { PostAuthGate } from './components/PostAuthGate';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicOnlyRoute } from './components/PublicOnlyRoute';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { ErrorBoundary } from 'react-error-boundary';
+import { GlobalErrorFallback } from './components/ErrorBoundary';
 
 export default function App() {
   return (
-    <ErrorBoundary>
+    <ErrorBoundary FallbackComponent={GlobalErrorFallback}>
       <Router>
         <Routes>
         {/* ─── Public-Only Routes ────────────────────────────── */}
