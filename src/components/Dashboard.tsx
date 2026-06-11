@@ -13,8 +13,18 @@ import { WidgetErrorFallback } from './ErrorBoundary';
 export const Dashboard = () => {
   const { userProfile, courses, deadlines, todos, toggleTodo } = useStore();
   const { getDashboardInsight, loading } = useAI();
-  const [insight, setInsight] = useState<string | null>(null);
+  const [insight, setInsight] = useState<string | null>(() => {
+    return sessionStorage.getItem('outlier_ai_insight');
+  });
   const navigate = useNavigate();
+
+  const handleGenerateInsight = async () => {
+    const res = await getDashboardInsight(courses, deadlines);
+    if (res) {
+      setInsight(res);
+      sessionStorage.setItem('outlier_ai_insight', res);
+    }
+  };
 
   const userName = userProfile?.name || 'Student';
   const greeting = getGreeting();
@@ -146,7 +156,7 @@ export const Dashboard = () => {
                       {insight}
                     </p>
                     <button 
-                      onClick={() => getDashboardInsight(courses, deadlines).then(res => { if (res) setInsight(res); })}
+                      onClick={handleGenerateInsight}
                       className="bg-white text-ink border-2 border-ink px-4 py-2 text-xs font-black uppercase tracking-widest shadow-[3px_3px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
                     >
                       Regenerate Insight
@@ -158,7 +168,7 @@ export const Dashboard = () => {
                       Click below to generate your daily AI insight based on your current courses and deadlines.
                     </p>
                     <button 
-                      onClick={() => getDashboardInsight(courses, deadlines).then(res => { if (res) setInsight(res); })}
+                      onClick={handleGenerateInsight}
                       className="bg-secondary text-white border-3 border-ink px-6 py-3 text-sm font-black uppercase tracking-widest shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2"
                     >
                       <Sparkles size={16} /> Generate Insight
