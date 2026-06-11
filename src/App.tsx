@@ -19,9 +19,19 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicOnlyRoute } from './components/PublicOnlyRoute';
 import { ErrorBoundary } from 'react-error-boundary';
 import { GlobalErrorFallback } from './components/ErrorBoundary';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, MutationCache } from '@tanstack/react-query';
+import { Toaster, toast } from 'sonner';
 
 const queryClient = new QueryClient({
+  mutationCache: new MutationCache({
+    onError: (error, _variables, _context, mutation) => {
+      if (mutation.meta?.silent) return;
+
+      toast.error('Sync Failed', {
+        description: error.message || 'Check your connection and try again.',
+      });
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
@@ -34,6 +44,13 @@ export default function App() {
   return (
     <ErrorBoundary FallbackComponent={GlobalErrorFallback}>
       <QueryClientProvider client={queryClient}>
+        <Toaster 
+          position="bottom-right" 
+          toastOptions={{
+            className: 'bg-white border-4 border-ink shadow-[6px_6px_0px_#1A1A1A] rounded-none font-bold',
+            descriptionClassName: 'text-ink/70 font-medium',
+          }}
+        />
         <Router>
         <Routes>
         {/* ─── Public-Only Routes ────────────────────────────── */}
