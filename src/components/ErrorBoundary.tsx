@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 import { FallbackProps } from 'react-error-boundary';
 
@@ -16,7 +16,7 @@ export const GlobalErrorFallback = ({ error, resetErrorBoundary }: FallbackProps
         </div>
         
         <div className="bg-white border-4 border-ink p-4 mb-8 overflow-auto max-h-48 text-sm font-mono whitespace-pre-wrap">
-          {error?.message || 'Unknown error occurred'}
+          {(error as Error)?.message || 'Unknown error occurred'}
         </div>
 
         <button 
@@ -45,7 +45,7 @@ export const LayoutErrorFallback = ({ error, resetErrorBoundary }: FallbackProps
         </div>
         
         <div className="bg-black/20 border-4 border-ink p-4 mb-8 overflow-auto max-h-40 text-sm font-mono whitespace-pre-wrap">
-          {error?.message || 'Unknown error occurred'}
+          {(error as Error)?.message || 'Unknown error occurred'}
         </div>
 
         <div className="flex gap-4">
@@ -76,7 +76,7 @@ export const WidgetErrorFallback = ({ error, resetErrorBoundary }: FallbackProps
           </div>
           <div>
             <h3 className="text-lg font-black uppercase tracking-tight">Widget Failed</h3>
-            <p className="text-sm font-medium opacity-80 truncate max-w-[200px] sm:max-w-xs">{error?.message}</p>
+            <p className="text-sm font-medium opacity-80 truncate max-w-[200px] sm:max-w-xs">{(error as Error)?.message}</p>
           </div>
         </div>
         
