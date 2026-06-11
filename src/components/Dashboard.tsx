@@ -9,20 +9,20 @@ import { getThemeBgClass } from '../utils/impactStyles';
 import { getGreeting, getDeadlineStatus, isSameDay } from '../utils/dateUtils';
 import { ErrorBoundary } from 'react-error-boundary';
 import { WidgetErrorFallback } from './ErrorBoundary';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 export const Dashboard = () => {
   const { userProfile, courses, deadlines, todos, toggleTodo } = useStore();
   const { getDashboardInsight, loading } = useAI();
-  const [insight, setInsight] = useState<string | null>(() => {
-    return sessionStorage.getItem('outlier_ai_insight');
-  });
   const navigate = useNavigate();
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [insight, setInsight] = useLocalStorage<string | null>(`daily-insight-${todayStr}`, null);
 
   const handleGenerateInsight = async () => {
     const res = await getDashboardInsight(courses, deadlines);
     if (res) {
       setInsight(res);
-      sessionStorage.setItem('outlier_ai_insight', res);
     }
   };
 
