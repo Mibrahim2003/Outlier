@@ -6,7 +6,8 @@ import { useDeliverables } from '../domain/deliverables/useDeliverables';
 import { useTodos } from '../domain/todos/useTodos';
 import { useCalendar } from '../domain/calendar/useCalendar';
 import { useAI } from '../hooks/useAI';
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { calculateSemesterGPA, projectCGPA, estimateGrade } from '../utils/gpaEngine';
 import { isDateInRange } from '../utils/dateUtils';
 import { Todo } from '../types';
@@ -19,8 +20,14 @@ export const Analytics = () => {
   const { deliverables } = useDeliverables();
   const { addTodo } = useTodos();
   const { academicCalendar } = useCalendar();
-  const { getStudyPriorities, loading } = useAI();
-  const [priorities, setPriorities] = useState<any[] | null>(null);
+  const { getStudyPriorities } = useAI();
+
+  const { data: priorities, isLoading: loading } = useQuery({
+    queryKey: ['ai-priorities', courses, deadlines],
+    queryFn: () => getStudyPriorities(courses, deadlines),
+    staleTime: 1000 * 60 * 60, // cache for an hour
+    enabled: courses.length > 0,
+  });
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advancedPastCredits, setAdvancedPastCredits] = useState<string>('');
 
@@ -33,13 +40,7 @@ export const Analytics = () => {
   const [showOptimizeModal, setShowOptimizeModal] = useState(false);
   const [taskApprovals, setTaskApprovals] = useState<{ text: string; checked: boolean; date: string }[]>([]);
 
-  useEffect(() => {
-    if (courses.length > 0) {
-      getStudyPriorities(courses, deadlines).then(res => {
-        if (res && Array.isArray(res)) setPriorities(res);
-      });
-    }
-  }, [courses, deadlines, getStudyPriorities]);
+  // Query manages lifecycle now
 
   // Use robust gpaEngine for calculations
   const { semesterGPA, courses: courseStatuses, totalCredits } = calculateSemesterGPA(courses, deliverables);
@@ -107,7 +108,7 @@ export const Analytics = () => {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const dateStr = tomorrow.toISOString().split('T')[0];
 
-    setTaskApprovals(priorities.map(p => ({
+    setTaskApprovals((priorities as any[]).map((p: any) => ({
       text: p.title || p.task || 'Study Task',
       checked: true,
       date: dateStr,

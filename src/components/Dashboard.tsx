@@ -7,6 +7,7 @@ import { useCourses } from '../domain/courses/useCourses';
 import { useDeadlines } from '../domain/deadlines/useDeadlines';
 import { useTodos } from '../domain/todos/useTodos';
 import { useAI } from '../hooks/useAI';
+import { useMutation } from '@tanstack/react-query';
 
 import { getThemeBgClass } from '../utils/impactStyles';
 import { getGreeting, getDeadlineStatus, isSameDay } from '../utils/dateUtils';
@@ -20,17 +21,23 @@ export const Dashboard = () => {
   const { courses } = useCourses();
   const { deadlines } = useDeadlines();
   const { todos, toggleTodo } = useTodos();
-  const { getDashboardInsight, loading } = useAI();
+  const { getDashboardInsight } = useAI();
   const navigate = useNavigate();
 
   const todayStr = new Date().toISOString().split('T')[0];
   const [insight, setInsight] = useLocalStorage<string | null>(`daily-insight-${todayStr}`, null);
 
-  const handleGenerateInsight = async () => {
-    const res = await getDashboardInsight(courses, deadlines);
-    if (res) {
-      setInsight(res);
+  const insightMutation = useMutation({
+    mutationFn: () => getDashboardInsight(courses, deadlines),
+    onSuccess: (data) => {
+      if (data) setInsight(data);
     }
+  });
+
+  const loading = insightMutation.isPending;
+
+  const handleGenerateInsight = () => {
+    insightMutation.mutate();
   };
 
   const userName = userProfile?.name || 'Student';

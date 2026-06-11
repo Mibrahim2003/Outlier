@@ -9,6 +9,13 @@ vi.mock('../../domain/profile/useProfile', () => ({
   useProfile: () => ({ userProfile: { name: 'Ibrahim Tester', targetGpa: 3.8 } })
 }));
 
+vi.mock('@tanstack/react-query', () => ({
+  useMutation: (_options: any) => ({
+    mutate: vi.fn(),
+    isPending: false,
+  }),
+}));
+
 vi.mock('../../domain/courses/useCourses', () => ({
   useCourses: () => ({ courses: [ { id: '1', credits: 3, gradeProgress: 90, impactLevel: 'heavy' }, { id: '2', credits: 4, gradeProgress: 80, impactLevel: 'standard' } ] })
 }));
@@ -30,7 +37,6 @@ vi.mock('../../domain/todos/useTodos', () => ({
 vi.mock('../../hooks/useAI', () => ({
   useAI: () => ({
     getDashboardInsight: vi.fn().mockResolvedValue('Mocked AI insight'),
-    loading: false
   })
 }));
 

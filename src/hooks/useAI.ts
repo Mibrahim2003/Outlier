@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { Course, Deadline } from '../types';
 import { supabase } from '../lib/supabase';
 import { z } from 'zod';
@@ -27,13 +27,8 @@ const generateContent = async (prompt: string, inlineData?: { mimeType: string; 
 };
 
 export function useAI() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const getDashboardInsight = useCallback(async (courses: Course[], deadlines: Deadline[]) => {
-    setLoading(true);
-    try {
-      const prompt = `You are "Outlier," a high-precision academic command system. Your only job is to assess the user's current academic state and upcoming deadlines, then deliver the most urgent, actionable guidance for today.
+    const prompt = `You are "Outlier," a high-precision academic command system. Your only job is to assess the user's current academic state and upcoming deadlines, then deliver the most urgent, actionable guidance for today.
 
 You will receive:
 - Courses: active courses with current estimated grade and overall progress percentage.
@@ -62,21 +57,13 @@ Cold, precise, direct, and unforgiving. Speak like a tactical system that only c
 User Data:
 Courses: ${JSON.stringify(courses)}
 Deadlines: ${JSON.stringify(deadlines)}`;
-      
-      const insight = await generateContent(prompt);
-      return insight;
-    } catch (e: any) {
-      setError(e.message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
+    
+    const insight = await generateContent(prompt);
+    return insight;
   }, []);
 
   const getStudyPriorities = useCallback(async (courses: Course[], deadlines: Deadline[]) => {
-    setLoading(true);
-    try {
-      const prompt = `You are an AI study assistant. Generate exactly 3 study priority tasks based on this data:
+    const prompt = `You are an AI study assistant. Generate exactly 3 study priority tasks based on this data:
 Courses: ${JSON.stringify(courses)}
 Deadlines: ${JSON.stringify(deadlines)}
 
@@ -88,23 +75,14 @@ Return ONLY valid JSON in this exact structure:
     "priority": "critical" | "high" | "medium"
   }
 ]`;
-      
-      const res = await generateContent(prompt);
-      const schema = schemas.AIStudyPrioritySchema;
-      return parseAIResponse(res, schema) as any;
-    } catch (e: any) {
-      console.error(e);
-      setError(e.message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
+    
+    const res = await generateContent(prompt);
+    const schema = schemas.AIStudyPrioritySchema;
+    return parseAIResponse(res, schema) as any;
   }, []);
 
   const extractClassMarks = async (base64Data: string, mimeType: string, registrationNumber: string | undefined, totalMarks: number) => {
-    setLoading(true);
-    try {
-      const prompt = `You are a data extraction AI. Extract the class marks from this document/image.
+    const prompt = `You are a data extraction AI. Extract the class marks from this document/image.
 The document contains a list of students, their Registration Numbers, Names, and Obtained Marks.
 The total possible marks for this exam/quiz is: ${totalMarks}.
 
@@ -117,22 +95,14 @@ Return ONLY valid JSON in this exact structure. Do not use markdown blocks.
   "highestScore": [the highest score achieved by anyone in the class],
   "toppersCount": [number of students who achieved the highest score]
 }`;
-      
-      const result = await generateContent(prompt, { mimeType, data: base64Data });
-      const schema = schemas.AIClassMarksSchema;
-      return parseAIResponse(result, schema);
-    } catch (e: any) {
-      setError(e.message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
+    
+    const result = await generateContent(prompt, { mimeType, data: base64Data });
+    const schema = schemas.AIClassMarksSchema;
+    return parseAIResponse(result, schema);
   };
 
   const getCourseInsight = async (course: Course, deliverables: any[]) => {
-    setLoading(true);
-    try {
-      const prompt = `You are an academic performance analyst inside a study dashboard. Your job is to evaluate one specific course using the course record and the student's recent deliverables, then produce a single paragraph that is brutally honest, highly analytical, and directly useful.
+    const prompt = `You are an academic performance analyst inside a study dashboard. Your job is to evaluate one specific course using the course record and the student's recent deliverables, then produce a single paragraph that is brutally honest, highly analytical, and directly useful.
 
 You will receive:
 - Course: ${JSON.stringify(course)}
@@ -169,21 +139,13 @@ Style:
 Cold, precise, direct, and constructive.
 Sound like a high-level academic analyst, not a friendly tutor.
 Be honest without being dramatic.`;
-      
-      const insight = await generateContent(prompt);
-      return insight;
-    } catch (e: any) {
-      setError(e.message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
+    
+    const insight = await generateContent(prompt);
+    return insight;
   };
 
   const getCourseCriticalAction = async (course: Course, deliverables: any[]) => {
-    setLoading(true);
-    try {
-      const prompt = `You are a high-level academic performance analyst.
+    const prompt = `You are a high-level academic performance analyst.
 
 Your job is to review one course and the student's recent deliverables, then identify the SINGLE most critical weakness or most important area for improvement. Focus on the weakness that is most likely limiting performance right now or will most strongly affect future grades.
 
@@ -218,22 +180,14 @@ Output rules:
 - Do not use code fences.
 - Do not add extra keys.
 - Do not add commentary before or after the JSON.`;
-      
-      const res = await generateContent(prompt);
-      const schema = schemas.AICourseCriticalActionSchema;
-      return parseAIResponse(res, schema);
-    } catch (e: any) {
-      setError(e.message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
+    
+    const res = await generateContent(prompt);
+    const schema = schemas.AICourseCriticalActionSchema;
+    return parseAIResponse(res, schema);
   };
 
   const generateCourseStudyPlan = async (course: Course, _deliverables: any[], topic: string) => {
-    setLoading(true);
-    try {
-      const prompt = `You are a tactical academic planner.
+    const prompt = `You are a tactical academic planner.
 
 Goal:
 Create exactly 3 high-impact study tasks that directly fix the student's weakness in the topic: "${topic}" for the course: ${course.code}.
@@ -275,22 +229,14 @@ Required output format:
   "Task 2 description",
   "Task 3 description"
 ]`;
-      
-      const res = await generateContent(prompt);
-      const schema = schemas.AICourseStudyPlanSchema;
-      return parseAIResponse(res, schema);
-    } catch (e: any) {
-      setError(e.message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
+    
+    const res = await generateContent(prompt);
+    const schema = schemas.AICourseStudyPlanSchema;
+    return parseAIResponse(res, schema);
   };
 
   const analyzeProjectScope = async (idea: string, deadline: string) => {
-    setLoading(true);
-    try {
-      const prompt = `You are a ruthless Senior Tech Lead and Academic Evaluator.
+    const prompt = `You are a ruthless Senior Tech Lead and Academic Evaluator.
 
 Your job is to evaluate a student's project idea against the deadline, then judge whether it is realistic, where the scope is bloated, what hidden risks exist, and what minimum version would still secure a strong grade.
 
@@ -333,21 +279,13 @@ Output rules:
 - No bullet points.
 - No prefacing text.
 - No conclusion outside the JSON.`;
-      const res = await generateContent(prompt);
-      const schema = schemas.AIProjectScopeAnalysisSchema;
-      return parseAIResponse(res, schema);
-    } catch (e: any) {
-      setError(e.message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
+    const res = await generateContent(prompt);
+    const schema = schemas.AIProjectScopeAnalysisSchema;
+    return parseAIResponse(res, schema);
   };
 
   const generateProjectMilestones = async (idea: string, deadline: string) => {
-    setLoading(true);
-    try {
-      const prompt = `You are a tactical project manager.
+    const prompt = `You are a tactical project manager.
 
 Your job is to turn a student's project idea into exactly 4 critical milestones that lead from today to the deadline with the highest chance of finishing on time.
 
@@ -390,16 +328,10 @@ Output rules:
 - Do not use markdown.
 - Do not use code fences.
 - Do not include explanatory text outside the JSON.`;
-      const res = await generateContent(prompt);
-      const schema = schemas.AIProjectMilestoneSchema;
-      return parseAIResponse(res, schema);
-    } catch (e: any) {
-      setError(e.message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
+    const res = await generateContent(prompt);
+    const schema = schemas.AIProjectMilestoneSchema;
+    return parseAIResponse(res, schema);
   };
 
-  return { getDashboardInsight, getStudyPriorities, getCourseInsight, getCourseCriticalAction, generateCourseStudyPlan, extractClassMarks, analyzeProjectScope, generateProjectMilestones, loading, error };
+  return { getDashboardInsight, getStudyPriorities, getCourseInsight, getCourseCriticalAction, generateCourseStudyPlan, extractClassMarks, analyzeProjectScope, generateProjectMilestones };
 }

@@ -1,6 +1,7 @@
 import { useState, FormEvent, ChangeEvent } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAI } from '../hooks/useAI';
+import { useMutation } from '@tanstack/react-query';
 import { CourseDeliverable } from '../types';
 import { 
   ArrowLeft, 
@@ -27,11 +28,26 @@ const TABS = ['Quizzes', 'Assignments', 'Midterm', 'Final', 'Project', 'AI Insig
 
 export const CourseDetail = () => {
   const { id } = useParams();
-  const { userProfile } = useProfile();
   const { courses } = useCourses();
+  const localCourse = courses.find((c) => c.id === id);
+
+  if (!localCourse) {
+    return (
+      <div className="py-20 text-center space-y-4">
+        <h2 className="text-4xl font-black uppercase">Course Not Found</h2>
+        <Link to="/dashboard" className="text-tertiary underline font-bold">Return to Dashboard</Link>
+      </div>
+    );
+  }
+
+  return <CourseDetailContent localCourse={localCourse} />;
+};
+
+const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
+  const { userProfile } = useProfile();
   const { deliverables, addDeliverable, updateDeliverable } = useDeliverables();
   const { addTodo } = useTodos();
-  const { getCourseInsight, getCourseCriticalAction, generateCourseStudyPlan, extractClassMarks, loading: aiLoading } = useAI();
+  const { getCourseInsight, getCourseCriticalAction, generateCourseStudyPlan, extractClassMarks, analyzeProjectScope, generateProjectMilestones } = useAI();
   
   const [activeTab, setActiveTab] = useState(0);
   const [aiInsight, setAiInsight] = useState<string | null>(null);
@@ -61,18 +77,7 @@ export const CourseDetail = () => {
   const [initProjectIdea, setInitProjectIdea] = useState('');
   const [initProjectDeadline, setInitProjectDeadline] = useState('');
   
-  const { analyzeProjectScope, generateProjectMilestones } = useAI();
-
-  const localCourse = courses.find((c) => c.id === id);
-
-  if (!localCourse) {
-    return (
-      <div className="py-20 text-center space-y-4">
-        <h2 className="text-4xl font-black uppercase">Course Not Found</h2>
-        <Link to="/dashboard" className="text-tertiary underline font-bold">Return to Dashboard</Link>
-      </div>
-    );
-  }
+  // AI Destructuring moved to top
 
   const course = {
     ...localCourse,
@@ -133,39 +138,40 @@ export const CourseDetail = () => {
     statDistanceTopper = '-' + (maxGapSum / gapCount).toFixed(1) + '%';
   }
 
-  const handleGenerateInsight = async () => {
-    const insight = await getCourseInsight(course, courseDeliverables);
-    if (insight) {
-      setAiInsight(insight);
-    }
-  };
+  const insightMutation = useMutation({
+    mutationFn: () => getCourseInsight(course, courseDeliverables),
+    onSuccess: (insight) => { if (insight) setAiInsight(insight); }
+  });
 
-  const handleGenerateCriticalAction = async () => {
-    const action = await getCourseCriticalAction(course, courseDeliverables);
-    if (action) {
-      setCriticalAction(action);
-      setStudyPlanGenerated(false);
+  const criticalActionMutation = useMutation({
+    mutationFn: () => getCourseCriticalAction(course, courseDeliverables),
+    onSuccess: (action) => {
+      if (action) {
+        setCriticalAction(action);
+        setStudyPlanGenerated(false);
+      }
     }
-  };
+  });
 
-  const handleGenerateStudyPlan = async () => {
-    if (!criticalAction) return;
-    const tasks = await generateCourseStudyPlan(course, courseDeliverables, criticalAction.topic);
-    if (tasks) {
-      const today = new Date().toISOString().split('T')[0];
-      tasks.forEach((task: string) => {
-        addTodo({
-          id: crypto.randomUUID(),
-          text: task,
-          completed: false,
-          dueDate: today,
-          createdAt: new Date().toISOString(),
-          course: course.code
+  const studyPlanMutation = useMutation({
+    mutationFn: () => {
+      if (!criticalAction) throw new Error("No critical action");
+      return generateCourseStudyPlan(course, courseDeliverables, criticalAction.topic);
+    },
+    onSuccess: (tasks) => {
+      if (tasks) {
+        const today = new Date().toISOString().split('T')[0];
+        tasks.forEach((task: string) => {
+          addTodo({ id: crypto.randomUUID(), text: task, completed: false, dueDate: today, createdAt: new Date().toISOString(), course: course.code });
         });
-      });
-      setStudyPlanGenerated(true);
+        setStudyPlanGenerated(true);
+      }
     }
-  };
+  });
+
+  const handleGenerateInsight = () => insightMutation.mutate();
+  const handleGenerateCriticalAction = () => criticalActionMutation.mutate();
+  const handleGenerateStudyPlan = () => studyPlanMutation.mutate();
 
   // Project Functions
 
@@ -188,49 +194,36 @@ export const CourseDetail = () => {
   };
 
 
-  const handleAnalyzeScope = async () => {
+  const scopeMutation = useMutation({
+    mutationFn: (project: any) => analyzeProjectScope(project.metadata.projectIdea, project.date),
+    onSuccess: (analysis, project) => {
+      if (analysis) updateDeliverable({ ...project, metadata: { ...project.metadata, scopeFeedback: analysis.feedback } });
+    }
+  });
+
+  const milestoneMutation = useMutation({
+    mutationFn: (project: any) => generateProjectMilestones(project.metadata.projectIdea, project.date),
+    onSuccess: (milestones, project) => {
+      if (milestones) {
+        milestones.forEach(m => {
+          const dueDate = new Date(); dueDate.setDate(dueDate.getDate() + m.daysFromNow);
+          addTodo({ id: crypto.randomUUID(), text: `[${project.title}] ${m.title}`, completed: false, dueDate: dueDate.toISOString().split('T')[0], createdAt: new Date().toISOString(), course: course.code });
+        });
+        updateDeliverable({ ...project, metadata: { ...project.metadata, milestonesGenerated: true } });
+      }
+    }
+  });
+
+  const handleAnalyzeScope = () => {
     const project = projects[0];
     if (!project || !project.metadata?.projectIdea) return;
-    
-    const analysis = await analyzeProjectScope(project.metadata.projectIdea, project.date);
-    if (analysis) {
-      updateDeliverable({
-        ...project,
-        metadata: {
-          ...project.metadata,
-          scopeFeedback: analysis.feedback
-        }
-      });
-    }
+    scopeMutation.mutate(project);
   };
 
-  const handleGenerateMilestones = async () => {
+  const handleGenerateMilestones = () => {
     const project = projects[0];
     if (!project || !project.metadata?.projectIdea) return;
-    
-    const milestones = await generateProjectMilestones(project.metadata.projectIdea, project.date);
-    if (milestones) {
-      milestones.forEach(m => {
-        const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + m.daysFromNow);
-        addTodo({
-          id: crypto.randomUUID(),
-          text: `[${project.title}] ${m.title}`,
-          completed: false,
-          dueDate: dueDate.toISOString().split('T')[0],
-          createdAt: new Date().toISOString(),
-          course: course.code
-        });
-      });
-
-      updateDeliverable({
-        ...project,
-        metadata: {
-          ...project.metadata,
-          milestonesGenerated: true
-        }
-      });
-    }
+    milestoneMutation.mutate(project);
   };
 
   const handleAddSubmit = (e: FormEvent) => {
@@ -257,6 +250,20 @@ export const CourseDetail = () => {
     setNewTotalMarks('100');
   };
 
+  const marksMutation = useMutation({
+    mutationFn: ({ base64String, fileType, totalMarks }: any) => extractClassMarks(base64String, fileType, userProfile?.registrationNumber, totalMarks),
+    onSuccess: (extracted) => {
+      if (extracted) {
+        if (extracted.myScore !== null) setMyScore(extracted.myScore.toString());
+        setBulkScores(extracted.allScores.join(', '));
+        setExtractedHighestScore(extracted.highestScore);
+        setExtractedToppersCount(extracted.toppersCount);
+      }
+    }
+  });
+
+  const aiLoading = insightMutation.isPending || criticalActionMutation.isPending || studyPlanMutation.isPending || scopeMutation.isPending || milestoneMutation.isPending || marksMutation.isPending;
+
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -266,17 +273,9 @@ export const CourseDetail = () => {
     const totalMarks = deliverable.metadata?.totalMarks || 100;
 
     const reader = new FileReader();
-    reader.onloadend = async () => {
+    reader.onloadend = () => {
       const base64String = (reader.result as string).split(',')[1];
-      const extracted = await extractClassMarks(base64String, file.type, userProfile?.registrationNumber, totalMarks);
-      if (extracted) {
-        if (extracted.myScore !== null) {
-          setMyScore(extracted.myScore.toString());
-        }
-        setBulkScores(extracted.allScores.join(', '));
-        setExtractedHighestScore(extracted.highestScore);
-        setExtractedToppersCount(extracted.toppersCount);
-      }
+      marksMutation.mutate({ base64String, fileType: file.type, totalMarks });
     };
     reader.readAsDataURL(file);
   };
@@ -444,7 +443,7 @@ export const CourseDetail = () => {
           </span>
           {course.weightage && Object.entries(course.weightage).map(([key, val]) => (
             <Badge key={key} variant="outline" className="px-3 py-1">
-              {key} {val}%
+              {key} {val as number}%
             </Badge>
           ))}
         </div>
