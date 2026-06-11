@@ -8,12 +8,20 @@ import { AcademicCalendar } from '../AcademicCalendar';
 // Mock useStore — no calendar uploaded
 const mockSetAcademicCalendar = vi.fn();
 
-vi.mock('../../context/StoreContext', () => ({
-  useStore: () => ({
-    academicCalendar: null,
-    setAcademicCalendar: mockSetAcademicCalendar,
-    deadlines: [],
-  })
+vi.mock('../../domain/calendar/useCalendar', () => ({
+  useCalendar: () => ({ academicCalendar: null, setAcademicCalendar: mockSetAcademicCalendar })
+}));
+
+vi.mock('../../domain/deadlines/useDeadlines', () => ({
+  useDeadlines: () => ({ deadlines: [] })
+}));
+
+vi.mock('../../domain/courses/useCourses', () => ({
+  useCourses: () => ({ courses: [] })
+}));
+
+vi.mock('../../domain/todos/useTodos', () => ({
+  useTodos: () => ({ todos: [], addTodo: vi.fn(), toggleTodo: vi.fn() })
 }));
 
 vi.mock('../../hooks/useCalendarParser', () => ({

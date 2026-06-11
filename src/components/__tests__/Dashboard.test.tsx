@@ -5,16 +5,20 @@ import { MemoryRouter } from 'react-router-dom';
 import { Dashboard } from '../Dashboard';
 
 // Mock dependencies
-vi.mock('../../context/StoreContext', () => ({
-  useStore: () => ({
-    userProfile: { name: 'Ibrahim Tester', targetGpa: 3.8 },
-    courses: [
-      { id: '1', credits: 3, gradeProgress: 90, impactLevel: 'heavy' },
-      { id: '2', credits: 4, gradeProgress: 80, impactLevel: 'standard' }
-    ],
-    deadlines: [
-      { id: '1', title: 'Test Deadline', dueDate: '2026-05-30', topic: 'Tests', course: 'CS-201', priority: 'urgent' }
-    ],
+vi.mock('../../domain/profile/useProfile', () => ({
+  useProfile: () => ({ userProfile: { name: 'Ibrahim Tester', targetGpa: 3.8 } })
+}));
+
+vi.mock('../../domain/courses/useCourses', () => ({
+  useCourses: () => ({ courses: [ { id: '1', credits: 3, gradeProgress: 90, impactLevel: 'heavy' }, { id: '2', credits: 4, gradeProgress: 80, impactLevel: 'standard' } ] })
+}));
+
+vi.mock('../../domain/deadlines/useDeadlines', () => ({
+  useDeadlines: () => ({ deadlines: [ { id: '1', title: 'Test Deadline', dueDate: '2026-05-30', topic: 'Tests', course: 'CS-201', priority: 'urgent' } ] })
+}));
+
+vi.mock('../../domain/todos/useTodos', () => ({
+  useTodos: () => ({
     todos: [
       { id: 't1', text: 'Read Chapter 5', completed: false, dueDate: new Date().toISOString().split('T')[0], createdAt: new Date().toISOString() },
       { id: 't2', text: 'Review notes', completed: true, dueDate: new Date().toISOString().split('T')[0], createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },

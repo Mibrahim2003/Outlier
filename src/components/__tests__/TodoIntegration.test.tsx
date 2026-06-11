@@ -10,8 +10,8 @@ const mockToggleTodo = vi.fn();
 const mockAddDeadline = vi.fn();
 const mockSetAcademicCalendar = vi.fn();
 
-vi.mock('../../context/StoreContext', () => ({
-  useStore: () => ({
+vi.mock('../../domain/calendar/useCalendar', () => ({
+  useCalendar: () => ({
     academicCalendar: {
       id: 'test-cal',
       semesters: [{
@@ -23,19 +23,31 @@ vi.mock('../../context/StoreContext', () => ({
       }],
       uploadedAt: '2026-01-01T00:00:00Z',
     },
-    setAcademicCalendar: mockSetAcademicCalendar,
-    deadlines: [],
-    addDeadline: mockAddDeadline,
+    setAcademicCalendar: mockSetAcademicCalendar
+  })
+}));
+
+vi.mock('../../domain/deadlines/useDeadlines', () => ({
+  useDeadlines: () => ({ deadlines: [], addDeadline: mockAddDeadline })
+}));
+
+vi.mock('../../domain/todos/useTodos', () => ({
+  useTodos: () => ({
     todos: [
       { id: 't1', text: 'Existing task', completed: false, dueDate: '2026-03-10', createdAt: '2026-03-09T10:00:00Z' },
     ],
     addTodo: mockAddTodo,
-    toggleTodo: mockToggleTodo,
+    toggleTodo: mockToggleTodo
+  })
+}));
+
+vi.mock('../../domain/courses/useCourses', () => ({
+  useCourses: () => ({
     courses: [
       { id: 'c1', code: 'CS-301', name: 'Algorithms', credits: 3, gradeProgress: 75, impactLevel: 'heavy', grade: 'B', weightage: {} },
       { id: 'c2', code: 'MA-201', name: 'Linear Algebra', credits: 4, gradeProgress: 82, impactLevel: 'standard', grade: 'B+', weightage: {} },
-    ],
-  }),
+    ]
+  })
 }));
 
 vi.mock('../../hooks/useCalendarParser', () => ({

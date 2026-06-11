@@ -11,8 +11,8 @@ const mockToggleTodo = vi.fn();
 const mockSetAcademicCalendar = vi.fn();
 
 // Mock store context with test parameters
-vi.mock('../../context/StoreContext', () => ({
-  useStore: () => ({
+vi.mock('../../domain/calendar/useCalendar', () => ({
+  useCalendar: () => ({
     academicCalendar: {
       id: 'test-cal',
       semesters: [{
@@ -26,18 +26,33 @@ vi.mock('../../context/StoreContext', () => ({
       }],
       uploadedAt: '2026-08-01T00:00:00Z',
     },
-    setAcademicCalendar: mockSetAcademicCalendar,
+    setAcademicCalendar: mockSetAcademicCalendar
+  })
+}));
+
+vi.mock('../../domain/deadlines/useDeadlines', () => ({
+  useDeadlines: () => ({
     deadlines: [
       { id: 'd1', title: 'Midterm Exam', course: 'CS-201', topic: 'Algorithms', dueDate: '2026-10-12', priority: 'urgent' },
       { id: 'd2', title: 'Normal HW', course: 'CS-201', topic: 'Homework', dueDate: '2026-10-15', priority: 'normal' },
     ],
-    addDeadline: mockAddDeadline,
+    addDeadline: mockAddDeadline
+  })
+}));
+
+vi.mock('../../domain/todos/useTodos', () => ({
+  useTodos: () => ({
     todos: [
       { id: 't1', text: 'Study Chapter 8', completed: false, dueDate: '2026-10-12', createdAt: '2026-10-10T10:00:00Z' },
       { id: 't2', text: 'Review slides', completed: true, dueDate: '2026-10-12', createdAt: '2026-10-10T10:00:00Z', completedAt: '2026-10-12T15:00:00Z' },
     ],
     addTodo: mockAddTodo,
-    toggleTodo: mockToggleTodo,
+    toggleTodo: mockToggleTodo
+  })
+}));
+
+vi.mock('../../domain/courses/useCourses', () => ({
+  useCourses: () => ({
     courses: [
       { id: 'c1', code: 'CS-201', name: 'Data Structures', credits: 3, gradeProgress: 88, impactLevel: 'standard', grade: 'B+', weightage: {} }
     ]
