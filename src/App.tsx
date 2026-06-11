@@ -17,11 +17,13 @@ import { AcademicCalendar } from './components/AcademicCalendar';
 import { PostAuthGate } from './components/PostAuthGate';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicOnlyRoute } from './components/PublicOnlyRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
   return (
-    <Router>
-      <Routes>
+    <ErrorBoundary>
+      <Router>
+        <Routes>
         {/* ─── Public-Only Routes ────────────────────────────── */}
         {/* Logged-in users are redirected away to /post-auth */}
         <Route path="/" element={
@@ -121,6 +123,7 @@ export default function App() {
         {/* ─── Fallback ──────────────────────────────────────── */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </Router>
+      </Router>
+    </ErrorBoundary>
   );
 }
