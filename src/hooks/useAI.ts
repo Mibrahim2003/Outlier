@@ -29,7 +29,7 @@ export function useAI() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getDashboardInsight = async (courses: Course[], deadlines: Deadline[]) => {
+  const getDashboardInsight = useCallback(async (courses: Course[], deadlines: Deadline[]) => {
     setLoading(true);
     try {
       const prompt = `You are "Outlier," a high-precision academic command system. Your only job is to assess the user's current academic state and upcoming deadlines, then deliver the most urgent, actionable guidance for today.
@@ -70,7 +70,7 @@ Deadlines: ${JSON.stringify(deadlines)}`;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const getStudyPriorities = useCallback(async (courses: Course[], deadlines: Deadline[]) => {
     setLoading(true);

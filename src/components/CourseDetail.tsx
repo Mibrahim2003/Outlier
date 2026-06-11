@@ -12,7 +12,7 @@ import {
   Star,
   Upload,
   Plus,
-  Settings
+  Folder
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { getThemeBgClass, getThemeTextClass } from '../utils/impactStyles';
@@ -455,8 +455,9 @@ export const CourseDetail = () => {
             {i === 0 && <FileText size={14} />}
             {i === 1 && <FileText size={14} />}
             {i === 2 && <Target size={14} />}
-            {i === 3 && <Settings size={14} />}
-            {i === 4 && <Sparkles size={14} />}
+            {i === 3 && <Target size={14} />}
+            {i === 4 && <Folder size={14} />}
+            {i === 5 && <Sparkles size={14} />}
             {tab}
           </button>
         ))}
