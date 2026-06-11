@@ -103,19 +103,7 @@ export default function App() {
             </ProtectedRoute>
           } 
         />
-        <Route 
-          path="/library" 
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <div className="py-12 text-center">
-                  <h2 className="text-4xl font-black uppercase tracking-tighter">Knowledge Library</h2>
-                  <p className="mt-4 text-xl font-medium opacity-60 italic">Library management coming soon...</p>
-                </div>
-              </Layout>
-            </ProtectedRoute>
-          } 
-        />
+
         <Route 
           path="/settings" 
           element={

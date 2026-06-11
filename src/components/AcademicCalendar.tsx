@@ -88,13 +88,14 @@ export const AcademicCalendar = () => {
 
   const grid = useMemo(() => getCalendarGrid(viewYear, viewMonth), [viewYear, viewMonth]);
 
-  const weeksRemaining = useMemo(() => {
+  const currentWeek = useMemo(() => {
     if (!activeSemester) return null;
-    const end = new Date(activeSemester.endDate);
-    const diffMs = end.getTime() - new Date().getTime();
-    if (diffMs < 0) return 0;
-    return Math.max(0, Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000)));
-  }, [activeSemester]);
+    const wk = getSemesterWeekNumber(today, new Date(activeSemester.startDate));
+    const total = Math.ceil((new Date(activeSemester.endDate).getTime() - new Date(activeSemester.startDate).getTime()) / (7 * 24 * 60 * 60 * 1000));
+    if (wk < 1) return 1;
+    if (wk > total) return total;
+    return wk;
+  }, [activeSemester, today]);
 
   const totalWeeks = useMemo(() => {
     if (!activeSemester) return null;
@@ -365,12 +366,9 @@ export const AcademicCalendar = () => {
           )}
         </div>
         <div className="flex items-center gap-4">
-          {weeksRemaining !== null && totalWeeks !== null && (
-            <div className="bg-[#FFDE59] border-4 border-[#1A1A1A] px-4 py-2 shadow-[4px_4px_0px_#1A1A1A]">
-              <p className="text-[9px] font-black uppercase tracking-[0.15em] opacity-60">Weeks Left</p>
-              <p className="text-2xl font-black tracking-tighter leading-none">{weeksRemaining}<span className="text-sm opacity-40">/{totalWeeks}</span></p>
-            </div>
-          )}
+          <h2 className="text-3xl font-black tracking-[-0.04em] uppercase text-ink hidden md:block mr-2">
+            {monthLabel}
+          </h2>
           <button
             onClick={goToday}
             className="bg-[#FFDE59] border-4 border-[#1A1A1A] px-5 py-3 font-black uppercase text-sm tracking-[0.1em] shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all"
@@ -443,6 +441,7 @@ export const AcademicCalendar = () => {
 
                     const isToday = isSameDay(date, today);
                     const isSelected = selectedDate && isSameDay(date, selectedDate);
+                    const isPast = new Date(date.getFullYear(), date.getMonth(), date.getDate()) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
                     const breakName = allSemesters.length > 0
                       ? allSemesters.reduce<string | null>((found, s) => found || isBreakDay(date, s.breaks), null)
                       : null;
@@ -457,15 +456,21 @@ export const AcademicCalendar = () => {
                       <div
                         key={di}
                         onClick={() => setSelectedDate(date)}
-                        className={`flex flex-col items-center justify-between pb-2 pt-3 border-r border-ink/15 last:border-r-0 min-h-[90px] cursor-pointer transition-all relative group
-                          ${!isInSemester && !breakName && !isExamDay ? 'bg-[#F5F0E3]/50' : 'bg-white'}
-                          ${isToday ? 'bg-[#FFDE59]/10' : ''}
-                          ${isSelected ? '!z-10 shadow-[inset_0_0_0_2px_#1A1A1A]' : ''}
-                          ${breakName ? 'bg-ink/5' : ''}
-                          ${isExamDay && !breakName ? 'bg-[#A8275A]/5' : ''}
-                          hover:bg-[#FFDE59]/20
+                        className={`flex flex-col items-center justify-between pb-1 pt-3 border-r border-ink/15 last:border-r-0 min-h-[90px] cursor-pointer transition-all relative group
+                          ${isPast ? 'bg-hatching-past' : !isInSemester && !breakName && !isExamDay ? 'bg-[#F5F0E3]/50' : 'bg-white'}
+                          ${isToday && !isSelected ? 'bg-[#FFDE59]/10' : ''}
+                          ${isSelected ? '!z-20 bg-[#FFDE59] shadow-[0_0_0_3px_#1A1A1A]' : 'hover:bg-[#FFDE59]/20 hover:z-10 hover:shadow-[0_0_0_3px_#1A1A1A]'}
+                          ${breakName && !isSelected && !isPast ? 'bg-ink/5' : ''}
+                          ${isExamDay && !breakName && !isSelected && !isPast ? 'bg-[#A8275A]/5' : ''}
                         `}
                       >
+                        {/* + Icon on Hover/Selected */}
+                        <div className={`absolute top-0 right-0 p-1 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+                          <div className="bg-white border-2 border-[#1A1A1A] w-5 h-5 flex items-center justify-center">
+                            <Plus size={14} strokeWidth={4} className="text-[#1A1A1A]" />
+                          </div>
+                        </div>
+
                         {/* Centered Date Number */}
                         <div className="flex-1 flex items-center justify-center w-full">
                           {isToday ? (
@@ -485,61 +490,38 @@ export const AcademicCalendar = () => {
                           )}
                         </div>
 
-                        {/* Event Indicators Row */}
-                        <div className="flex items-center justify-center gap-1 w-full mt-auto min-h-[12px] z-10">
-                          {/* Break Dot */}
+                        {/* Event Bands Row */}
+                        <div className="flex flex-col gap-[2px] w-[80%] mt-auto mb-1 z-10">
                           {breakName && (
-                            <div 
-                              title={`Break: ${breakName}`}
-                              className="w-2 h-2 rounded-full bg-ink/25 border border-ink/40"
-                            />
+                            <div title={`Break: ${breakName}`} className="w-full h-[5px] bg-ink/30" />
                           )}
-
-                          {/* Exam Dot */}
+                          
                           {isExamDay && !breakName && (
-                            <div 
-                              title="Exam Period"
-                              className="w-2 h-2 rounded-full bg-[#A8275A] border border-ink animate-pulse"
-                            />
+                            <div title="Exam Period" className="w-full h-[5px] bg-[#A8275A]" />
                           )}
 
-                          {/* Deadline Squares */}
-                          {dayDeadlines.slice(0, 3).map(dl => (
+                          {dayDeadlines.slice(0, 2).map(dl => (
                             <div
                               key={dl.id}
                               title={`[${dl.course}] ${dl.title}`}
-                              className={`w-2 h-2 border border-ink ${
+                              className={`w-full h-[5px] ${
                                 dl.priority === 'urgent' ? 'bg-[#A8275A]' :
-                                dl.priority === 'moderate' ? 'bg-[#FFDE59]' : 'bg-ink'
+                                dl.priority === 'moderate' ? 'bg-[#FF8A00]' : 'bg-[#006761]'
                               }`}
                             />
                           ))}
-                          {dayDeadlines.length > 3 && (
-                            <span className="text-[7px] font-bold opacity-60">+{dayDeadlines.length - 3}</span>
-                          )}
 
-                          {/* Todo Circles */}
-                          {dayTodos.filter(t => !t.completed).slice(0, 3).map(todo => (
+                          {dayTodos.filter(t => !t.completed).slice(0, 2).map(todo => (
                             <div
                               key={todo.id}
                               title={todo.text}
-                              className="w-2 h-2 rounded-full border-[1.5px] border-[#1A1A1A] bg-white"
+                              className="w-full h-[5px] bg-[#3182CE]"
                             />
                           ))}
-                          {dayTodos.filter(t => t.completed).length > 0 && dayTodos.filter(t => !t.completed).length < 3 && (
-                            dayTodos.filter(t => t.completed).slice(0, 3 - dayTodos.filter(t => !t.completed).length).map(todo => (
-                              <div
-                                key={todo.id}
-                                title={`✓ ${todo.text}`}
-                                className="w-2 h-2 rounded-full border-[1.5px] border-ink/30 bg-[#FFDE59]/60"
-                              />
-                            ))
+                          
+                          {(dayDeadlines.length > 2 || dayTodos.filter(t => !t.completed).length > 2) && (
+                            <div className="w-full h-[5px] bg-ink" />
                           )}
-                        </div>
-                        
-                        {/* Hover Add Button (subtle) */}
-                        <div className="absolute inset-0 bg-[#FFDE59]/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]">
-                           <Plus size={24} strokeWidth={3} className="text-[#1A1A1A] opacity-50" />
                         </div>
                       </div>
                     );

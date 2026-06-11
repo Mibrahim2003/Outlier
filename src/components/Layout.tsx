@@ -53,7 +53,6 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
   const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/courses', icon: BookOpen, label: 'Courses' },
-    { to: '/library', icon: Library, label: 'Library' },
     { to: '/analytics', icon: BarChart3, label: 'Analytics' },
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
@@ -76,7 +75,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             <Search size={18} className="mr-2 text-ink" />
             <input 
               className="bg-transparent border-none focus:ring-0 w-full font-medium text-sm outline-none" 
-              placeholder="Search knowledge base..." 
+              placeholder="Search courses and tasks..." 
               type="text"
             />
           </div>

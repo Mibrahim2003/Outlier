@@ -58,6 +58,16 @@
   box-shadow: 6px 6px 0px 0px var(--color-on-background);
 }
 
+@utility bg-hatching-past {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(26, 26, 26, 0.08),
+    rgba(26, 26, 26, 0.08) 1.5px,
+    transparent 1.5px,
+    transparent 8px
+  );
+}
+
 @utility industrial-grid {
   background-image: linear-gradient(#e5e2e1 1px, transparent 1px), linear-gradient(90deg, #e5e2e1 1px, transparent 1px);
   background-size: 50px 50px;
