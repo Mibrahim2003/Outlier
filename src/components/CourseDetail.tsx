@@ -12,7 +12,8 @@ import {
   Star,
   Upload,
   Plus,
-  Folder
+  Folder,
+  Settings
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { getThemeBgClass, getThemeTextClass } from '../utils/impactStyles';

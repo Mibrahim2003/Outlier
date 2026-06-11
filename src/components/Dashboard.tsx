@@ -4,7 +4,7 @@ import { Sparkles, AlertCircle, Clock, CheckCircle2, Calendar, Loader2, Plus, Li
 import { motion } from 'motion/react';
 import { useStore } from '../context/StoreContext';
 import { useAI } from '../hooks/useAI';
-import { useState } from 'react';
+
 import { getThemeBgClass } from '../utils/impactStyles';
 import { getGreeting, getDeadlineStatus, isSameDay } from '../utils/dateUtils';
 import { ErrorBoundary } from 'react-error-boundary';
