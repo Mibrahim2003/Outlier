@@ -39,7 +39,7 @@ export function useTodos() {
         course: todo.course ?? null,
         created_at: todo.createdAt,
         completed_at: todo.completedAt ?? null,
-      });
+      }, { onConflict: 'user_id,id' });
       if (error) throw error;
     },
     onMutate: async (newTodo) => {
