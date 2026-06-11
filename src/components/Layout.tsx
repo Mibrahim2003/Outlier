@@ -14,7 +14,8 @@ import {
   Search,
   Bell,
   Menu,
-  X
+  X,
+  Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -54,6 +55,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/calendar', icon: Calendar, label: 'Calendar' },
     { to: '/courses', icon: BookOpen, label: 'Courses' },
     { to: '/analytics', icon: BarChart3, label: 'Analytics' },
     { to: '/settings', icon: Settings, label: 'Settings' },
