@@ -57,6 +57,11 @@ export const UserProfileSchema = z.object({
   targetGpa: z.number(),
   semester: z.string(),
   courseCount: z.number(),
+  gradingScale: z.array(z.object({
+    grade: z.string(),
+    gpc: z.number(),
+    minPercentage: z.number().optional(),
+  })).optional(),
 });
 
 export const OnboardingStateSchema = z.object({

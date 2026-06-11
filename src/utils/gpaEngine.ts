@@ -1,10 +1,26 @@
 import { Course, CourseDeliverable } from '../types';
 
+export const DEFAULT_GRADING_SCALE = [
+  { grade: 'A', gpc: 4.00, minPercentage: 85 },
+  { grade: 'A-', gpc: 3.67, minPercentage: 80 },
+  { grade: 'B+', gpc: 3.33, minPercentage: 75 },
+  { grade: 'B', gpc: 3.00, minPercentage: 71 },
+  { grade: 'B-', gpc: 2.67, minPercentage: 68 },
+  { grade: 'C+', gpc: 2.33, minPercentage: 64 },
+  { grade: 'C', gpc: 2.00, minPercentage: 61 },
+  { grade: 'C-', gpc: 1.67, minPercentage: 58 },
+  { grade: 'D+', gpc: 1.33, minPercentage: 54 },
+  { grade: 'D', gpc: 1.00, minPercentage: 50 },
+  { grade: 'F', gpc: 0.00, minPercentage: 0 },
+];
+
+export type GradingScale = { grade: string; gpc: number; minPercentage?: number }[];
+
 /**
  * Estimates a grade based on relative grading (z-score) if class stats are available,
- * or falls back to absolute grading based on percentage.
+ * or falls back to absolute grading based on percentage using the provided grading scale.
  */
-export function estimateGrade(score: number, maxScore: number, classAvg?: number, classStdDev?: number): { grade: string; gpc: number } {
+export function estimateGrade(score: number, maxScore: number, gradingScale: GradingScale = DEFAULT_GRADING_SCALE, classAvg?: number, classStdDev?: number): { grade: string; gpc: number } {
   const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
 
   if (classAvg !== undefined && classStdDev !== undefined && classStdDev > 0) {
@@ -24,17 +40,17 @@ export function estimateGrade(score: number, maxScore: number, classAvg?: number
     return { grade: 'F', gpc: 0.00 };
   }
 
-  // Absolute fallback based on standard percentage cutoffs
-  if (percentage >= 85) return { grade: 'A', gpc: 4.00 };
-  if (percentage >= 80) return { grade: 'A-', gpc: 3.67 };
-  if (percentage >= 75) return { grade: 'B+', gpc: 3.33 };
-  if (percentage >= 71) return { grade: 'B', gpc: 3.00 };
-  if (percentage >= 68) return { grade: 'B-', gpc: 2.67 };
-  if (percentage >= 64) return { grade: 'C+', gpc: 2.33 };
-  if (percentage >= 61) return { grade: 'C', gpc: 2.00 };
-  if (percentage >= 58) return { grade: 'C-', gpc: 1.67 };
-  if (percentage >= 54) return { grade: 'D+', gpc: 1.33 };
-  if (percentage >= 50) return { grade: 'D', gpc: 1.00 };
+  // Absolute fallback based on standard percentage cutoffs dynamically
+  // Sort by minPercentage descending
+  const sortedScale = [...gradingScale].sort((a, b) => (b.minPercentage || 0) - (a.minPercentage || 0));
+  
+  for (const scale of sortedScale) {
+    if (percentage >= (scale.minPercentage || 0)) {
+      return { grade: scale.grade, gpc: scale.gpc };
+    }
+  }
+
+  // Fallback to F
   return { grade: 'F', gpc: 0.00 };
 }
 
@@ -50,7 +66,7 @@ export interface CourseStatus {
 /**
  * Calculates the predicted status for a single course.
  */
-export function calculateCourseStatus(course: Course, deliverables: CourseDeliverable[]): CourseStatus {
+export function calculateCourseStatus(course: Course, deliverables: CourseDeliverable[], gradingScale: GradingScale = DEFAULT_GRADING_SCALE): CourseStatus {
   let totalWeightedScore = 0; // accumulated percentage points
   let totalCoveredWeight = 0; // out of 100
 
@@ -117,9 +133,9 @@ export function calculateCourseStatus(course: Course, deliverables: CourseDelive
   if (zScoreCount > 0) {
     const avgZScore = zScoreSum / zScoreCount;
     // Reverse engineer a dummy score/avg to use estimateGrade just for z-score mapping
-    estimatedResult = estimateGrade(avgZScore, 1, 0, 1);
+    estimatedResult = estimateGrade(avgZScore, 1, gradingScale, 0, 1);
   } else {
-    estimatedResult = estimateGrade(projectedScore, 100);
+    estimatedResult = estimateGrade(projectedScore, 100, gradingScale);
   }
 
   // If nothing is graded, don't project an F, project an N/A basically, but use 0 as numbers
@@ -157,13 +173,13 @@ export interface SemesterStatus {
 /**
  * Calculates the overall semester GPA by aggregating predicted GPCs across all courses.
  */
-export function calculateSemesterGPA(courses: Course[], deliverables: CourseDeliverable[]): SemesterStatus {
+export function calculateSemesterGPA(courses: Course[], deliverables: CourseDeliverable[], gradingScale: GradingScale = DEFAULT_GRADING_SCALE): SemesterStatus {
   let totalPoints = 0;
   let totalCredits = 0;
 
   const courseStatuses = courses.map(course => {
     const courseDelivs = deliverables.filter(d => d.courseId === course.id);
-    const status = calculateCourseStatus(course, courseDelivs);
+    const status = calculateCourseStatus(course, courseDelivs, gradingScale);
     
     // Only count courses where we have at least SOME data
     if (status.coveredWeight > 0) {

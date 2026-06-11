@@ -132,12 +132,10 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             <Button
               variant="tertiary" size="default"
               className="w-full flex items-center justify-center gap-2"
-              onClick={() => {}}
+              onClick={() => navigate('/onboarding')}
             >
-              <Link to="/onboarding" className="flex items-center gap-2 text-inherit no-underline">
-                <PlusCircle size={18} />
-                <span>New Project</span>
-              </Link>
+              <PlusCircle size={18} />
+              <span>New Project</span>
             </Button>
             <div className="pt-4 flex flex-col gap-1">
               <button className="flex items-center gap-3 p-2 text-xs font-bold uppercase tracking-widest hover:text-secondary transition-colors text-left">

@@ -14,6 +14,7 @@ import { ProfileSetup } from './components/ProfileSetup';
 import { CourseDetail } from './components/CourseDetail';
 import { CourseList } from './components/CourseList';
 import { AcademicCalendar } from './components/AcademicCalendar';
+import { Settings } from './components/Settings';
 import { PostAuthGate } from './components/PostAuthGate';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicOnlyRoute } from './components/PublicOnlyRoute';
@@ -140,10 +141,7 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Layout>
-                <div className="py-12 text-center">
-                  <h2 className="text-4xl font-black uppercase tracking-tighter">Settings</h2>
-                  <p className="mt-4 text-xl font-medium opacity-60 italic">Account settings coming soon...</p>
-                </div>
+                <Settings />
               </Layout>
             </ProtectedRoute>
           } 

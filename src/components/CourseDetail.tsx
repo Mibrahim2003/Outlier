@@ -92,7 +92,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
   const projects = courseDeliverables.filter(d => d.type === 'project');
 
   // Use the new gpaEngine for all calculations
-  const courseStatus = calculateCourseStatus(course, courseDeliverables);
+  const courseStatus = calculateCourseStatus(course, courseDeliverables, userProfile?.gradingScale);
   
   const statYourAverage = courseStatus.coveredWeight > 0 ? courseStatus.projectedScore.toFixed(1) + '%' : 'N/A';
   

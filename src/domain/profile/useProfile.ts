@@ -26,6 +26,7 @@ export function useProfile() {
         targetGpa: Number(data.target_gpa),
         semester: data.semester,
         courseCount: Number(data.course_count ?? 0),
+        gradingScale: data.grading_scale,
       } as UserProfile;
     },
     enabled: !!userId,
@@ -45,6 +46,7 @@ export function useProfile() {
         target_gpa: profile.targetGpa,
         semester: profile.semester,
         course_count: profile.courseCount,
+        grading_scale: profile.gradingScale,
       }, { onConflict: 'user_id' });
       if (error) throw error;
     },

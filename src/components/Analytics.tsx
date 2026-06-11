@@ -43,7 +43,7 @@ export const Analytics = () => {
   // Query manages lifecycle now
 
   // Use robust gpaEngine for calculations
-  const { semesterGPA, courses: courseStatuses, totalCredits } = calculateSemesterGPA(courses, deliverables);
+  const { semesterGPA, courses: courseStatuses, totalCredits } = calculateSemesterGPA(courses, deliverables, userProfile?.gradingScale);
 
   // Projection based on current CGPA
   const currentCGPA = userProfile?.currentCgpa || 0;
@@ -97,7 +97,7 @@ export const Analytics = () => {
     const newWeightedScore = cs.weightedScore + (score / 100) * remainingWeight;
     const newProjectedScore = newWeightedScore; // Now out of 100
 
-    const result = estimateGrade(newProjectedScore, 100);
+    const result = estimateGrade(newProjectedScore, 100, userProfile?.gradingScale);
     setWhatIfResult(result);
   };
 
@@ -139,7 +139,7 @@ export const Analytics = () => {
     const remainingWeight = 100 - cs.coveredWeight;
     const scenarios = [60, 70, 80, 90, 100].map(finalScore => {
       const newWeighted = cs.weightedScore + (finalScore / 100) * remainingWeight;
-      const grade = estimateGrade(newWeighted, 100);
+      const grade = estimateGrade(newWeighted, 100, userProfile?.gradingScale);
       return { finalScore, ...grade };
     });
 
