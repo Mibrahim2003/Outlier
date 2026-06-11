@@ -1,32 +1,37 @@
-name: CI
+name: Continuous Integration — Code Quality, Tests & Build Verification
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  checks:
+  code-quality-and-build-verification:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository source code into workflow workspace
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js version 20 runtime with npm caching enabled
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - run: npm ci
+      - name: Install project dependencies using clean install
+        run: npm ci
 
-      - name: Run linting
+      - name: Execute static code analysis and enforce coding standards
         run: npm run lint
 
-      - name: Unit tests
+      - name: Run automated unit test suite
         run: npm test
 
-      - name: Production build
+      - name: Verify production build compiles successfully
         run: npm run build
         env:
           VITE_SUPABASE_URL: https://placeholder-ci.supabase.co

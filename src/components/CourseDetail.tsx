@@ -21,6 +21,7 @@ import { useDeliverables } from '../domain/deliverables/useDeliverables';
 import { useTodos } from '../domain/todos/useTodos';
 import { getThemeBgClass, getThemeTextClass } from '../utils/impactStyles';
 import { calculateCourseStatus } from '../utils/gpaEngine';
+import { Button, Card, Badge, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from './ui';
 
 const TABS = ['Quizzes', 'Assignments', 'Midterm', 'Final', 'Project', 'AI Insights'];
 
@@ -348,25 +349,27 @@ export const CourseDetail = () => {
       <div className="flex items-center justify-between">
         <h3 className="text-2xl font-black uppercase tracking-tighter">{title}</h3>
         <div className="flex gap-3">
-          <button 
+          <Button 
             onClick={() => { setUploadDeliverableType(type); setIsUploadModalOpen(true); }}
-            className="bg-white border-3 border-ink px-4 py-2 text-xs font-black uppercase tracking-widest shadow-[3px_3px_0px_#1A1A1A] hover:shadow-[1px_1px_0px_#1A1A1A] hover:translate-x-[1px] hover:translate-y-[1px] transition-all flex items-center gap-2"
+            variant="outline" size="xs"
+            className="flex items-center gap-2"
           >
             <Upload size={14} />
             Upload Marks
-          </button>
-          <button 
+          </Button>
+          <Button 
             onClick={() => openModal(type)}
-            className="bg-primary-container border-3 border-ink px-4 py-2 text-xs font-black uppercase tracking-widest shadow-[3px_3px_0px_#1A1A1A] hover:shadow-[1px_1px_0px_#1A1A1A] hover:translate-x-[1px] hover:translate-y-[1px] transition-all flex items-center gap-2"
+            variant="primary" size="xs"
+            className="flex items-center gap-2"
           >
             <Plus size={14} />
             Add {type === 'quiz' ? 'Quiz' : type === 'midterm' ? 'Midterm' : 'Final'}
-          </button>
+          </Button>
         </div>
       </div>
 
       {items.map((item) => (
-        <div key={item.id} className={`bg-white border-3 border-ink p-6 shadow-[3px_3px_0px_#1A1A1A] ${item.status === 'scheduled' ? 'border-dashed' : ''}`}>
+        <Card key={item.id} shadow="sm" className={`p-6 ${item.status === 'scheduled' ? 'border-dashed' : ''}`}>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2 flex-wrap">
@@ -395,13 +398,13 @@ export const CourseDetail = () => {
                 </div>
               )}
               {item.status === 'scheduled' && (
-                <button className="bg-white border-2 border-ink px-3 py-1 text-[10px] font-black uppercase shadow-[2px_2px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all">
+                <Button variant="outline" size="xs" className="px-3 py-1 text-[10px]">
                   Set Reminder
-                </button>
+                </Button>
               )}
             </div>
           </div>
-        </div>
+        </Card>
       ))}
       {items.length === 0 && (
         <div className="text-center p-8 border-2 border-dashed border-ink opacity-60 font-bold uppercase tracking-widest text-xs">
@@ -422,16 +425,16 @@ export const CourseDetail = () => {
       </div>
 
       {/* Course Header — Yellow card */}
-      <header className={`${getThemeBgClass(course.themeColor)} ${getThemeTextClass(course.themeColor)} border-3 border-ink p-8 md:p-10 shadow-[6px_6px_0px_#1A1A1A] relative overflow-hidden`}>
+      <Card shadow="md" className={`${getThemeBgClass(course.themeColor)} ${getThemeTextClass(course.themeColor)} p-8 md:p-10 relative overflow-hidden`}>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="space-y-2">
             <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-none uppercase">{course.code}</h1>
             <p className="text-xl md:text-2xl font-black uppercase tracking-tight opacity-80">{course.name}</p>
           </div>
-          <div className="bg-white text-ink border-3 border-ink p-4 shadow-[3px_3px_0px_#1A1A1A] text-center min-w-[100px]">
+          <Card shadow="sm" className="bg-white text-ink p-4 text-center min-w-[100px]">
             <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Est. Grade</p>
             <p className="text-4xl font-black leading-none mt-1">{course.grade}</p>
-          </div>
+          </Card>
         </div>
         
         {/* Weightage Pills */}
@@ -440,24 +443,22 @@ export const CourseDetail = () => {
             {course.credits} Credit Hours
           </span>
           {course.weightage && Object.entries(course.weightage).map(([key, val]) => (
-            <span key={key} className="bg-white text-ink border-2 border-ink px-3 py-1 text-xs font-black uppercase tracking-widest">
+            <Badge key={key} variant="outline" className="px-3 py-1">
               {key} {val}%
-            </span>
+            </Badge>
           ))}
         </div>
-      </header>
+      </Card>
 
       {/* Tab Bar */}
       <div className="flex flex-wrap gap-2">
         {TABS.map((tab, i) => (
-          <button
+          <Button
             key={tab}
             onClick={() => setActiveTab(i)}
-            className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-3 transition-all flex items-center gap-2 ${
-              activeTab === i 
-                ? 'bg-ink text-white border-ink shadow-none' 
-                : 'bg-white text-ink border-ink shadow-[3px_3px_0px_#1A1A1A] hover:shadow-[1px_1px_0px_#1A1A1A] hover:translate-x-[1px] hover:translate-y-[1px]'
-            }`}
+            variant={activeTab === i ? 'ink' : 'outline'}
+            size="sm"
+            className="flex items-center gap-2"
           >
             {i === 0 && <FileText size={14} />}
             {i === 1 && <FileText size={14} />}
@@ -466,7 +467,7 @@ export const CourseDetail = () => {
             {i === 4 && <Folder size={14} />}
             {i === 5 && <Sparkles size={14} />}
             {tab}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -479,7 +480,7 @@ export const CourseDetail = () => {
               {renderAssessments('Active Quizzes', quizzes, 'quiz')}
 
               {/* Performance Chart */}
-              <div className="bg-white border-3 border-ink p-8 shadow-[3px_3px_0px_#1A1A1A]">
+              <Card shadow="sm" className="p-8">
                 <h4 className="text-sm font-black uppercase tracking-widest mb-6">Your Performance vs Class Average</h4>
                 <div className="relative h-48 w-full border-b-4 border-ink flex items-end justify-around px-8 gap-8">
                   {['Quiz 1', 'Quiz 2', 'Quiz 3'].map((label, i) => (
@@ -508,7 +509,7 @@ export const CourseDetail = () => {
                   <div className="flex items-center gap-2 text-[10px] font-bold"><div className={`w-3 h-3 ${getThemeBgClass(course.themeColor)} border border-ink`}></div> You</div>
                   <div className="flex items-center gap-2 text-[10px] font-bold"><div className="w-3 h-3 bg-ink/20 border border-ink"></div> Class Average</div>
                 </div>
-              </div>
+              </Card>
             </div>
           )}
 
@@ -517,16 +518,17 @@ export const CourseDetail = () => {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-2xl font-black uppercase tracking-tighter">Assignments</h3>
-                <button 
+                <Button 
                   onClick={() => openModal('assignment')}
-                  className="bg-primary-container border-3 border-ink px-4 py-2 text-xs font-black uppercase tracking-widest shadow-[3px_3px_0px_#1A1A1A] hover:shadow-[1px_1px_0px_#1A1A1A] hover:translate-x-[1px] hover:translate-y-[1px] transition-all flex items-center gap-2"
+                  variant="primary" size="xs"
+                  className="flex items-center gap-2"
                 >
                   <Plus size={14} />
                   Add Assignment
-                </button>
+                </Button>
               </div>
               {assignments.map((item) => (
-                <div key={item.id} className="bg-white border-3 border-ink p-6 shadow-[3px_3px_0px_#1A1A1A] flex justify-between items-center">
+                <Card key={item.id} shadow="sm" className="p-6 flex justify-between items-center">
                   <div className="flex items-center gap-4">
                     <div className="p-2 border-2 border-ink bg-tertiary text-white">
                       <CheckCircle2 size={18} />
@@ -540,7 +542,7 @@ export const CourseDetail = () => {
                     <p className="text-[10px] font-black uppercase opacity-40">Score</p>
                     <p className="font-black text-xl">{item.score || '-'}</p>
                   </div>
-                </div>
+                </Card>
               ))}
               {assignments.length === 0 && (
                 <div className="text-center p-8 border-2 border-dashed border-ink opacity-60 font-bold uppercase tracking-widest text-xs">
@@ -560,7 +562,7 @@ export const CourseDetail = () => {
           {activeTab === 4 && (
             <div className="space-y-6">
               {projects.length === 0 ? (
-                <div className="bg-white border-3 border-ink p-8 shadow-[6px_6px_0px_#1A1A1A]">
+                <Card shadow="md" className="p-8">
                   <h3 className="text-2xl font-black uppercase tracking-tighter mb-4">Project Setup</h3>
                   <p className="text-sm font-medium opacity-80 mb-6">Enter your project details to enable milestone tracking and scope analysis.</p>
                   
@@ -597,33 +599,33 @@ export const CourseDetail = () => {
                         required
                       />
                     </div>
-                    <button 
+                    <Button 
                       type="submit"
-                      className="bg-ink text-white border-2 border-ink p-4 font-black uppercase tracking-widest w-full hover:bg-ink/90 transition-all"
+                      variant="ink" size="lg" className="w-full"
                     >
                       Save Project
-                    </button>
+                    </Button>
                   </form>
-                </div>
+                </Card>
               ) : (
                 <div className="space-y-8">
                   {/* Master Project Header */}
-                  <div className="flex justify-between items-start bg-ink text-white p-6 shadow-[6px_6px_0px_#1A1A1A]">
+                  <Card shadow="md" className="flex justify-between items-start bg-ink text-white p-6">
                     <div>
                       <span className="bg-white/20 text-white px-2 py-1 text-[10px] font-black uppercase tracking-widest border border-white/30">Course Project</span>
                       <h3 className="text-3xl font-black uppercase tracking-tighter mt-2">{projects[0].title}</h3>
                       <p className="text-sm font-bold opacity-80 mt-1">Due: {projects[0].date}</p>
                     </div>
-                    <button 
+                    <Button 
                       onClick={() => { setUploadDeliverableType('project'); setIsUploadModalOpen(true); }}
-                      className="bg-white text-ink border-2 border-white px-4 py-2 text-xs font-black uppercase tracking-widest shadow-[3px_3px_0px_rgba(255,255,255,0.3)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all flex items-center gap-2"
+                      variant="outline" size="xs" className="text-ink bg-white border-white hover:bg-gray-100"
                     >
                       <Upload size={14} /> Upload Final Marks
-                    </button>
-                  </div>
+                    </Button>
+                  </Card>
 
                   {/* Tech Lead Scope Analyzer */}
-                  <div className="bg-secondary text-white border-3 border-ink p-6 shadow-[6px_6px_0px_#1A1A1A]">
+                  <Card shadow="md" className="bg-secondary text-white p-6">
                     <h4 className="text-xl font-black uppercase tracking-tighter flex items-center gap-2"><Sparkles size={20} /> Tech Lead Scope Analyzer</h4>
                     <p className="text-sm opacity-80 mt-2 mb-4 font-medium">The AI acts as a ruthless Senior Tech Lead to analyze your project idea for scope creep and grade risk.</p>
                     
@@ -639,18 +641,18 @@ export const CourseDetail = () => {
                         </button>
                       </div>
                     ) : (
-                      <button 
+                      <Button 
                         onClick={handleAnalyzeScope}
                         disabled={aiLoading}
-                        className="bg-white text-ink border-2 border-ink px-6 py-3 text-xs font-black uppercase tracking-widest shadow-[3px_3px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all disabled:opacity-50"
+                        variant="outline" size="sm" className="bg-white text-ink"
                       >
                         {aiLoading ? 'Analyzing Scope...' : 'Analyze Scope'}
-                      </button>
+                      </Button>
                     )}
-                  </div>
+                  </Card>
 
                   {/* Milestone Generator */}
-                  <div className="bg-white border-3 border-ink p-6 shadow-[6px_6px_0px_#1A1A1A]">
+                  <Card shadow="md" className="p-6">
                     <h4 className="text-xl font-black uppercase tracking-tighter flex items-center gap-2"><Target size={20} /> Tactical Milestones</h4>
                     <p className="text-sm opacity-60 mt-2 mb-4 font-medium">Break this project down into 4 actionable milestones with staggered deadlines.</p>
                     
@@ -659,15 +661,15 @@ export const CourseDetail = () => {
                         <CheckCircle2 size={24} /> Milestones Injected into Global Todos!
                       </div>
                     ) : (
-                      <button 
+                      <Button 
                         onClick={handleGenerateMilestones}
                         disabled={aiLoading}
-                        className="bg-primary-container text-ink border-2 border-ink px-6 py-3 text-xs font-black uppercase tracking-widest shadow-[3px_3px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all disabled:opacity-50"
+                        variant="primary" size="sm"
                       >
                         {aiLoading ? 'Generating Milestones...' : 'Generate & Inject Milestones'}
-                      </button>
+                      </Button>
                     )}
-                  </div>
+                  </Card>
                 </div>
               )}
             </div>
@@ -675,7 +677,7 @@ export const CourseDetail = () => {
 
           {/* AI Insights Tab */}
           {activeTab === 5 && (
-            <div className="bg-secondary text-white border-3 border-ink p-8 shadow-[6px_6px_0px_#1A1A1A] relative overflow-hidden">
+            <Card shadow="md" className="bg-secondary text-white p-8 relative overflow-hidden">
               <Sparkles className="absolute -right-4 -top-4 opacity-20" size={120} fill="currentColor" />
               <div className="relative z-10 space-y-4">
                 <div className="flex items-center gap-2">
@@ -688,34 +690,34 @@ export const CourseDetail = () => {
                     <p className="text-lg font-medium leading-snug italic">
                       "{aiInsight}"
                     </p>
-                    <button 
+                    <Button 
                       onClick={handleGenerateInsight}
                       disabled={aiLoading}
-                      className="bg-white text-ink border-2 border-white px-4 py-2 text-xs font-black uppercase tracking-widest shadow-[3px_3px_0px_rgba(255,255,255,0.3)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all mt-4 disabled:opacity-50"
+                      variant="outline" size="sm" className="bg-white text-ink mt-4"
                     >
                       {aiLoading ? 'Analyzing...' : 'Regenerate Insight'}
-                    </button>
+                    </Button>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     <p className="text-lg font-medium leading-snug">
                       Generate a personalized, brutally honest insight about your performance in this course based on your recent deliverables.
                     </p>
-                    <button 
+                    <Button 
                       onClick={handleGenerateInsight}
                       disabled={aiLoading}
-                      className="bg-white text-ink border-2 border-white px-4 py-2 text-xs font-black uppercase tracking-widest shadow-[3px_3px_0px_rgba(255,255,255,0.3)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all mt-4 disabled:opacity-50"
+                      variant="outline" size="sm" className="bg-white text-ink mt-4"
                     >
                       {aiLoading ? 'Analyzing...' : 'Generate Insight'}
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
-            </div>
+            </Card>
           )}
 
           {/* Critical Insight - Always visible at bottom */}
-          <div className="bg-ink text-white border-3 border-ink p-8 shadow-[6px_6px_0px_#a8275a]">
+          <Card shadow="md" className="bg-ink text-white p-8">
             <div className="flex items-start gap-4">
               <div className="p-2 bg-secondary border-2 border-white/20 mt-1">
                 <Settings size={20} />
@@ -732,13 +734,13 @@ export const CourseDetail = () => {
                         <CheckCircle2 size={14} className="inline mr-1" /> Study Plan added to Today's Tasks
                       </p>
                     ) : (
-                      <button 
+                      <Button 
                         onClick={handleGenerateStudyPlan}
                         disabled={aiLoading}
-                        className="bg-white text-ink border-2 border-white px-4 py-2 text-xs font-black uppercase tracking-widest shadow-[3px_3px_0px_rgba(255,255,255,0.3)] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all mt-2 disabled:opacity-50"
+                        variant="outline" size="sm" className="bg-white text-ink mt-2"
                       >
                         {aiLoading ? 'Generating Plan...' : 'Generate Study Plan'}
-                      </button>
+                      </Button>
                     )}
                   </>
                 ) : (
@@ -747,24 +749,24 @@ export const CourseDetail = () => {
                     <p className="font-medium leading-relaxed opacity-60 italic">
                       Identify your biggest vulnerability in {course.code} based on recent performance.
                     </p>
-                    <button 
+                    <Button 
                       onClick={handleGenerateCriticalAction}
                       disabled={aiLoading}
-                      className="bg-secondary text-white border-2 border-ink px-4 py-2 text-xs font-black uppercase tracking-widest shadow-[3px_3px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all mt-2 disabled:opacity-50 flex items-center gap-2"
+                      variant="secondary" size="sm" className="mt-2 flex items-center gap-2"
                     >
                       <Sparkles size={14} /> {aiLoading ? 'Analyzing...' : 'Scan for Weaknesses'}
-                    </button>
+                    </Button>
                   </>
                 )}
               </div>
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Right Sidebar */}
         <div className="lg:col-span-4 space-y-8">
           {/* Quick Stats */}
-          <div className="bg-white border-3 border-ink shadow-[3px_3px_0px_#1A1A1A]">
+          <Card shadow="sm" className="p-0">
             <div className="p-6 border-b-4 border-ink">
               <h3 className="text-xl font-black uppercase tracking-tighter">Quick Stats</h3>
             </div>
@@ -790,10 +792,10 @@ export const CourseDetail = () => {
               <p className="text-4xl font-black leading-none">{statProjectedGrade}</p>
               <p className="text-[10px] font-bold uppercase mt-2 opacity-60">{statProjectedNote}</p>
             </div>
-          </div>
+          </Card>
 
           {/* Recommended Resource */}
-          <div className="bg-white border-3 border-ink shadow-[3px_3px_0px_#1A1A1A] overflow-hidden">
+          <Card shadow="sm" className="overflow-hidden p-0">
             <div className="h-48 bg-ink overflow-hidden relative">
               <img 
                 alt="Code visualization" 
@@ -806,26 +808,20 @@ export const CourseDetail = () => {
               <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-2">Recommended Resource</p>
               <h4 className="text-lg font-black leading-tight">Visualizing Data Structures: An Interactive Guide</h4>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
 
       {/* Add Deliverable Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-ink/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white border-4 border-ink w-full max-w-md shadow-[8px_8px_0px_#1A1A1A] overflow-hidden">
-            <div className="bg-primary-container border-b-4 border-ink p-6 flex justify-between items-center">
-              <h3 className="text-2xl font-black uppercase tracking-tighter leading-none">
-                Add {modalType === 'quiz' ? 'Quiz' : modalType === 'midterm' ? 'Midterm' : modalType === 'final' ? 'Final' : 'Assignment'}
-              </h3>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="font-black hover:opacity-60 transition-opacity"
-              >
-                X
-              </button>
-            </div>
-            <form onSubmit={handleAddSubmit} className="p-6 space-y-6">
+      <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <ModalContent>
+          <ModalHeader onClose={() => setIsModalOpen(false)}>
+            <h3 className="text-2xl font-black uppercase tracking-tighter leading-none">
+              Add {modalType === 'quiz' ? 'Quiz' : modalType === 'midterm' ? 'Midterm' : modalType === 'final' ? 'Final' : 'Assignment'}
+            </h3>
+          </ModalHeader>
+          <form onSubmit={handleAddSubmit}>
+            <ModalBody className="space-y-6">
               <div className="space-y-2">
                 <label className="text-xs font-black uppercase tracking-widest opacity-60">Title</label>
                 <input 
@@ -868,33 +864,30 @@ export const CourseDetail = () => {
                   required
                 />
               </div>
-              <button 
+            </ModalBody>
+            <ModalFooter>
+              <Button 
                 type="submit"
-                className="w-full bg-ink text-white border-2 border-ink p-4 font-black uppercase tracking-widest shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all"
+                variant="ink" size="lg"
+                className="w-full"
               >
                 Set Reminder
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+              </Button>
+            </ModalFooter>
+          </form>
+        </ModalContent>
+      </Modal>
 
       {/* Upload Marks Modal */}
-      {isUploadModalOpen && (
-        <div className="fixed inset-0 bg-ink/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white border-4 border-ink w-full max-w-md shadow-[8px_8px_0px_#1A1A1A] overflow-hidden">
-            <div className="bg-tertiary border-b-4 border-ink p-6 flex justify-between items-center text-white">
-              <h3 className="text-2xl font-black uppercase tracking-tighter leading-none">
-                Upload Marks
-              </h3>
-              <button 
-                onClick={() => setIsUploadModalOpen(false)}
-                className="font-black hover:opacity-60 transition-opacity"
-              >
-                X
-              </button>
-            </div>
-            <form onSubmit={handleUploadMarks} className="p-6 space-y-6">
+      <Modal open={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)}>
+        <ModalContent>
+          <ModalHeader onClose={() => setIsUploadModalOpen(false)} className="bg-tertiary text-white">
+            <h3 className="text-2xl font-black uppercase tracking-tighter leading-none">
+              Upload Marks
+            </h3>
+          </ModalHeader>
+          <form onSubmit={handleUploadMarks}>
+            <ModalBody className="space-y-6">
               
               <div className="space-y-2">
                 <label className="text-xs font-black uppercase tracking-widest opacity-60">Select {uploadDeliverableType}</label>
@@ -980,17 +973,19 @@ export const CourseDetail = () => {
                   </div>
                 </div>
               )}
-
-              <button 
+            </ModalBody>
+            <ModalFooter>
+              <Button 
                 type="submit"
-                className="w-full bg-tertiary text-white border-2 border-ink p-4 font-black uppercase tracking-widest shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all"
+                variant="tertiary" size="lg"
+                className="w-full"
               >
                 Upload & Grade
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+              </Button>
+            </ModalFooter>
+          </form>
+        </ModalContent>
+      </Modal>
     </div>
   );
 };

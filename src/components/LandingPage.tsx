@@ -1,6 +1,7 @@
 import { BarChart3, BrainCircuit, BellRing } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, Variants } from 'motion/react';
+import { Button, cardVariants, buttonVariants } from './ui';
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -19,7 +20,7 @@ export const LandingPage = () => {
   return (
     <div className="min-h-screen overflow-x-hidden">
       {/* TopNavBar */}
-      <nav className="fixed top-0 w-full z-50 border-b-4 border-ink bg-background flex justify-between items-center h-20 px-6 md:px-12 shadow-[3px_3px_0px_#1A1A1A]">
+      <nav className={`fixed top-0 w-full z-50 bg-background flex justify-between items-center h-20 px-6 md:px-12 ${cardVariants({ shadow: 'sm' })} !border-x-0 !border-t-0 !border-b-4 !rounded-none`}>
         <div className="text-2xl font-black text-ink uppercase tracking-tighter">
           Outlier
         </div>
@@ -28,8 +29,8 @@ export const LandingPage = () => {
           <a className="text-ink/60 hover:bg-primary-container hover:shadow-[2px_2px_0px_#1A1A1A] transition-all px-2" href="#">Features</a>
           <Link className="text-ink/60 hover:bg-primary-container hover:shadow-[2px_2px_0px_#1A1A1A] transition-all px-2" to="/dashboard">Dashboard</Link>
         </div>
-        <Link to="/auth" className="bg-primary-container border-3 border-ink px-6 py-2 font-black uppercase tracking-tighter shadow-[3px_3px_0px_#1A1A1A] hover:shadow-[2px_2px_0px_#1A1A1A] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all">
-          Sign In with Google
+        <Link to="/auth">
+          <Button variant="primary" size="sm">Sign In with Google</Button>
         </Link>
       </nav>
 
@@ -52,8 +53,10 @@ export const LandingPage = () => {
             AI-powered academic dashboard that tracks your grades, predicts your GPA, and tells you exactly what to study next.
           </p>
           <div className="flex flex-col md:flex-row gap-6 justify-center">
-            <Link to="/auth" className="bg-primary-container border-3 border-ink px-12 py-6 text-2xl md:text-4xl font-black uppercase tracking-tighter shadow-[6px_6px_0px_#1A1A1A] hover:shadow-[3px_3px_0px_#1A1A1A] hover:translate-x-[2px] hover:translate-y-[2px] active:shadow-none active:translate-x-[8px] active:translate-y-[8px] transition-all">
-              Get Started with Google
+            <Link to="/auth">
+              <Button variant="primary" size="lg" className="px-12 py-6 text-2xl md:text-4xl">
+                Get Started with Google
+              </Button>
             </Link>
           </div>
         </div>
@@ -81,7 +84,7 @@ export const LandingPage = () => {
           className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto relative z-10"
         >
           {/* Card 1: Smart Grade Tracking */}
-          <motion.div variants={itemVariants} className="bg-primary-container border-3 border-ink p-8 shadow-[6px_6px_0px_#1A1A1A] hover:shadow-[12px_12px_0px_#1A1A1A] hover:-translate-y-2 hover:-translate-x-1 transition-all duration-300 flex flex-col gap-6 group">
+          <motion.div variants={itemVariants} className={`${cardVariants({ shadow: 'md', interactive: true })} bg-primary-container p-8 flex flex-col gap-6 group hover:shadow-[12px_12px_0px_#1A1A1A] hover:-translate-y-2 hover:-translate-x-1`}>
             <div className="w-16 h-16 border-3 border-ink bg-white flex items-center justify-center">
               <BarChart3 size={32} />
             </div>
@@ -92,7 +95,7 @@ export const LandingPage = () => {
             </div>
           </motion.div>
           {/* Card 2: AI Study Recommendations */}
-          <motion.div variants={itemVariants} className="bg-secondary border-3 border-ink p-8 shadow-[6px_6px_0px_#1A1A1A] hover:shadow-[12px_12px_0px_#1A1A1A] hover:-translate-y-2 hover:-translate-x-1 transition-all duration-300 text-white flex flex-col gap-6 -rotate-1 origin-bottom-left hover:rotate-0">
+          <motion.div variants={itemVariants} className={`${cardVariants({ shadow: 'md', interactive: true })} bg-secondary p-8 text-white flex flex-col gap-6 -rotate-1 origin-bottom-left hover:rotate-0 hover:shadow-[12px_12px_0px_#1A1A1A] hover:-translate-y-2 hover:-translate-x-1`}>
             <div className="w-16 h-16 border-3 border-ink bg-white text-ink flex items-center justify-center">
               <BrainCircuit size={32} />
             </div>
@@ -103,7 +106,7 @@ export const LandingPage = () => {
             </div>
           </motion.div>
           {/* Card 3: Assignment Reminders */}
-          <motion.div variants={itemVariants} className="bg-tertiary border-3 border-ink p-8 shadow-[6px_6px_0px_#1A1A1A] hover:shadow-[12px_12px_0px_#1A1A1A] hover:-translate-y-2 hover:-translate-x-1 transition-all duration-300 text-white flex flex-col gap-6">
+          <motion.div variants={itemVariants} className={`${cardVariants({ shadow: 'md', interactive: true })} bg-tertiary p-8 text-white flex flex-col gap-6 hover:shadow-[12px_12px_0px_#1A1A1A] hover:-translate-y-2 hover:-translate-x-1`}>
             <div className="w-16 h-16 border-3 border-ink bg-white text-ink flex items-center justify-center">
               <BellRing size={32} />
             </div>
@@ -152,7 +155,7 @@ export const LandingPage = () => {
           </div>
           <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-8">Ready to Win?</h2>
           <p className="text-2xl font-bold mb-12">Join the elite cohort of students using data to destroy their competition.</p>
-          <Link to="/auth" className="bg-primary-container border-3 border-ink px-12 py-6 text-2xl font-black uppercase tracking-tighter shadow-[6px_6px_0px_#1A1A1A] hover:bg-ink hover:text-primary-container transition-all inline-block w-full md:w-auto">
+          <Link to="/auth" className={`${buttonVariants({ variant: 'primary', size: 'lg' })} !px-12 !py-6 text-2xl inline-flex w-full md:w-auto`}>
             Start Forging Now
           </Link>
         </motion.div>

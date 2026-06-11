@@ -1,4 +1,4 @@
-import { TrendingUp, Calendar, Target, AlertCircle, Clock, Loader2, ChevronDown, ChevronUp, Plus, Check, X, Zap } from 'lucide-react';
+import { TrendingUp, Calendar, Target, AlertCircle, Clock, Loader2, ChevronDown, ChevronUp, Plus, Check, Zap } from 'lucide-react';
 import { useProfile } from '../domain/profile/useProfile';
 import { useCourses } from '../domain/courses/useCourses';
 import { useDeadlines } from '../domain/deadlines/useDeadlines';
@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { calculateSemesterGPA, projectCGPA, estimateGrade } from '../utils/gpaEngine';
 import { isDateInRange } from '../utils/dateUtils';
 import { Todo } from '../types';
+import { Card, Button, Badge, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from './ui';
 
 export const Analytics = () => {
   const { userProfile } = useProfile();
@@ -152,16 +153,16 @@ export const Analytics = () => {
           <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-ink uppercase">📊 Semester Analytics</h2>
           <p className="text-lg text-ink/60 font-medium mt-1">Real-time performance tracking & grade forecasting.</p>
         </div>
-        <div className="bg-tertiary text-white border-2 border-ink px-4 py-2 font-bold shadow-[3px_3px_0px_#1A1A1A] flex items-center gap-2">
+        <Badge variant="tertiary" size="lg" className="flex items-center gap-2">
           <Calendar size={16} />
           {activeSemester?.name || userProfile?.semester ? `Semester ${userProfile?.semester}` : 'Current Semester'}
-        </div>
+        </Badge>
       </div>
 
       {/* GPA Overview & AI Insights Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* GPA Overview Card */}
-        <div className="lg:col-span-2 bg-primary-container border-3 border-ink p-8 shadow-[6px_6px_0px_#1A1A1A] flex flex-col justify-between relative overflow-hidden">
+        <Card shadow="md" className="lg:col-span-2 bg-primary-container p-8 flex flex-col justify-between relative overflow-hidden">
           <div className="absolute -right-8 -top-8 w-48 h-48 border-3 border-ink rotate-12 opacity-10 pointer-events-none"></div>
           <div>
             <div className="flex justify-between items-start">
@@ -226,10 +227,10 @@ export const Analytics = () => {
               <div className="flex items-center gap-2 text-[10px] font-bold"><div className="w-3 h-3 bg-ink/10 border border-ink"></div> Remaining</div>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* AI Study Priority List */}
-        <div className="bg-white border-3 border-ink border-l-secondary border-l-[12px] p-6 shadow-[3px_3px_0px_#1A1A1A] flex flex-col">
+        <Card shadow="sm" className="border-l-secondary border-l-[12px] p-6 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-black uppercase tracking-tighter">🤖 AI Study Priorities</h3>
             <span className="bg-secondary text-white text-[10px] px-2 py-0.5 border border-ink rotate-3 font-bold">CRITICAL</span>
@@ -257,15 +258,16 @@ export const Analytics = () => {
               </div>
             )}
           </ul>
-          <button
+          <Button
             onClick={openOptimizeModal}
             disabled={!priorities || priorities.length === 0}
-            className="mt-6 w-full border-3 border-ink py-2 font-black uppercase text-xs bg-secondary text-white shadow-[3px_3px_0px_#000] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            variant="secondary" size="sm"
+            className="mt-6 w-full flex items-center justify-center gap-2"
           >
             <Zap size={14} />
             Add to Calendar
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
 
       {/* Course Performance Matrix */}
@@ -276,7 +278,7 @@ export const Analytics = () => {
             const course = courses.find(c => c.id === cs.courseId);
             if (!course) return null;
             return (
-              <div key={course.id} className="bg-white border-3 border-ink shadow-[6px_6px_0px_#1A1A1A] flex flex-col">
+              <Card key={course.id} shadow="md" className="flex flex-col">
                 <div className="p-6 bg-ink text-white flex justify-between items-center">
                   <div>
                     <h4 className="text-2xl font-black tracking-tighter">{course.code}</h4>
@@ -304,14 +306,14 @@ export const Analytics = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>
       </div>
 
       {/* What-If Calculator */}
-      <div className="bg-white border-3 border-ink border-t-tertiary border-t-[12px] p-8 shadow-[6px_6px_0px_#1A1A1A]">
+      <Card shadow="md" className="border-t-tertiary border-t-[12px] p-8">
         <div className="flex items-center gap-3 mb-8">
           <Target size={32} className="text-tertiary" />
           <h3 className="text-3xl font-black tracking-tighter uppercase">🎯 What-If Calculator</h3>
@@ -344,13 +346,14 @@ export const Analytics = () => {
               />
             </div>
           </div>
-          <button
+          <Button
             onClick={handleWhatIf}
             disabled={!whatIfCourseId || !whatIfScore}
-            className="w-full bg-primary-container border-3 border-ink py-4 font-black uppercase text-lg shadow-[3px_3px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            variant="primary" size="lg"
+            className="w-full"
           >
             Calculate Impact
-          </button>
+          </Button>
           {whatIfResult && (
             <div className="bg-background border-2 border-ink p-4 flex justify-between items-center">
               <span className="font-bold text-sm">
@@ -360,22 +363,23 @@ export const Analytics = () => {
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Advanced Analytics Toggle */}
       <div>
-        <button
+        <Button
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="flex items-center gap-3 border-3 border-ink px-6 py-3 font-black uppercase text-sm tracking-[0.1em] bg-white shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all"
+          variant="outline"
+          className="flex items-center gap-3"
         >
           {showAdvanced ? <ChevronUp size={18} strokeWidth={3} /> : <ChevronDown size={18} strokeWidth={3} />}
           Advanced Analytics
-        </button>
+        </Button>
 
         {showAdvanced && (
           <div className="mt-6 space-y-8">
             {/* Past Credit Hours Input */}
-            <div className="bg-white border-3 border-ink p-6 shadow-[4px_4px_0px_#1A1A1A]">
+            <Card shadow="sm" className="p-6">
               <h4 className="text-lg font-black uppercase tracking-tighter mb-4">📋 Past Credit Hours</h4>
               <p className="text-sm text-ink/60 font-medium mb-4">
                 Enter the total credit hours you've completed before this semester. This improves the accuracy of your CGPA projection.
@@ -394,11 +398,11 @@ export const Analytics = () => {
                   />
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Grade Sensitivity Table */}
             {gradeSensitivity.length > 0 && (
-              <div className="bg-white border-3 border-ink p-6 shadow-[4px_4px_0px_#1A1A1A]">
+              <Card shadow="sm" className="p-6">
                 <h4 className="text-lg font-black uppercase tracking-tighter mb-2">📊 What You Need on the Final</h4>
                 <p className="text-sm text-ink/60 font-medium mb-6">
                   For each course, see how different scores on remaining work affect your final grade.
@@ -425,69 +429,66 @@ export const Analytics = () => {
                     </div>
                   ))}
                 </div>
-              </div>
+              </Card>
             )}
           </div>
         )}
       </div>
 
       {/* Optimize Schedule Approval Modal */}
-      {showOptimizeModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white border-4 border-ink shadow-[8px_8px_0px_#1A1A1A] max-w-lg w-full max-h-[80vh] overflow-y-auto">
-            <div className="p-6 border-b-4 border-ink bg-primary-container flex justify-between items-center">
-              <h3 className="text-xl font-black uppercase tracking-tighter">📋 Review Tasks</h3>
-              <button onClick={() => setShowOptimizeModal(false)} className="p-1 border-2 border-ink bg-white hover:bg-secondary hover:text-white transition-colors">
-                <X size={18} strokeWidth={3} />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <p className="text-sm text-ink/60 font-medium">
-                These tasks were generated from your AI study priorities. Uncheck any you don't want, edit the text, or change the due date.
-              </p>
-              {taskApprovals.map((task, i) => (
-                <div key={i} className={`border-2 border-ink p-4 flex items-start gap-3 transition-all ${task.checked ? 'bg-background' : 'bg-ink/5 opacity-60'}`}>
-                  <button
-                    onClick={() => setTaskApprovals(prev => prev.map((t, j) => j === i ? { ...t, checked: !t.checked } : t))}
-                    className={`shrink-0 w-6 h-6 border-2 border-ink flex items-center justify-center mt-0.5 ${task.checked ? 'bg-tertiary text-white' : 'bg-white'}`}
-                  >
-                    {task.checked && <Check size={14} strokeWidth={4} />}
-                  </button>
-                  <div className="flex-1 space-y-2">
-                    <input
-                      className="w-full bg-transparent font-bold text-sm outline-none border-b border-transparent focus:border-ink"
-                      value={task.text}
-                      onChange={e => setTaskApprovals(prev => prev.map((t, j) => j === i ? { ...t, text: e.target.value } : t))}
-                    />
-                    <input
-                      type="date"
-                      className="text-xs font-bold border border-ink px-2 py-1 bg-white outline-none"
-                      value={task.date}
-                      onChange={e => setTaskApprovals(prev => prev.map((t, j) => j === i ? { ...t, date: e.target.value } : t))}
-                    />
-                  </div>
+      <Modal open={showOptimizeModal} onClose={() => setShowOptimizeModal(false)}>
+        <ModalContent>
+          <ModalHeader onClose={() => setShowOptimizeModal(false)}>
+            <h3 className="text-xl font-black uppercase tracking-tighter">📋 Review Tasks</h3>
+          </ModalHeader>
+          <ModalBody className="space-y-4">
+            <p className="text-sm text-ink/60 font-medium">
+              These tasks were generated from your AI study priorities. Uncheck any you don't want, edit the text, or change the due date.
+            </p>
+            {taskApprovals.map((task, i) => (
+              <div key={i} className={`border-2 border-ink p-4 flex items-start gap-3 transition-all ${task.checked ? 'bg-background' : 'bg-ink/5 opacity-60'}`}>
+                <button
+                  onClick={() => setTaskApprovals(prev => prev.map((t, j) => j === i ? { ...t, checked: !t.checked } : t))}
+                  className={`shrink-0 w-6 h-6 border-2 border-ink flex items-center justify-center mt-0.5 ${task.checked ? 'bg-tertiary text-white' : 'bg-white'}`}
+                >
+                  {task.checked && <Check size={14} strokeWidth={4} />}
+                </button>
+                <div className="flex-1 space-y-2">
+                  <input
+                    className="w-full bg-transparent font-bold text-sm outline-none border-b border-transparent focus:border-ink"
+                    value={task.text}
+                    onChange={e => setTaskApprovals(prev => prev.map((t, j) => j === i ? { ...t, text: e.target.value } : t))}
+                  />
+                  <input
+                    type="date"
+                    className="text-xs font-bold border border-ink px-2 py-1 bg-white outline-none"
+                    value={task.date}
+                    onChange={e => setTaskApprovals(prev => prev.map((t, j) => j === i ? { ...t, date: e.target.value } : t))}
+                  />
                 </div>
-              ))}
-            </div>
-            <div className="p-6 border-t-4 border-ink flex gap-4">
-              <button
-                onClick={() => setShowOptimizeModal(false)}
-                className="flex-1 border-3 border-ink py-3 font-black uppercase text-xs bg-white shadow-[3px_3px_0px_#1A1A1A] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddApprovedTasks}
-                disabled={taskApprovals.filter(t => t.checked).length === 0}
-                className="flex-1 border-3 border-ink py-3 font-black uppercase text-xs bg-tertiary text-white shadow-[3px_3px_0px_#1A1A1A] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all disabled:opacity-40 flex items-center justify-center gap-2"
-              >
-                <Plus size={14} />
-                Add {taskApprovals.filter(t => t.checked).length} to Calendar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              </div>
+            ))}
+          </ModalBody>
+          <ModalFooter className="flex gap-4">
+            <Button
+              onClick={() => setShowOptimizeModal(false)}
+              variant="outline" size="sm"
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddApprovedTasks}
+              disabled={taskApprovals.filter(t => t.checked).length === 0}
+              variant="tertiary" size="sm"
+              className="flex-1 flex items-center justify-center gap-2"
+            >
+              <Plus size={14} />
+              Add {taskApprovals.filter(t => t.checked).length} to Calendar
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <div className="pb-12"></div>
     </div>

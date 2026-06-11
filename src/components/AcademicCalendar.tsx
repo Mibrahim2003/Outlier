@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { Upload, ChevronLeft, ChevronRight, Loader2, AlertCircle, Flame, Plus, Download, Settings, X } from 'lucide-react';
+import { Upload, ChevronLeft, ChevronRight, Loader2, AlertCircle, Flame, Plus, Download, Settings } from 'lucide-react';
 import { useCalendar } from '../domain/calendar/useCalendar';
 import { useDeadlines } from '../domain/deadlines/useDeadlines';
 import { useTodos } from '../domain/todos/useTodos';
@@ -16,6 +16,7 @@ import {
 import { SemesterInfo, Deadline, Todo } from '../types';
 import { exportToICS } from '../utils/icsExport';
 import { useSearchParams } from 'react-router-dom';
+import { Button, Card, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from './ui';
 
 const DAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
@@ -250,10 +251,11 @@ export const AcademicCalendar = () => {
           <p className="text-lg font-bold opacity-60 leading-relaxed max-w-sm mx-auto">
             Drop your university's academic calendar image and we'll extract everything automatically.
           </p>
-          <button
+          <Button
             onClick={() => fileInputRef.current?.click()}
             disabled={parsing}
-            className="bg-[#FFDE59] border-4 border-[#1A1A1A] px-10 py-5 font-black text-lg uppercase tracking-widest shadow-[6px_6px_0px_#1A1A1A] hover:shadow-[3px_3px_0px_#1A1A1A] hover:translate-x-[3px] hover:translate-y-[3px] active:shadow-none active:translate-x-[6px] active:translate-y-[6px] transition-all disabled:opacity-50 flex items-center gap-3 mx-auto"
+            variant="secondary" size="lg"
+            className="px-10 py-5 mx-auto flex items-center gap-3 bg-[#FFDE59]"
           >
             {parsing ? (
               <>
@@ -266,7 +268,7 @@ export const AcademicCalendar = () => {
                 Select File
               </>
             )}
-          </button>
+          </Button>
           <input
             ref={fileInputRef}
             type="file"
@@ -292,7 +294,7 @@ export const AcademicCalendar = () => {
   return (
     <div className="space-y-8 relative">
       {/* Filters and Actions Top Bar */}
-      <div className="bg-white border-4 border-[#1A1A1A] shadow-[4px_4px_0px_#1A1A1A] p-4 flex flex-wrap items-center justify-between gap-4">
+      <Card shadow="sm" className="p-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-6">
           <label className="flex items-center gap-3 cursor-pointer group">
             <div className="relative">
@@ -323,22 +325,24 @@ export const AcademicCalendar = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          <button 
+          <Button 
             onClick={openEditModal}
-            className="flex items-center gap-2 bg-white border-3 border-[#1A1A1A] px-3 py-1.5 font-black text-[10px] uppercase tracking-widest shadow-[2px_2px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+            variant="outline" size="xs"
+            className="flex items-center gap-2"
           >
             <Settings size={14} strokeWidth={3} />
             Edit Semester
-          </button>
-          <button 
+          </Button>
+          <Button 
             onClick={() => exportToICS(deadlines, academicCalendar)}
-            className="flex items-center gap-2 bg-ink text-white border-3 border-[#1A1A1A] px-3 py-1.5 font-black text-[10px] uppercase tracking-widest shadow-[2px_2px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+            variant="ink" size="xs"
+            className="flex items-center gap-2"
           >
             <Download size={14} strokeWidth={3} />
             Export .ICS
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
 
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -358,25 +362,25 @@ export const AcademicCalendar = () => {
           <h2 className="text-3xl font-black tracking-[-0.04em] uppercase text-ink hidden md:block mr-2">
             {monthLabel}
           </h2>
-          <button
+          <Button
             onClick={goToday}
-            className="bg-[#FFDE59] border-4 border-[#1A1A1A] px-5 py-3 font-black uppercase text-sm tracking-[0.1em] shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all"
+            variant="secondary" size="sm" className="bg-[#FFDE59]"
           >
             Today
-          </button>
-          <div className="flex">
-            <button
+          </Button>
+          <div className="flex gap-1">
+            <Button
               onClick={prevMonth}
-              className="bg-white border-4 border-[#1A1A1A] p-3 shadow-[3px_3px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
+              variant="outline" size="sm" className="p-3"
             >
               <ChevronLeft size={20} strokeWidth={3} />
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={nextMonth}
-              className="bg-white border-4 border-[#1A1A1A] border-l-0 p-3 shadow-[3px_3px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all"
+              variant="outline" size="sm" className="p-3"
             >
               <ChevronRight size={20} strokeWidth={3} />
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -384,7 +388,7 @@ export const AcademicCalendar = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Calendar Grid */}
         <div className="lg:col-span-8">
-          <div className="bg-white border-4 border-[#1A1A1A] shadow-[8px_8px_0px_#1A1A1A] overflow-hidden">
+          <Card shadow="md" className="overflow-hidden p-0">
             {/* Day headers */}
             <div className="grid grid-cols-8 border-b-4 border-[#1A1A1A]">
               <div className="p-3 text-center border-r border-ink/15 bg-[#1A1A1A] text-[#FFDE59]">
@@ -518,12 +522,12 @@ export const AcademicCalendar = () => {
                 </div>
               );
             })}
-          </div>
+          </Card>
         </div>
 
         {/* Day Detail Sidebar */}
-        <div className="lg:col-span-4 flex flex-col">
-          <div className="bg-white border-4 border-[#1A1A1A] shadow-[8px_8px_0px_#1A1A1A] sticky top-28 flex-1 flex flex-col min-h-[400px]">
+        <div className="lg:col-span-4 flex flex-col sticky top-28">
+          <Card shadow="md" className="flex-1 flex flex-col min-h-[400px] overflow-hidden p-0">
             {/* Sidebar Header */}
             <div className="bg-[#1A1A1A] text-white p-6 border-b-4 border-[#1A1A1A]">
               {selectedDate ? (
@@ -653,30 +657,28 @@ export const AcademicCalendar = () => {
 
             {/* Add Event Button at bottom of sidebar */}
             <div className="p-4 bg-white border-t-4 border-[#1A1A1A]">
-              <button
+              <Button
                 onClick={() => setIsAddModalOpen(true)}
                 disabled={!selectedDate}
-                className="w-full bg-[#FFDE59] border-4 border-[#1A1A1A] py-4 font-black uppercase tracking-[0.15em] shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                variant="secondary" size="lg"
+                className="w-full bg-[#FFDE59] flex items-center justify-center gap-2"
               >
                 <Plus strokeWidth={3} size={20} />
                 Add Event
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
 
       {/* Unified Add Event Modal */}
-      {isAddModalOpen && selectedDate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1A1A1A]/80 backdrop-blur-sm">
-          <div className="bg-white border-4 border-[#1A1A1A] shadow-[12px_12px_0px_#FFDE59] w-full max-w-md">
-            <div className="bg-[#1A1A1A] text-white p-4 flex justify-between items-center border-b-4 border-[#1A1A1A]">
-              <h2 className="text-2xl font-black uppercase tracking-widest">New Event</h2>
-              <button onClick={() => setIsAddModalOpen(false)} className="hover:text-[#A8275A] transition-colors">
-                <X strokeWidth={3} />
-              </button>
-            </div>
-            <form onSubmit={handleAddEvent} className="p-6 space-y-6">
+      <Modal open={isAddModalOpen && !!selectedDate} onClose={() => setIsAddModalOpen(false)}>
+        <ModalContent>
+          <ModalHeader onClose={() => setIsAddModalOpen(false)} className="bg-[#1A1A1A] text-white">
+            <h2 className="text-2xl font-black uppercase tracking-widest">New Event</h2>
+          </ModalHeader>
+          <form onSubmit={handleAddEvent}>
+            <ModalBody className="space-y-6">
               {/* Task / Deadline Toggle */}
               <div className="flex border-3 border-[#1A1A1A]">
                 <button
@@ -705,7 +707,7 @@ export const AcademicCalendar = () => {
 
               <div className="bg-[#FFDE59]/30 p-3 border-l-4 border-[#FFDE59]">
                 <p className="text-[10px] font-black uppercase tracking-[0.1em] opacity-60">Selected Date</p>
-                <p className="text-lg font-black">{formatDateShort(selectedDate)}</p>
+                <p className="text-lg font-black">{selectedDate ? formatDateShort(selectedDate) : ''}</p>
               </div>
               
               <div className="space-y-2">
@@ -777,28 +779,29 @@ export const AcademicCalendar = () => {
                   </div>
                 </>
               )}
-
-              <button type="submit" className={`w-full border-4 border-[#1A1A1A] py-4 font-black uppercase tracking-widest shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all ${
-                eventType === 'task' ? 'bg-[#FFDE59]' : 'bg-[#A8275A] text-white'
-              }`}>
+            </ModalBody>
+            <ModalFooter>
+              <Button 
+                type="submit" 
+                variant={eventType === 'task' ? 'secondary' : 'ink'} 
+                size="lg"
+                className={`w-full ${eventType === 'task' ? 'bg-[#FFDE59]' : 'bg-[#A8275A] text-white'}`}
+              >
                 {eventType === 'task' ? 'Add Task' : 'Commit Deadline'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+              </Button>
+            </ModalFooter>
+          </form>
+        </ModalContent>
+      </Modal>
 
       {/* Edit Semester Modal */}
-      {isEditModalOpen && activeSemester && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1A1A1A]/80 backdrop-blur-sm">
-          <div className="bg-white border-4 border-[#1A1A1A] shadow-[12px_12px_0px_#A8275A] w-full max-w-md">
-            <div className="bg-[#1A1A1A] text-white p-4 flex justify-between items-center border-b-4 border-[#1A1A1A]">
-              <h2 className="text-2xl font-black uppercase tracking-widest">Edit Semester</h2>
-              <button onClick={() => setIsEditModalOpen(false)} className="hover:text-[#A8275A] transition-colors">
-                <X strokeWidth={3} />
-              </button>
-            </div>
-            <form onSubmit={handleEditSemester} className="p-6 space-y-6">
+      <Modal open={isEditModalOpen && !!activeSemester} onClose={() => setIsEditModalOpen(false)}>
+        <ModalContent>
+          <ModalHeader onClose={() => setIsEditModalOpen(false)} className="bg-[#1A1A1A] text-white">
+            <h2 className="text-2xl font-black uppercase tracking-widest">Edit Semester</h2>
+          </ModalHeader>
+          <form onSubmit={handleEditSemester}>
+            <ModalBody className="space-y-6">
               
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-[0.1em]">Semester Name</label>
@@ -832,14 +835,15 @@ export const AcademicCalendar = () => {
                   />
                 </div>
               </div>
-
-              <button type="submit" className="w-full bg-ink text-white border-4 border-[#1A1A1A] py-4 font-black uppercase tracking-widest shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] transition-all">
+            </ModalBody>
+            <ModalFooter>
+              <Button type="submit" variant="ink" size="lg" className="w-full text-white bg-ink">
                 Save Changes
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+              </Button>
+            </ModalFooter>
+          </form>
+        </ModalContent>
+      </Modal>
 
     </div>
   );

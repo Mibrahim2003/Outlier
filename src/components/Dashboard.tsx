@@ -13,6 +13,7 @@ import { getGreeting, getDeadlineStatus, isSameDay } from '../utils/dateUtils';
 import { ErrorBoundary } from 'react-error-boundary';
 import { WidgetErrorFallback } from './ErrorBoundary';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { Button, Card, Badge } from './ui';
 
 export const Dashboard = () => {
   const { userProfile } = useProfile();
@@ -53,13 +54,13 @@ export const Dashboard = () => {
   return (
     <div className="space-y-12">
       {/* Welcome Banner */}
-      <section className="relative bg-primary-container border-3 border-ink p-6 md:p-10 shadow-[6px_6px_0px_#1A1A1A] flex flex-col md:flex-row justify-between items-start md:items-center overflow-hidden">
+      <Card shadow="md" className="bg-primary-container p-6 md:p-10 flex flex-col md:flex-row justify-between items-start md:items-center overflow-hidden relative">
         <div className="space-y-4 z-10">
-          <div className="inline-block bg-secondary text-white px-3 py-1 font-bold border-2 border-ink -rotate-2 mb-2 shadow-[2px_2px_0px_#1A1A1A]">
+          <Badge variant="secondary" className="-rotate-2 mb-2 shadow-[2px_2px_0px_#1A1A1A]">
             <span className="flex items-center gap-2 text-xs uppercase tracking-tighter">
               <Sparkles size={14} fill="currentColor" /> AI Insights
             </span>
-          </div>
+          </Badge>
           <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-none">{greeting}, {userName}</h1>
           <p className="text-lg md:text-xl font-medium opacity-80">
             You have <span className="underline decoration-4 decoration-secondary">{deadlines.length} upcoming {deadlines.length === 1 ? 'deadline' : 'deadlines'}</span> this week.
@@ -67,7 +68,7 @@ export const Dashboard = () => {
         </div>
         <div className="hidden lg:block absolute right-[-20px] top-[-20px] bottom-[-20px] w-64 border-l-4 border-ink shadow-[-6px_0px_0px_rgba(0,0,0,0.1)] hazard-stripes skew-x-[-15deg]">
         </div>
-      </section>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
         {/* Left: Main Dashboard Content */}
@@ -76,13 +77,13 @@ export const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             
             {dynamicStats.map((stat) => (
-              <div key={stat.label} className="bg-white border-3 border-ink shadow-[3px_3px_0px_#1A1A1A] group hover:translate-y-[-2px] transition-all">
+              <Card key={stat.label} shadow="sm" className="group hover:translate-y-[-2px] transition-all">
                 <div className={`h-3 ${stat.color} border-b-4 border-ink`}></div>
                 <div className="p-4 text-center">
                   <p className="text-[10px] font-black uppercase tracking-widest opacity-60">{stat.label}</p>
                   <p className="text-3xl md:text-4xl font-black mt-1">{stat.value}</p>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
 
@@ -91,26 +92,24 @@ export const Dashboard = () => {
             <div className="flex items-end justify-between">
               <h2 className="text-3xl md:text-4xl font-black tracking-tighter uppercase">My Courses</h2>
               <div className="flex gap-4">
-                <button 
+                <Button 
                   onClick={() => navigate('/onboarding')}
-                  className="text-xs bg-tertiary text-white border-2 border-ink px-3 py-1 font-bold uppercase tracking-widest shadow-[2px_2px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-1"
+                  variant="tertiary" size="xs"
+                  className="flex items-center gap-1"
                 >
                   <Plus size={14} /> Add
-                </button>
+                </Button>
                 <Link to="/courses" className="text-sm font-bold underline decoration-4 decoration-primary flex items-center">View All</Link>
               </div>
             </div>
             
             {courses.length === 0 ? (
-              <div className="bg-white border-3 border-ink border-dashed p-10 text-center shadow-[3px_3px_0px_#1A1A1A]">
+              <Card shadow="sm" className="border-dashed p-10 text-center">
                 <p className="text-lg font-bold mb-4 opacity-60 uppercase tracking-widest">No Active Courses</p>
-                <button 
-                  onClick={() => navigate('/onboarding')}
-                  className="bg-primary-container border-3 border-ink px-6 py-3 font-black uppercase tracking-widest shadow-[3px_3px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
-                >
+                <Button onClick={() => navigate('/onboarding')}>
                   Add Your First Course
-                </button>
-              </div>
+                </Button>
+              </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {courses.map((course) => (
@@ -122,7 +121,7 @@ export const Dashboard = () => {
                       <div className={`h-4 ${getThemeBgClass(course.themeColor)} border-b-4 border-ink`}></div>
                       <div className="p-6 flex-1 space-y-4">
                         <div className="flex justify-between items-start">
-                          <span className="bg-ink text-white px-2 py-1 text-[10px] font-black uppercase">{course.code}</span>
+                          <Badge>{course.code}</Badge>
                           <span className="text-[10px] font-bold uppercase opacity-60">{course.credits} Credits</span>
                         </div>
                         <h3 className="text-xl md:text-2xl font-black leading-tight">{course.name}</h3>
@@ -145,7 +144,7 @@ export const Dashboard = () => {
 
           {/* AI Recommendations Widget */}
           <ErrorBoundary FallbackComponent={WidgetErrorFallback}>
-            <div className="bg-white border-3 border-ink shadow-[6px_6px_0px_#1A1A1A]">
+            <Card shadow="md">
               <div className="bg-secondary p-4 border-b-4 border-ink flex items-center gap-3">
                 <Sparkles className="text-white" fill="currentColor" size={24} />
                 <span className="text-white font-black uppercase tracking-widest text-lg">🤖 AI Says...</span>
@@ -161,46 +160,41 @@ export const Dashboard = () => {
                     <p className="text-xl md:text-2xl font-medium leading-snug mb-4">
                       {insight}
                     </p>
-                    <button 
-                      onClick={handleGenerateInsight}
-                      className="bg-white text-ink border-2 border-ink px-4 py-2 text-xs font-black uppercase tracking-widest shadow-[3px_3px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
-                    >
+                    <Button onClick={handleGenerateInsight} variant="outline" size="xs">
                       Regenerate Insight
-                    </button>
+                    </Button>
                   </div>
                 ) : (
                   <div className="w-full flex flex-col items-start gap-4">
                     <p className="text-xl md:text-2xl font-medium opacity-60 italic">
                       Click below to generate your daily AI insight based on your current courses and deadlines.
                     </p>
-                    <button 
-                      onClick={handleGenerateInsight}
-                      className="bg-secondary text-white border-3 border-ink px-6 py-3 text-sm font-black uppercase tracking-widest shadow-[4px_4px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2"
-                    >
+                    <Button onClick={handleGenerateInsight} variant="secondary" className="flex items-center gap-2">
                       <Sparkles size={16} /> Generate Insight
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
-            </div>
+            </Card>
           </ErrorBoundary>
         </div>
 
         {/* Right Sidebar: Today's Tasks + Upcoming Deadlines */}
         <div className="lg:col-span-4">
-          <div className="bg-white border-3 border-ink shadow-[6px_6px_0px_#1A1A1A] sticky top-28">
+          <Card shadow="md" className="sticky top-28">
             {/* Today's Tasks Section */}
             <div className="p-6 border-b-4 border-ink flex justify-between items-center">
               <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter flex items-center gap-2">
                 <ListChecks size={22} strokeWidth={3} />
                 Today's Tasks
               </h2>
-              <button 
+              <Button 
                 onClick={() => navigate('/calendar?action=add-task')}
-                className="bg-primary-container border-2 border-ink p-1 shadow-[2px_2px_0px_#1A1A1A] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
+                variant="primary" size="icon"
+                className="w-8 h-8"
               >
                 <Plus size={18} />
-              </button>
+              </Button>
             </div>
             <div className="p-6 space-y-3 bg-[#FFF6E3]">
               {todayTodos.length === 0 ? (
@@ -217,15 +211,16 @@ export const Dashboard = () => {
               ) : (
                 <>
                   {uncompletedTodayTodos.map(todo => (
-                    <div
+                    <Card
                       key={todo.id}
+                      shadow="sm" interactive
                       onClick={() => toggleTodo(todo.id)}
-                      className="flex items-center gap-3 p-3 bg-white border-3 border-ink shadow-[2px_2px_0px_#1A1A1A] cursor-pointer hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_#1A1A1A] transition-all"
+                      className="flex items-center gap-3 p-3"
                     >
                       <div className="w-5 h-5 border-3 border-ink flex-shrink-0 bg-white" />
                       <span className="font-bold text-sm flex-1">{todo.text}</span>
                       {todo.course && <span className="text-[9px] font-black uppercase opacity-30">{todo.course}</span>}
-                    </div>
+                    </Card>
                   ))}
                   {completedTodayTodos.map(todo => (
                     <div
@@ -268,9 +263,10 @@ export const Dashboard = () => {
               ) : deadlines.map((deadline) => {
                 const status = getDeadlineStatus(deadline.dueDate);
                 return (
-                  <div 
+                  <Card 
                     key={deadline.id}
-                    className="p-4 border-3 border-ink shadow-[3px_3px_0px_#1A1A1A] bg-white relative overflow-hidden group hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all cursor-pointer"
+                    shadow="sm" interactive
+                    className="p-4 relative overflow-hidden"
                   >
                     <div className={`absolute left-0 top-0 bottom-0 w-2 ${
                       deadline.priority === 'urgent' ? 'bg-secondary' : 
@@ -288,17 +284,18 @@ export const Dashboard = () => {
                        deadline.priority === 'moderate' ? <Clock size={18} className="text-primary" /> : 
                        <CheckCircle2 size={18} className="text-tertiary" />}
                     </div>
-                  </div>
+                  </Card>
                 );
               })}
-              <button 
+              <Button 
                 onClick={() => navigate('/calendar')}
-                className="w-full py-4 border-3 border-ink text-sm font-black uppercase tracking-widest hover:bg-ink hover:text-white transition-all active:translate-x-[2px] active:translate-y-[2px]"
+                variant="outline"
+                className="w-full"
               >
                 Open Full Calendar
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>

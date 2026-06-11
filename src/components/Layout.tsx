@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Button, cardVariants } from './ui';
 
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -30,10 +31,10 @@ interface SidebarItemProps {
 const SidebarItem = ({ to, icon: Icon, label, active }: SidebarItemProps) => (
   <Link 
     to={to}
-    className={`flex items-center gap-4 p-4 border-b-4 transition-all active:scale-95 duration-75 ${
+    className={`flex items-center gap-4 p-4 transition-all active:scale-95 duration-75 ${
       active 
-        ? 'bg-primary-container text-ink font-bold border-ink shadow-[2px_2px_0px_#1A1A1A]' 
-        : 'text-ink border-transparent hover:bg-secondary hover:text-white'
+        ? `${cardVariants({ shadow: 'sm' })} bg-primary-container text-ink font-bold !border-b-4` 
+        : 'text-ink border-transparent border-b-4 hover:bg-secondary hover:text-white'
     }`}
   >
     <Icon size={20} />
@@ -61,7 +62,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top Navigation */}
-      <nav className="fixed top-0 w-full z-50 border-b-4 border-ink bg-background shadow-[3px_3px_0px_#1A1A1A] flex items-center justify-between px-6 h-20">
+      <nav className={`fixed top-0 w-full z-50 bg-background flex items-center justify-between px-6 h-20 ${cardVariants({ shadow: 'sm' })} !border-b-4 !border-t-0 !border-x-0 !rounded-none`}>
         <div className="flex items-center gap-8">
           <button 
             className="md:hidden p-2 border-2 border-ink neo-brutal-shadow bg-white"
@@ -72,7 +73,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
           <Link to="/" className="text-2xl font-black uppercase tracking-tighter text-ink">
             Outlier
           </Link>
-          <div className="hidden md:flex items-center bg-white border-3 border-ink px-4 py-2 w-96 shadow-[2px_2px_0px_#1A1A1A]">
+          <div className={`hidden md:flex items-center px-4 py-2 w-96 ${cardVariants({ shadow: 'sm' })}`}>
             <Search size={18} className="mr-2 text-ink" />
             <input 
               className="bg-transparent border-none focus:ring-0 w-full font-medium text-sm outline-none" 
@@ -87,7 +88,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             <span className="absolute top-1 right-1 w-3 h-3 bg-secondary border-2 border-ink"></span>
           </div>
           <div className="hidden sm:flex items-center gap-3 group cursor-pointer">
-            <div className="w-10 h-10 border-3 border-ink shadow-[2px_2px_0px_#1A1A1A] overflow-hidden bg-white">
+            <div className={`w-10 h-10 overflow-hidden ${cardVariants({ shadow: 'sm' })}`}>
               <img 
                 alt="User avatar" 
                 className="w-full h-full object-cover" 
@@ -126,13 +127,16 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             ))}
           </nav>
           <div className="p-4 border-t-4 border-ink mt-auto space-y-2">
-            <Link 
-              to="/onboarding"
-              className="w-full bg-tertiary text-white py-3 font-bold border-3 border-ink shadow-[3px_3px_0px_#1A1A1A] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all flex items-center justify-center gap-2"
+            <Button
+              variant="tertiary" size="default"
+              className="w-full flex items-center justify-center gap-2"
+              onClick={() => {}}
             >
-              <PlusCircle size={18} />
-              <span>New Project</span>
-            </Link>
+              <Link to="/onboarding" className="flex items-center gap-2 text-inherit no-underline">
+                <PlusCircle size={18} />
+                <span>New Project</span>
+              </Link>
+            </Button>
             <div className="pt-4 flex flex-col gap-1">
               <button className="flex items-center gap-3 p-2 text-xs font-bold uppercase tracking-widest hover:text-secondary transition-colors text-left">
                 <HelpCircle size={14} /> Help
