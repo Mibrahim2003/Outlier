@@ -88,23 +88,6 @@ export const AcademicCalendar = () => {
 
   const grid = useMemo(() => getCalendarGrid(viewYear, viewMonth), [viewYear, viewMonth]);
 
-  const currentWeek = useMemo(() => {
-    if (!activeSemester) return null;
-    const wk = getSemesterWeekNumber(today, new Date(activeSemester.startDate));
-    const total = Math.ceil((new Date(activeSemester.endDate).getTime() - new Date(activeSemester.startDate).getTime()) / (7 * 24 * 60 * 60 * 1000));
-    if (wk < 1) return 1;
-    if (wk > total) return total;
-    return wk;
-  }, [activeSemester, today]);
-
-  const totalWeeks = useMemo(() => {
-    if (!activeSemester) return null;
-    const start = new Date(activeSemester.startDate);
-    const end = new Date(activeSemester.endDate);
-    const diffMs = end.getTime() - start.getTime();
-    return Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000));
-  }, [activeSemester]);
-
   const handleFile = async (file: File) => {
     const semesters = await parseCalendarImage(file);
     if (semesters && semesters.length > 0) {

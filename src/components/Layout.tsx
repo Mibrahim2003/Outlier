@@ -5,7 +5,6 @@ import { supabase } from '../lib/supabase';
 import { 
   LayoutDashboard, 
   BookOpen, 
-  Library, 
   BarChart3, 
   Settings, 
   PlusCircle, 
