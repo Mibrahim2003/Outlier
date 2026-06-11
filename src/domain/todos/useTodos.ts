@@ -128,9 +128,11 @@ export function useTodos() {
     },
   });
 
+  const { mutate: clearCompleted } = clearCompletedMutation;
+
   const clearCompletedTodos = () => {
     const completedIds = todos.filter(t => t.completed).map(t => t.id);
-    if (completedIds.length) clearCompletedMutation.mutate(completedIds);
+    if (completedIds.length) clearCompleted(completedIds);
   };
 
   // Midnight auto-clear for completed todos
@@ -142,13 +144,13 @@ export function useTodos() {
         (t) => t.completed && t.completedAt && t.completedAt.split('T')[0] < todayStr
       );
       if (toRemove.length > 0) {
-        clearCompletedMutation.mutate(toRemove.map(t => t.id));
+        clearCompleted(toRemove.map(t => t.id));
       }
     };
     const interval = setInterval(checkMidnightClear, 60_000);
     checkMidnightClear();
     return () => clearInterval(interval);
-  }, [userId, todos, clearCompletedMutation]);
+  }, [userId, todos, clearCompleted]);
 
   return { 
     todos, 
