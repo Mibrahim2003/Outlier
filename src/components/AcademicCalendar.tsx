@@ -43,6 +43,39 @@ export const AcademicCalendar = () => {
   // Modals State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  
+  // Manual Setup State
+  const [isManualSetupOpen, setIsManualSetupOpen] = useState(false);
+  const [manualName, setManualName] = useState('Fall 2026');
+  const [manualStart, setManualStart] = useState('');
+  const [manualEnd, setManualEnd] = useState('');
+  const [manualError, setManualError] = useState<string | null>(null);
+
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualStart || !manualEnd || !manualName) return;
+
+    const start = new Date(manualStart);
+    const end = new Date(manualEnd);
+
+    if (end <= start) {
+      setManualError('End date must be exactly after the start date.');
+      return;
+    }
+
+    setManualError(null);
+    setAcademicCalendar({
+      id: crypto.randomUUID(),
+      uploadedAt: new Date().toISOString(),
+      semesters: [{
+        name: manualName,
+        startDate: manualStart,
+        endDate: manualEnd,
+        breaks: [],
+      }]
+    });
+    setIsManualSetupOpen(false);
+  };
 
   // Add Deadline Form State
   const [newDlTitle, setNewDlTitle] = useState('');
@@ -279,6 +312,15 @@ export const AcademicCalendar = () => {
           <p className="text-[11px] font-black uppercase tracking-[0.15em] opacity-30">
             PNG • JPG • PDF Screenshots • Max 10 MB
           </p>
+          <div className="pt-4 border-t-3 border-ink/10 flex flex-col items-center">
+            <Button
+              variant={parseError ? "primary" : "outline"}
+              size="default"
+              onClick={() => setIsManualSetupOpen(true)}
+            >
+              Skip & Enter Manually
+            </Button>
+          </div>
           {parseError && (
             <div className="bg-[#A8275A] text-white border-4 border-[#1A1A1A] p-4 flex items-center gap-3 font-black text-sm shadow-[4px_4px_0px_#1A1A1A]">
               <AlertCircle size={20} strokeWidth={3} />
@@ -286,6 +328,62 @@ export const AcademicCalendar = () => {
             </div>
           )}
         </div>
+        
+        {/* Manual Setup Modal */}
+        <Modal open={isManualSetupOpen} onClose={() => setIsManualSetupOpen(false)}>
+          <ModalContent>
+            <ModalHeader onClose={() => setIsManualSetupOpen(false)} className="bg-[#1A1A1A] text-white">
+              <h2 className="text-2xl font-black uppercase tracking-widest">Manual Setup</h2>
+            </ModalHeader>
+            <form onSubmit={handleManualSubmit}>
+              <ModalBody className="space-y-6">
+                {manualError && (
+                  <div className="bg-[#A8275A] text-white border-4 border-[#1A1A1A] p-4 flex items-center gap-3 font-black text-sm shadow-[4px_4px_0px_#1A1A1A]">
+                    <AlertCircle size={20} strokeWidth={3} />
+                    {manualError}
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.1em]">Semester Name</label>
+                  <input 
+                    required
+                    value={manualName}
+                    onChange={e => setManualName(e.target.value)}
+                    className="w-full bg-[#FFF6E3] border-3 border-[#1A1A1A] p-3 font-bold focus:outline-none focus:ring-4 focus:ring-[#A8275A]/30" 
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.1em]">Start Date</label>
+                    <input 
+                      required
+                      type="date"
+                      value={manualStart}
+                      onChange={e => setManualStart(e.target.value)}
+                      className="w-full bg-[#FFF6E3] border-3 border-[#1A1A1A] p-3 font-bold focus:outline-none focus:ring-4 focus:ring-[#A8275A]/30" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.1em]">End Date</label>
+                    <input 
+                      required
+                      type="date"
+                      value={manualEnd}
+                      onChange={e => setManualEnd(e.target.value)}
+                      className="w-full bg-[#FFF6E3] border-3 border-[#1A1A1A] p-3 font-bold focus:outline-none focus:ring-4 focus:ring-[#A8275A]/30" 
+                    />
+                  </div>
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button type="submit" variant="ink" size="lg" className="w-full text-white bg-ink">
+                  Create Calendar
+                </Button>
+              </ModalFooter>
+            </form>
+          </ModalContent>
+        </Modal>
+
       </div>
     );
   }
