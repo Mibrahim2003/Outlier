@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { CourseDeliverable } from '../../types';
-import { DbDeliverableRow } from '../db-types';
+import { useAuth } from '../../context/AuthContext';
 
 const toPayload = (d: CourseDeliverable, userId: string) => ({
   id: d.id,
@@ -15,12 +15,18 @@ const toPayload = (d: CourseDeliverable, userId: string) => ({
   metadata: d.metadata ?? {},
 });
 
-export function useDeliverables(userId: string | undefined, reportSyncError: (msg: string) => void) {
-  const [deliverables, setDeliverablesState] = useState<CourseDeliverable[]>([]);
+export function useDeliverables() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const userId = user?.id;
 
-  const hydrateDeliverables = (data: DbDeliverableRow[]) => {
-    setDeliverablesState(
-      data.map((row) => ({
+  const { data: deliverables = [], isLoading } = useQuery({
+    queryKey: ['deliverables', userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      const { data, error } = await supabase.from('course_deliverables').select('*').eq('user_id', userId);
+      if (error) throw error;
+      return data.map((row: any) => ({
         id: String(row.id),
         courseId: row.course_id,
         type: row.type,
@@ -29,101 +35,101 @@ export function useDeliverables(userId: string | undefined, reportSyncError: (ms
         score: row.score ?? undefined,
         status: row.status,
         metadata: row.metadata as CourseDeliverable['metadata'],
-      })),
-    );
+      }));
+    },
+    enabled: !!userId,
+  });
+
+  const addDeliverableMutation = useMutation({
+    mutationFn: async (deliverable: CourseDeliverable) => {
+      const { error } = await supabase.from('course_deliverables').upsert(toPayload(deliverable, userId!), { onConflict: 'user_id,id' });
+      if (error) throw error;
+    },
+    onMutate: async (newDeliverable) => {
+      await queryClient.cancelQueries({ queryKey: ['deliverables', userId] });
+      const previousDeliverables = queryClient.getQueryData(['deliverables', userId]);
+      queryClient.setQueryData(['deliverables', userId], (old: CourseDeliverable[] = []) => [...old, newDeliverable]);
+      return { previousDeliverables };
+    },
+    onError: (_err, _, context: any) => {
+      queryClient.setQueryData(['deliverables', userId], context?.previousDeliverables);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['deliverables', userId] });
+    },
+  });
+
+  const updateDeliverableMutation = useMutation({
+    mutationFn: async (deliverable: CourseDeliverable) => {
+      const { error } = await supabase.from('course_deliverables').upsert(toPayload(deliverable, userId!), { onConflict: 'user_id,id' });
+      if (error) throw error;
+    },
+    onMutate: async (updatedDeliverable) => {
+      await queryClient.cancelQueries({ queryKey: ['deliverables', userId] });
+      const previousDeliverables = queryClient.getQueryData(['deliverables', userId]);
+      queryClient.setQueryData(['deliverables', userId], (old: CourseDeliverable[] = []) => 
+        old.map(d => d.id === updatedDeliverable.id ? updatedDeliverable : d)
+      );
+      return { previousDeliverables };
+    },
+    onError: (_err, _, context: any) => {
+      queryClient.setQueryData(['deliverables', userId], context?.previousDeliverables);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['deliverables', userId] });
+    },
+  });
+
+  const removeDeliverableMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('course_deliverables').delete().eq('user_id', userId!).eq('id', id);
+      if (error) throw error;
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['deliverables', userId] });
+      const previousDeliverables = queryClient.getQueryData(['deliverables', userId]);
+      queryClient.setQueryData(['deliverables', userId], (old: CourseDeliverable[] = []) => old.filter(d => d.id !== id));
+      return { previousDeliverables };
+    },
+    onError: (_err, _, context: any) => {
+      queryClient.setQueryData(['deliverables', userId], context?.previousDeliverables);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['deliverables', userId] });
+    },
+  });
+
+  const setDeliverablesMutation = useMutation({
+    mutationFn: async (next: CourseDeliverable[]) => {
+      const removedIds = deliverables.map((d) => d.id).filter((id) => !next.some((n) => n.id === id));
+      if (removedIds.length > 0) {
+        await supabase.from('course_deliverables').delete().eq('user_id', userId!).in('id', removedIds);
+      }
+      if (next.length > 0) {
+        const payload = next.map((d) => toPayload(d, userId!));
+        await supabase.from('course_deliverables').upsert(payload, { onConflict: 'user_id,id' });
+      }
+    },
+    onMutate: async (nextDeliverables) => {
+      await queryClient.cancelQueries({ queryKey: ['deliverables', userId] });
+      const previousDeliverables = queryClient.getQueryData(['deliverables', userId]);
+      queryClient.setQueryData(['deliverables', userId], nextDeliverables);
+      return { previousDeliverables };
+    },
+    onError: (_err, _, context: any) => {
+      queryClient.setQueryData(['deliverables', userId], context?.previousDeliverables);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['deliverables', userId] });
+    },
+  });
+
+  return { 
+    deliverables, 
+    isLoading,
+    addDeliverable: addDeliverableMutation.mutate, 
+    updateDeliverable: updateDeliverableMutation.mutate, 
+    removeDeliverable: removeDeliverableMutation.mutate,
+    setDeliverables: setDeliverablesMutation.mutate 
   };
-
-  const syncDeliverables = async (next: CourseDeliverable[], prev: CourseDeliverable[]) => {
-    if (!userId) return;
-
-    const removedIds = prev.map((d) => d.id).filter((id) => !next.some((n) => n.id === id));
-
-    if (removedIds.length > 0) {
-      const { error } = await supabase
-        .from('course_deliverables')
-        .delete()
-        .eq('user_id', userId)
-        .in('id', removedIds);
-      if (error) reportSyncError(`Failed to delete removed deliverables: ${error.message}`);
-    }
-
-    if (next.length > 0) {
-      const payload = next.map((d) => toPayload(d, userId));
-      const { error } = await supabase.from('course_deliverables').upsert(payload, { onConflict: 'user_id,id' });
-      if (error) reportSyncError(`Failed to sync deliverables: ${error.message}`);
-    }
-  };
-
-  const setDeliverables = (next: CourseDeliverable[]) => {
-    let snapshotPrev: CourseDeliverable[] = [];
-    setDeliverablesState((prev) => {
-      snapshotPrev = prev;
-      return next;
-    });
-    void syncDeliverables(next, snapshotPrev);
-  };
-
-  const addDeliverable = (deliverable: CourseDeliverable) => {
-    setDeliverablesState((prev) => [...prev, deliverable]);
-
-    if (!userId) return;
-
-    void supabase
-      .from('course_deliverables')
-      .upsert(toPayload(deliverable, userId), { onConflict: 'user_id,id' })
-      .then(({ error }) => {
-        if (error) {
-          reportSyncError(`Failed to add deliverable: ${error.message}`);
-          setDeliverablesState((prev) => prev.filter((d) => d.id !== deliverable.id));
-        }
-      });
-  };
-
-  const updateDeliverable = (deliverable: CourseDeliverable) => {
-    let originalDeliverable: CourseDeliverable | undefined;
-    setDeliverablesState((prev) => {
-      originalDeliverable = prev.find((d) => d.id === deliverable.id);
-      return prev.map((d) => (d.id === deliverable.id ? deliverable : d));
-    });
-
-    if (!userId) return;
-
-    void supabase
-      .from('course_deliverables')
-      .upsert(toPayload(deliverable, userId), { onConflict: 'user_id,id' })
-      .then(({ error }) => {
-        if (error) {
-          reportSyncError(`Failed to update deliverable: ${error.message}`);
-          if (originalDeliverable) {
-            setDeliverablesState((prev) => prev.map((d) => (d.id === deliverable.id ? originalDeliverable! : d)));
-          }
-        }
-      });
-  };
-
-  const removeDeliverable = (id: string) => {
-    let removedItem: CourseDeliverable | undefined;
-    setDeliverablesState((prev) => {
-      removedItem = prev.find((d) => d.id === id);
-      return prev.filter((d) => d.id !== id);
-    });
-
-    if (!userId) return;
-
-    void supabase
-      .from('course_deliverables')
-      .delete()
-      .eq('user_id', userId)
-      .eq('id', id)
-      .then(({ error }) => {
-        if (error) {
-          reportSyncError(`Failed to remove deliverable: ${error.message}`);
-          if (removedItem) setDeliverablesState((prev) => [...prev, removedItem!]);
-        }
-      });
-  };
-
-  const reset = () => setDeliverablesState([]);
-
-  return { deliverables, setDeliverables, addDeliverable, updateDeliverable, removeDeliverable, hydrateDeliverables, reset };
 }

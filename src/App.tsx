@@ -19,11 +19,22 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { PublicOnlyRoute } from './components/PublicOnlyRoute';
 import { ErrorBoundary } from 'react-error-boundary';
 import { GlobalErrorFallback } from './components/ErrorBoundary';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 1,
+    },
+  },
+});
 
 export default function App() {
   return (
     <ErrorBoundary FallbackComponent={GlobalErrorFallback}>
-      <Router>
+      <QueryClientProvider client={queryClient}>
+        <Router>
         <Routes>
         {/* ─── Public-Only Routes ────────────────────────────── */}
         {/* Logged-in users are redirected away to /post-auth */}
@@ -121,10 +132,11 @@ export default function App() {
           } 
         />
 
-        {/* ─── Fallback ──────────────────────────────────────── */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* ─── Catch-all ───────────────────────────────────────────── */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
       </Router>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }

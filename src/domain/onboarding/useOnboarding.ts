@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { OnboardingState } from '../../types';
 import { DbOnboardingRow } from '../db-types';
+import { useAuth } from '../../context/AuthContext';
 
 const DEFAULT_ONBOARDING_STATE: OnboardingState = {
   loadoutCommitted: false,
@@ -14,66 +15,92 @@ export const mapOnboardingRow = (row: DbOnboardingRow): OnboardingState => ({
   version: Number(row?.version ?? 1),
 });
 
-export function useOnboarding(userId: string | undefined, reportSyncError: (msg: string) => void) {
-  const [onboardingState, setOnboardingState] = useState<OnboardingState>(DEFAULT_ONBOARDING_STATE);
+export function useOnboarding() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const userId = user?.id;
 
-  const hydrateOnboarding = (data: DbOnboardingRow | null) => {
-    setOnboardingState(data ? mapOnboardingRow(data) : DEFAULT_ONBOARDING_STATE);
-  };
+  const { data: onboardingState = DEFAULT_ONBOARDING_STATE, isLoading } = useQuery({
+    queryKey: ['onboarding', userId],
+    queryFn: async () => {
+      if (!userId) return DEFAULT_ONBOARDING_STATE;
+      const { data, error } = await supabase.from('onboarding_states').select('*').eq('user_id', userId).maybeSingle();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data ? mapOnboardingRow(data) : DEFAULT_ONBOARDING_STATE;
+    },
+    enabled: !!userId,
+  });
 
-  const commitLoadout = () => {
-    const next = {
-      ...onboardingState,
-      loadoutCommitted: true,
-      committedAt: new Date().toISOString(),
-    };
-    setOnboardingState(next);
-
-    if (!userId) return;
-
-    void supabase
-      .from('onboarding_states')
-      .upsert(
-        {
-          user_id: userId,
-          loadout_committed: true,
-          committed_at: next.committedAt,
-          version: next.version,
-        },
-        { onConflict: 'user_id' },
-      )
-      .then(({ error }) => {
-        if (error) reportSyncError(`Failed to commit onboarding loadout: ${error.message}`);
+  const commitLoadoutMutation = useMutation({
+    mutationFn: async () => {
+      const next = {
+        loadoutCommitted: true,
+        committedAt: new Date().toISOString(),
+        version: onboardingState.version,
+      };
+      const { error } = await supabase.from('onboarding_states').upsert({
+        user_id: userId!,
+        loadout_committed: next.loadoutCommitted,
+        committed_at: next.committedAt,
+        version: next.version,
+      }, { onConflict: 'user_id' });
+      if (error) throw error;
+      return next;
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['onboarding', userId] });
+      const previous = queryClient.getQueryData(['onboarding', userId]);
+      queryClient.setQueryData(['onboarding', userId], {
+        ...onboardingState,
+        loadoutCommitted: true,
+        committedAt: new Date().toISOString(),
       });
-  };
+      return { previous };
+    },
+    onError: (_err, _, context: any) => {
+      queryClient.setQueryData(['onboarding', userId], context?.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['onboarding', userId] });
+    },
+  });
 
-  const resetLoadoutCommit = () => {
-    const next = {
-      ...onboardingState,
-      loadoutCommitted: false,
-      committedAt: undefined,
-    };
-    setOnboardingState(next);
-
-    if (!userId) return;
-
-    void supabase
-      .from('onboarding_states')
-      .upsert(
-        {
-          user_id: userId,
-          loadout_committed: false,
-          committed_at: null,
-          version: next.version,
-        },
-        { onConflict: 'user_id' },
-      )
-      .then(({ error }) => {
-        if (error) reportSyncError(`Failed to reset onboarding loadout: ${error.message}`);
+  const resetLoadoutCommitMutation = useMutation({
+    mutationFn: async () => {
+      const next = {
+        loadoutCommitted: false,
+        version: onboardingState.version,
+      };
+      const { error } = await supabase.from('onboarding_states').upsert({
+        user_id: userId!,
+        loadout_committed: next.loadoutCommitted,
+        committed_at: null,
+        version: next.version,
+      }, { onConflict: 'user_id' });
+      if (error) throw error;
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['onboarding', userId] });
+      const previous = queryClient.getQueryData(['onboarding', userId]);
+      queryClient.setQueryData(['onboarding', userId], {
+        ...onboardingState,
+        loadoutCommitted: false,
+        committedAt: undefined,
       });
+      return { previous };
+    },
+    onError: (_err, _, context: any) => {
+      queryClient.setQueryData(['onboarding', userId], context?.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['onboarding', userId] });
+    },
+  });
+
+  return { 
+    onboardingState, 
+    isLoading,
+    commitLoadout: commitLoadoutMutation.mutate, 
+    resetLoadoutCommit: resetLoadoutCommitMutation.mutate 
   };
-
-  const reset = () => setOnboardingState(DEFAULT_ONBOARDING_STATE);
-
-  return { onboardingState, commitLoadout, resetLoadoutCommit, hydrateOnboarding, reset };
 }

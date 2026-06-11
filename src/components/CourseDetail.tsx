@@ -15,7 +15,10 @@ import {
   Folder,
   Settings
 } from 'lucide-react';
-import { useStore } from '../context/StoreContext';
+import { useProfile } from '../domain/profile/useProfile';
+import { useCourses } from '../domain/courses/useCourses';
+import { useDeliverables } from '../domain/deliverables/useDeliverables';
+import { useTodos } from '../domain/todos/useTodos';
 import { getThemeBgClass, getThemeTextClass } from '../utils/impactStyles';
 import { calculateCourseStatus } from '../utils/gpaEngine';
 
@@ -23,7 +26,10 @@ const TABS = ['Quizzes', 'Assignments', 'Midterm', 'Final', 'Project', 'AI Insig
 
 export const CourseDetail = () => {
   const { id } = useParams();
-  const { userProfile, courses, deliverables, addDeliverable, updateDeliverable, addTodo } = useStore();
+  const { userProfile } = useProfile();
+  const { courses } = useCourses();
+  const { deliverables, addDeliverable, updateDeliverable } = useDeliverables();
+  const { addTodo } = useTodos();
   const { getCourseInsight, getCourseCriticalAction, generateCourseStudyPlan, extractClassMarks, loading: aiLoading } = useAI();
   
   const [activeTab, setActiveTab] = useState(0);

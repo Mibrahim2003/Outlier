@@ -1,57 +1,70 @@
-import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { UserProfile } from '../../types';
-import { DbProfileRow } from '../db-types';
+import { useAuth } from '../../context/AuthContext';
 
-export function useProfile(userId: string | undefined, reportSyncError: (msg: string) => void) {
-  const [userProfile, setUserProfileState] = useState<UserProfile | null>(null);
+export function useProfile() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const userId = user?.id;
 
-  const hydrateProfile = (data: DbProfileRow | null) => {
-    setUserProfileState(
-      data
-        ? {
-            name: data.name,
-            registrationNumber: data.registration_number,
-            degree: data.degree,
-            universityName: data.university_name,
-            graduationYear: String(data.graduation_year),
-            currentCgpa: Number(data.current_cgpa),
-            targetGpa: Number(data.target_gpa),
-            semester: data.semester,
-            courseCount: Number(data.course_count ?? 0),
-          }
-        : null,
-    );
+  const { data: userProfile = null, isLoading } = useQuery({
+    queryKey: ['profile', userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const { data, error } = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
+      if (error && error.code !== 'PGRST116') throw error;
+      if (!data) return null;
+      
+      return {
+        name: data.name,
+        registrationNumber: data.registration_number,
+        degree: data.degree,
+        universityName: data.university_name,
+        graduationYear: String(data.graduation_year),
+        currentCgpa: Number(data.current_cgpa),
+        targetGpa: Number(data.target_gpa),
+        semester: data.semester,
+        courseCount: Number(data.course_count ?? 0),
+      } as UserProfile;
+    },
+    enabled: !!userId,
+  });
+
+  const setUserProfileMutation = useMutation({
+    mutationFn: async (profile: UserProfile | null) => {
+      if (!profile) return; // Currently no deletion logic for profile
+      const { error } = await supabase.from('profiles').upsert({
+        user_id: userId!,
+        name: profile.name,
+        registration_number: profile.registrationNumber || '',
+        degree: profile.degree,
+        university_name: profile.universityName,
+        graduation_year: profile.graduationYear,
+        current_cgpa: profile.currentCgpa,
+        target_gpa: profile.targetGpa,
+        semester: profile.semester,
+        course_count: profile.courseCount,
+      }, { onConflict: 'user_id' });
+      if (error) throw error;
+    },
+    onMutate: async (newProfile) => {
+      await queryClient.cancelQueries({ queryKey: ['profile', userId] });
+      const previousProfile = queryClient.getQueryData(['profile', userId]);
+      queryClient.setQueryData(['profile', userId], newProfile);
+      return { previousProfile };
+    },
+    onError: (_err, _, context: any) => {
+      queryClient.setQueryData(['profile', userId], context?.previousProfile);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile', userId] });
+    },
+  });
+
+  return { 
+    userProfile, 
+    isLoading,
+    setUserProfile: setUserProfileMutation.mutate 
   };
-
-  const setUserProfile = (profile: UserProfile | null) => {
-    setUserProfileState(profile);
-
-    if (!userId || !profile) return;
-
-    void supabase
-      .from('profiles')
-      .upsert(
-        {
-          user_id: userId,
-          name: profile.name,
-          registration_number: profile.registrationNumber || '',
-          degree: profile.degree,
-          university_name: profile.universityName,
-          graduation_year: profile.graduationYear,
-          current_cgpa: profile.currentCgpa,
-          target_gpa: profile.targetGpa,
-          semester: profile.semester,
-          course_count: profile.courseCount,
-        },
-        { onConflict: 'user_id' },
-      )
-      .then(({ error }) => {
-        if (error) reportSyncError(`Failed to save profile: ${error.message}`);
-      });
-  };
-
-  const reset = () => setUserProfileState(null);
-
-  return { userProfile, setUserProfile, hydrateProfile, reset };
 }

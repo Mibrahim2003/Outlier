@@ -1,5 +1,10 @@
 import { TrendingUp, Calendar, Target, AlertCircle, Clock, Loader2, ChevronDown, ChevronUp, Plus, Check, X, Zap } from 'lucide-react';
-import { useStore } from '../context/StoreContext';
+import { useProfile } from '../domain/profile/useProfile';
+import { useCourses } from '../domain/courses/useCourses';
+import { useDeadlines } from '../domain/deadlines/useDeadlines';
+import { useDeliverables } from '../domain/deliverables/useDeliverables';
+import { useTodos } from '../domain/todos/useTodos';
+import { useCalendar } from '../domain/calendar/useCalendar';
 import { useAI } from '../hooks/useAI';
 import { useEffect, useState } from 'react';
 import { calculateSemesterGPA, projectCGPA, estimateGrade } from '../utils/gpaEngine';
@@ -7,7 +12,12 @@ import { isDateInRange } from '../utils/dateUtils';
 import { Todo } from '../types';
 
 export const Analytics = () => {
-  const { courses, deadlines, deliverables, userProfile, academicCalendar, addTodo } = useStore();
+  const { userProfile } = useProfile();
+  const { courses } = useCourses();
+  const { deadlines } = useDeadlines();
+  const { deliverables } = useDeliverables();
+  const { addTodo } = useTodos();
+  const { academicCalendar } = useCalendar();
   const { getStudyPriorities, loading } = useAI();
   const [priorities, setPriorities] = useState<any[] | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useStore } from '../context/StoreContext';
+import { useProfile } from '../domain/profile/useProfile';
 
 export const ProfileSetup = () => {
   const navigate = useNavigate();
-  const { userProfile, setUserProfile } = useStore();
+  const { userProfile, setUserProfile } = useProfile();
 
   const [formData, setFormData] = useState({
     name: userProfile?.name || '',

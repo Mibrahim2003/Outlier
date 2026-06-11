@@ -1,12 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useStore } from '../context/StoreContext';
+import { useCourses } from '../domain/courses/useCourses';
+import { useOnboarding } from '../domain/onboarding/useOnboarding';
+import { useProfile } from '../domain/profile/useProfile';
 import { Course } from '../types';
 import { getImpactStyles, ThemeColor, getThemeBgClass } from '../utils/impactStyles';
 
 export const Onboarding = () => {
   const navigate = useNavigate();
-  const { courses, addCourse, removeCourse, commitLoadout, onboardingState, userProfile } = useStore();
+  const { courses, addCourse, removeCourse } = useCourses();
+  const { onboardingState, commitLoadout } = useOnboarding();
+  const { userProfile } = useProfile();
   
   // User can revisit this page to add courses, so no auto-redirect here.
 

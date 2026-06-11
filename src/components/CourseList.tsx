@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
 import { BookOpen, AlertCircle, TrendingUp } from 'lucide-react';
-import { useStore } from '../context/StoreContext';
+import { useCourses } from '../domain/courses/useCourses';
 import { getThemeBgClass, getThemeBottomBorderClass } from '../utils/impactStyles';
 
 export const CourseList = () => {
-  const { courses } = useStore();
+  const { courses } = useCourses();
 
   return (
     <div className="space-y-8 pb-20">

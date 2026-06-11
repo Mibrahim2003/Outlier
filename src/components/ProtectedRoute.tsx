@@ -1,7 +1,8 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useStore } from '../context/StoreContext';
+import { useProfile } from '../domain/profile/useProfile';
+import { useOnboarding } from '../domain/onboarding/useOnboarding';
 import { LoadingScreen } from './LoadingScreen';
 
 interface ProtectedRouteProps {
@@ -26,9 +27,10 @@ export const ProtectedRoute = ({
   requireLoadout = true,
 }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
-  const { userProfile, onboardingState, isHydrating } = useStore();
+  const { userProfile, isLoading: isProfileLoading } = useProfile();
+  const { onboardingState, isLoading: isOnboardingLoading } = useOnboarding();
 
-  if (loading || isHydrating) return <LoadingScreen message="Syncing Data..." />;
+  if (loading || isProfileLoading || isOnboardingLoading) return <LoadingScreen message="Syncing Data..." />;
 
   if (!user) return <Navigate to="/auth" replace />;
 

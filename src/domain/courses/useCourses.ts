@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { Course, ThemeColor } from '../../types';
 import { DbCourseRow } from '../db-types';
+import { useAuth } from '../../context/AuthContext';
 
 export const normalizeCourse = (course: DbCourseRow): Course => {
   const legacyColor = typeof course?.color === 'string' ? course.color : '';
@@ -47,86 +48,93 @@ const toPayload = (course: Course, userId: string) => ({
   weightage: course.weightage,
 });
 
-export function useCourses(userId: string | undefined, reportSyncError: (msg: string) => void) {
-  const [courses, setCoursesState] = useState<Course[]>([]);
+export function useCourses() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const userId = user?.id;
 
-  const hydrateCourses = (data: DbCourseRow[]) => {
-    setCoursesState(data.map(normalizeCourse));
+  const { data: courses = [], isLoading } = useQuery({
+    queryKey: ['courses', userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      const { data, error } = await supabase.from('courses').select('*').eq('user_id', userId);
+      if (error) throw error;
+      return data.map(normalizeCourse);
+    },
+    enabled: !!userId,
+  });
+
+  const addCourseMutation = useMutation({
+    mutationFn: async (course: Course) => {
+      const normalized = normalizeCourse(course as unknown as DbCourseRow);
+      const { error } = await supabase.from('courses').upsert(toPayload(normalized, userId!), { onConflict: 'user_id,id' });
+      if (error) throw error;
+    },
+    onMutate: async (newCourse) => {
+      await queryClient.cancelQueries({ queryKey: ['courses', userId] });
+      const previousCourses = queryClient.getQueryData(['courses', userId]);
+      const normalized = normalizeCourse(newCourse as unknown as DbCourseRow);
+      queryClient.setQueryData(['courses', userId], (old: Course[] = []) => [...old, normalized]);
+      return { previousCourses };
+    },
+    onError: (_err, _, context: any) => {
+      queryClient.setQueryData(['courses', userId], context?.previousCourses);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses', userId] });
+    },
+  });
+
+  const removeCourseMutation = useMutation({
+    mutationFn: async (courseId: string) => {
+      const { error } = await supabase.from('courses').delete().eq('user_id', userId!).eq('id', courseId);
+      if (error) throw error;
+    },
+    onMutate: async (courseId) => {
+      await queryClient.cancelQueries({ queryKey: ['courses', userId] });
+      const previousCourses = queryClient.getQueryData(['courses', userId]);
+      queryClient.setQueryData(['courses', userId], (old: Course[] = []) => old.filter(c => c.id !== courseId));
+      return { previousCourses };
+    },
+    onError: (_err, _, context: any) => {
+      queryClient.setQueryData(['courses', userId], context?.previousCourses);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses', userId] });
+    },
+  });
+
+  // Bulk add/set courses for Onboarding
+  const setCoursesMutation = useMutation({
+    mutationFn: async (nextCourses: Course[]) => {
+      const removedIds = courses.map((c) => c.id).filter((id) => !nextCourses.some((n) => n.id === id));
+      if (removedIds.length > 0) {
+        await supabase.from('courses').delete().eq('user_id', userId!).in('id', removedIds);
+      }
+      if (nextCourses.length > 0) {
+        const payload = nextCourses.map((c) => toPayload(normalizeCourse(c as any), userId!));
+        await supabase.from('courses').upsert(payload, { onConflict: 'user_id,id' });
+      }
+    },
+    onMutate: async (nextCourses) => {
+      await queryClient.cancelQueries({ queryKey: ['courses', userId] });
+      const previousCourses = queryClient.getQueryData(['courses', userId]);
+      queryClient.setQueryData(['courses', userId], nextCourses.map(c => normalizeCourse(c as any)));
+      return { previousCourses };
+    },
+    onError: (_err, _, context: any) => {
+      queryClient.setQueryData(['courses', userId], context?.previousCourses);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses', userId] });
+    },
+  });
+
+  return { 
+    courses, 
+    isLoading,
+    addCourse: addCourseMutation.mutate, 
+    removeCourse: removeCourseMutation.mutate,
+    setCourses: setCoursesMutation.mutate
   };
-
-  const syncCourses = async (nextCourses: Course[], previousCourses: Course[]) => {
-    if (!userId) return;
-
-    const removedIds = previousCourses
-      .map((c) => c.id)
-      .filter((id) => !nextCourses.some((n) => n.id === id));
-
-    if (removedIds.length > 0) {
-      const { error } = await supabase
-        .from('courses')
-        .delete()
-        .eq('user_id', userId)
-        .in('id', removedIds);
-      if (error) reportSyncError(`Failed to delete removed courses: ${error.message}`);
-    }
-
-    if (nextCourses.length > 0) {
-      const payload = nextCourses.map((c) => toPayload(c, userId));
-      const { error } = await supabase.from('courses').upsert(payload, { onConflict: 'user_id,id' });
-      if (error) reportSyncError(`Failed to sync courses: ${error.message}`);
-    }
-  };
-
-  const setCourses = (nextCourses: Course[]) => {
-    const normalized = nextCourses.map(normalizeCourse);
-    let snapshotPrev: Course[] = [];
-    setCoursesState((prev) => {
-      snapshotPrev = prev;
-      return normalized;
-    });
-    void syncCourses(normalized, snapshotPrev);
-  };
-
-  const addCourse = (course: Course) => {
-    const normalized = normalizeCourse(course as unknown as DbCourseRow);
-    setCoursesState((prev) => [...prev, normalized]);
-
-    if (!userId) return;
-
-    void supabase
-      .from('courses')
-      .upsert(toPayload(normalized, userId), { onConflict: 'user_id,id' })
-      .then(({ error }) => {
-        if (error) {
-          reportSyncError(`Failed to add course: ${error.message}`);
-          setCoursesState((prev) => prev.filter((c) => c.id !== normalized.id));
-        }
-      });
-  };
-
-  const removeCourse = (courseId: string) => {
-    let removedCourse: Course | undefined;
-    setCoursesState((prev) => {
-      removedCourse = prev.find((c) => c.id === courseId);
-      return prev.filter((c) => c.id !== courseId);
-    });
-
-    if (!userId) return;
-
-    void supabase
-      .from('courses')
-      .delete()
-      .eq('user_id', userId)
-      .eq('id', courseId)
-      .then(({ error }) => {
-        if (error) {
-          reportSyncError(`Failed to remove course: ${error.message}`);
-          if (removedCourse) setCoursesState((prev) => [...prev, removedCourse!]);
-        }
-      });
-  };
-
-  const reset = () => setCoursesState([]);
-
-  return { courses, setCourses, addCourse, removeCourse, hydrateCourses, reset };
 }

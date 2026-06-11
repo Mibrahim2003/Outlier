@@ -1,6 +1,9 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Upload, ChevronLeft, ChevronRight, Loader2, AlertCircle, Flame, Plus, Download, Settings, X } from 'lucide-react';
-import { useStore } from '../context/StoreContext';
+import { useCalendar } from '../domain/calendar/useCalendar';
+import { useDeadlines } from '../domain/deadlines/useDeadlines';
+import { useTodos } from '../domain/todos/useTodos';
+import { useCourses } from '../domain/courses/useCourses';
 import { useCalendarParser } from '../hooks/useCalendarParser';
 import { 
   getCalendarGrid, 
@@ -17,7 +20,10 @@ import { useSearchParams } from 'react-router-dom';
 const DAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 export const AcademicCalendar = () => {
-  const { academicCalendar, setAcademicCalendar, deadlines, addDeadline, todos, addTodo, toggleTodo, courses } = useStore();
+  const { academicCalendar, setAcademicCalendar } = useCalendar();
+  const { deadlines, addDeadline } = useDeadlines();
+  const { todos, addTodo, toggleTodo } = useTodos();
+  const { courses } = useCourses();
   const { parseCalendarImage, parsing, parseError } = useCalendarParser();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);

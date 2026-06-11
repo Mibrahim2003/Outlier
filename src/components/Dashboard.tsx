@@ -2,7 +2,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Stat } from '../types';
 import { Sparkles, AlertCircle, Clock, CheckCircle2, Calendar, Loader2, Plus, ListChecks } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useStore } from '../context/StoreContext';
+import { useProfile } from '../domain/profile/useProfile';
+import { useCourses } from '../domain/courses/useCourses';
+import { useDeadlines } from '../domain/deadlines/useDeadlines';
+import { useTodos } from '../domain/todos/useTodos';
 import { useAI } from '../hooks/useAI';
 
 import { getThemeBgClass } from '../utils/impactStyles';
@@ -12,7 +15,10 @@ import { WidgetErrorFallback } from './ErrorBoundary';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 export const Dashboard = () => {
-  const { userProfile, courses, deadlines, todos, toggleTodo } = useStore();
+  const { userProfile } = useProfile();
+  const { courses } = useCourses();
+  const { deadlines } = useDeadlines();
+  const { todos, toggleTodo } = useTodos();
   const { getDashboardInsight, loading } = useAI();
   const navigate = useNavigate();
 

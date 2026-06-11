@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SyncToast } from './SyncToast';
+
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { 
@@ -165,7 +165,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
           </AnimatePresence>
         </main>
       </div>
-      <SyncToast />
+
     </div>
   );
 };
