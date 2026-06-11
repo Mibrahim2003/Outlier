@@ -68,4 +68,5 @@ export const CardFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDiv
 );
 CardFooter.displayName = "CardFooter";
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { cardVariants, shadowMap };

@@ -53,7 +53,7 @@ export const Modal = ({ open, onClose, children, closeOnBackdrop = true }: Modal
 Modal.displayName = "Modal";
 
 /* ─── Modal content container (neo-brutalist card) ─────────────── */
-interface ModalContentProps extends React.HTMLAttributes<HTMLDivElement> {}
+type ModalContentProps = React.HTMLAttributes<HTMLDivElement>;
 
 export const ModalContent = ({ className, ...props }: ModalContentProps) => (
   <div
