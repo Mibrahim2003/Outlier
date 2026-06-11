@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SemesterInfo } from '../types';
 import { supabase } from '../lib/supabase';
 import { z } from 'zod';
+import * as schemas from '../schemas';
 
 const MAX_RETRIES = 3;
 
@@ -92,20 +93,7 @@ Rules:
 
       const textResult = await invokeWithRetry(prompt, mimeType, base64);
       
-      const schema = z.array(z.object({
-        name: z.string(),
-        startDate: z.string(),
-        endDate: z.string(),
-        breaks: z.array(z.object({
-          name: z.string(),
-          startDate: z.string(),
-          endDate: z.string()
-        })).optional(),
-        examPeriod: z.object({
-          startDate: z.string(),
-          endDate: z.string()
-        }).optional()
-      }).passthrough());
+      const schema = schemas.AICalendarSemesterListSchema;
       
       const semesters = parseAIResponse(textResult, schema);
       return semesters as SemesterInfo[];

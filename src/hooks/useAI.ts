@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Course, Deadline } from '../types';
 import { supabase } from '../lib/supabase';
 import { z } from 'zod';
+import * as schemas from '../schemas';
 
 function parseAIResponse<T>(text: string, schema: z.ZodType<T>): T {
   const cleanedText = text.replace(/```json/i, '').replace(/```json/g, '').replace(/```/g, '').trim();
@@ -89,14 +90,7 @@ Return ONLY valid JSON in this exact structure:
 ]`;
       
       const res = await generateContent(prompt);
-      const schema = z.array(z.object({
-        title: z.string().optional(),
-        desc: z.string().optional(),
-        priority: z.string().optional(),
-        courseId: z.string().optional(),
-        task: z.string().optional(),
-        reason: z.string().optional()
-      }).passthrough());
+      const schema = schemas.AIStudyPrioritySchema;
       return parseAIResponse(res, schema) as any;
     } catch (e: any) {
       console.error(e);
@@ -125,12 +119,7 @@ Return ONLY valid JSON in this exact structure. Do not use markdown blocks.
 }`;
       
       const result = await generateContent(prompt, { mimeType, data: base64Data });
-      const schema = z.object({
-        myScore: z.number().nullable(),
-        allScores: z.array(z.number()),
-        highestScore: z.number(),
-        toppersCount: z.number()
-      });
+      const schema = schemas.AIClassMarksSchema;
       return parseAIResponse(result, schema);
     } catch (e: any) {
       setError(e.message);
@@ -231,7 +220,7 @@ Output rules:
 - Do not add commentary before or after the JSON.`;
       
       const res = await generateContent(prompt);
-      const schema = z.object({ topic: z.string(), insight: z.string() });
+      const schema = schemas.AICourseCriticalActionSchema;
       return parseAIResponse(res, schema);
     } catch (e: any) {
       setError(e.message);
@@ -288,7 +277,7 @@ Required output format:
 ]`;
       
       const res = await generateContent(prompt);
-      const schema = z.array(z.string());
+      const schema = schemas.AICourseStudyPlanSchema;
       return parseAIResponse(res, schema);
     } catch (e: any) {
       setError(e.message);
@@ -345,7 +334,7 @@ Output rules:
 - No prefacing text.
 - No conclusion outside the JSON.`;
       const res = await generateContent(prompt);
-      const schema = z.object({ feedback: z.string() });
+      const schema = schemas.AIProjectScopeAnalysisSchema;
       return parseAIResponse(res, schema);
     } catch (e: any) {
       setError(e.message);
@@ -402,7 +391,7 @@ Output rules:
 - Do not use code fences.
 - Do not include explanatory text outside the JSON.`;
       const res = await generateContent(prompt);
-      const schema = z.array(z.object({ title: z.string(), daysFromNow: z.number() }));
+      const schema = schemas.AIProjectMilestoneSchema;
       return parseAIResponse(res, schema);
     } catch (e: any) {
       setError(e.message);
