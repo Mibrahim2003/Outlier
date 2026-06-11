@@ -1,7 +1,7 @@
 import { TrendingUp, Calendar, Target, AlertCircle, Clock, Loader2, ChevronDown, ChevronUp, Plus, Check, X, Zap } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useAI } from '../hooks/useAI';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { calculateSemesterGPA, projectCGPA, estimateGrade } from '../utils/gpaEngine';
 import { isDateInRange } from '../utils/dateUtils';
 import { Todo } from '../types';
@@ -39,7 +39,7 @@ export const Analytics = () => {
 
   // Smart pastCredits: derive from semester number × avg credit load
   // If user provided advanced override, use that instead
-  const estimatedPastCredits = useMemo(() => {
+  const estimatedPastCredits = (() => {
     if (advancedPastCredits && !isNaN(parseInt(advancedPastCredits))) {
       return parseInt(advancedPastCredits);
     }
@@ -47,27 +47,27 @@ export const Analytics = () => {
     const semNum = parseInt(semStr) || 1;
     // Past semesters × average 15 credit hours per semester
     return Math.max(0, (semNum - 1) * 15);
-  }, [userProfile?.semester, advancedPastCredits]);
+  })();
 
   const { projectedCGPA, requiredSemesterGPA } = projectCGPA(
     currentCGPA, targetCGPA, parseFloat(semesterGPA), totalCredits, estimatedPastCredits
   );
 
   // Average weight coverage across all courses
-  const avgWeightCoverage = useMemo(() => {
+  const avgWeightCoverage = (() => {
     const coursesWithData = courseStatuses.filter(cs => cs.coveredWeight > 0);
     if (coursesWithData.length === 0) return 0;
     return Math.round(coursesWithData.reduce((sum, cs) => sum + cs.coveredWeight, 0) / coursesWithData.length);
-  }, [courseStatuses]);
+  })();
 
   // Active semester from calendar
-  const activeSemester = useMemo(() => {
+  const activeSemester = (() => {
     if (!academicCalendar?.semesters?.length) return null;
     const now = new Date();
     return academicCalendar.semesters.find(s =>
       isDateInRange(now, new Date(s.startDate), new Date(s.endDate))
     ) || academicCalendar.semesters[0] || null;
-  }, [academicCalendar]);
+  })();
 
   // What-If Calculator logic
   const handleWhatIf = () => {
@@ -120,21 +120,19 @@ export const Analytics = () => {
   };
 
   // Grade sensitivity for advanced analytics
-  const gradeSensitivity = useMemo(() => {
-    return courseStatuses.map(cs => {
-      const course = courses.find(c => c.id === cs.courseId);
-      if (!course || cs.coveredWeight >= 100) return null;
+  const gradeSensitivity = courseStatuses.map(cs => {
+    const course = courses.find(c => c.id === cs.courseId);
+    if (!course || cs.coveredWeight >= 100) return null;
 
-      const remainingWeight = 100 - cs.coveredWeight;
-      const scenarios = [60, 70, 80, 90, 100].map(finalScore => {
-        const newWeighted = cs.weightedScore + (finalScore / 100) * remainingWeight;
-        const grade = estimateGrade(newWeighted, 100);
-        return { finalScore, ...grade };
-      });
+    const remainingWeight = 100 - cs.coveredWeight;
+    const scenarios = [60, 70, 80, 90, 100].map(finalScore => {
+      const newWeighted = cs.weightedScore + (finalScore / 100) * remainingWeight;
+      const grade = estimateGrade(newWeighted, 100);
+      return { finalScore, ...grade };
+    });
 
-      return { courseId: cs.courseId, code: course.code, name: course.name, scenarios, remainingWeight };
-    }).filter(Boolean);
-  }, [courseStatuses, courses]);
+    return { courseId: cs.courseId, code: course.code, name: course.name, scenarios, remainingWeight };
+  }).filter(Boolean);
 
   return (
     <div className="space-y-10">
