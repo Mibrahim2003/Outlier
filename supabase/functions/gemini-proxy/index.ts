@@ -16,9 +16,7 @@ const getCorsHeaders = (req: Request) => {
   };
 };
 
-const rateLimit = new Map<string, { count: number, reset: number }>();
-const MAX_REQUESTS_PER_MINUTE = 15;
-const WINDOW_MS = 60 * 1000;
+
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -57,21 +55,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const now = Date.now();
-    const userLimit = rateLimit.get(userId) || { count: 0, reset: now + WINDOW_MS };
-    if (now > userLimit.reset) {
-      userLimit.count = 1;
-      userLimit.reset = now + WINDOW_MS;
-    } else {
-      userLimit.count++;
-      if (userLimit.count > MAX_REQUESTS_PER_MINUTE) {
-        return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-    rateLimit.set(userId, userLimit);
+
 
     const bodyText = await req.text();
     if (!bodyText) {
@@ -94,9 +78,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (prompt.length > 5000) {
+    if (prompt.length > 500000) {
       return new Response(
-        JSON.stringify({ error: 'Prompt exceeds maximum length of 5000 characters' }),
+        JSON.stringify({ error: 'Prompt exceeds maximum length of 500000 characters' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
