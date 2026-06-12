@@ -18,7 +18,6 @@ export const Settings = () => {
     control,
     handleSubmit,
     reset,
-    watch,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<SettingsFormValues>({
