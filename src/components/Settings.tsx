@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { UserProfileSchema } from '../schemas';
@@ -57,6 +57,8 @@ export const Settings = () => {
   const onSubmit = async (data: SettingsFormValues) => {
     await setUserProfile(data);
   };
+
+  const currentPersona = useWatch({ control, name: 'aiPersona' });
 
   return (
     <div className="max-w-4xl space-y-10">
@@ -201,7 +203,7 @@ export const Settings = () => {
                   { value: 'bare_minimum', label: 'Bare Minimum', icon: Terminal, quote: "Zero filler. Just facts and raw numbers." }
                 ].map((persona) => {
                   const Icon = persona.icon;
-                  const isSelected = watch('aiPersona') === persona.value;
+                  const isSelected = currentPersona === persona.value;
                   return (
                     <div 
                       key={persona.value}
