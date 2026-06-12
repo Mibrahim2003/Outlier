@@ -63,7 +63,8 @@ describe('Dashboard', () => {
     expect(screen.getByText(/Ibrahim Tester/i)).toBeInTheDocument();
 
     // 2. Check if upcoming deadlines banner is dynamic
-    expect(screen.getByText(/1 upcoming deadline/i)).toBeInTheDocument();
+    expect(screen.getAllByText('1')[0]).toBeInTheDocument();
+    expect(screen.getByText(/upcoming deadline/i)).toBeInTheDocument();
 
     // 3. Check Pending Tasks shows uncompleted todo count (1 uncompleted)
     expect(screen.getByText('Pending Tasks')).toBeInTheDocument();
