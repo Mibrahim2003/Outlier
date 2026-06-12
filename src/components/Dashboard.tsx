@@ -35,12 +35,14 @@ const PhysicsAsset = ({ children, className, index, registerAsset }: { children:
   const isDragging = React.useRef(false);
   const ref = React.useRef<HTMLDivElement>(null);
   
-  const vx = React.useRef((Math.random() - 0.5) * 0.15);
-  const vy = React.useRef((Math.random() - 0.5) * 0.15);
+  const vx = React.useRef(0);
+  const vy = React.useRef(0);
   const baseX = React.useRef(0);
   const baseY = React.useRef(0);
 
   React.useEffect(() => {
+    vx.current = (Math.random() - 0.5) * 0.15;
+    vy.current = (Math.random() - 0.5) * 0.15;
     if (ref.current && ref.current.parentElement) {
        const parentRect = ref.current.parentElement.getBoundingClientRect();
        const rect = ref.current.getBoundingClientRect();
@@ -48,7 +50,7 @@ const PhysicsAsset = ({ children, className, index, registerAsset }: { children:
        baseY.current = (rect.top - parentRect.top) + rect.height / 2;
     }
     registerAsset(index, { x, y, vx, vy, isDragging, ref, baseX, baseY });
-  }, [index, registerAsset]);
+  }, [index, registerAsset, x, y]);
 
   return (
     <motion.div
@@ -220,9 +222,9 @@ export const Dashboard = () => {
 
   const loading = insightMutation.isPending;
 
-  const handleGenerateInsight = () => {
+  const handleGenerateInsight = React.useCallback(() => {
     insightMutation.mutate();
-  };
+  }, [insightMutation]);
 
   const hasAutoFetched = React.useRef(false);
   React.useEffect(() => {
@@ -231,7 +233,7 @@ export const Dashboard = () => {
       hasAutoFetched.current = true;
       handleGenerateInsight();
     }
-  }, [userProfile?.autoGenerateInsights, insight]);
+  }, [userProfile?.autoGenerateInsights, insight, handleGenerateInsight]);
 
   const userName = userProfile?.name || 'Student';
   const greeting = getGreeting();
