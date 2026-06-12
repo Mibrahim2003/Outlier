@@ -23,7 +23,7 @@ export const getThemeBgClass = (theme?: ThemeColor): string => {
   }
 };
 
-export const getThemeTextClass = (theme?: ThemeColor): string => {
+export const getThemeTextClass = (_theme?: ThemeColor): string => {
   return 'text-ink';
 };
 

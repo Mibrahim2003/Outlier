@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // ─── CORE APPLICATION SCHEMAS ──────────────────────────────────
 
-export const ThemeColorSchema = z.enum(['yellow', 'pink', 'green', 'blue']);
+export const ThemeColorSchema = z.enum(['yellow', 'pink', 'green', 'blue', 'purple']);
 
 export const CourseSchema = z.object({
   id: z.string(),
@@ -62,8 +62,8 @@ export const UserProfileSchema = z.object({
     gpc: z.number(),
     minPercentage: z.number().optional(),
   })).optional(),
-  aiPersona: z.enum(['tactical', 'supportive', 'bare_minimum']).default('tactical'),
-  autoGenerateInsights: z.boolean().default(false),
+  aiPersona: z.enum(['tactical', 'supportive', 'bare_minimum']).optional(),
+  autoGenerateInsights: z.boolean().optional(),
 });
 
 export const OnboardingStateSchema = z.object({

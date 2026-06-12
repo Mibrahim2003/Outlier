@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Stat } from '../types';
 import { Sparkles, AlertCircle, Clock, CheckCircle2, Calendar, Loader2, Plus, ListChecks } from 'lucide-react';
-import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
+import { motion, useMotionValue } from 'motion/react';
 import { useProfile } from '../domain/profile/useProfile';
 import { useCourses } from '../domain/courses/useCourses';
 import { useDeadlines } from '../domain/deadlines/useDeadlines';
@@ -14,7 +14,7 @@ import { getGreeting, getDeadlineStatus, isSameDay } from '../utils/dateUtils';
 import { ErrorBoundary } from 'react-error-boundary';
 import { WidgetErrorFallback } from './ErrorBoundary';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { Button, Card, Badge } from './ui';
+import { Button, Card } from './ui';
 import { VectorStar, RobotHead, FacetedPolygon, IsometricCube, Pyramid } from './BannerAssets';
 import React from 'react';
 
@@ -24,7 +24,7 @@ type AssetPhysicsState = {
   vx: React.MutableRefObject<number>;
   vy: React.MutableRefObject<number>;
   isDragging: React.MutableRefObject<boolean>;
-  ref: React.RefObject<HTMLDivElement>;
+  ref: React.RefObject<HTMLDivElement | null>;
   baseX: React.MutableRefObject<number>;
   baseY: React.MutableRefObject<number>;
 };
@@ -56,11 +56,11 @@ const PhysicsAsset = ({ children, className, index, registerAsset }: { children:
       drag
       dragMomentum={false}
       onDragStart={() => (isDragging.current = true)}
-      onDrag={(e, info) => {
+      onDrag={(_, info) => {
          x.set(x.get() + info.delta.x);
          y.set(y.get() + info.delta.y);
       }}
-      onDragEnd={(e, info) => {
+      onDragEnd={(_, info) => {
          isDragging.current = false;
          vx.current = info.velocity.x * 0.02;
          vy.current = info.velocity.y * 0.02;
@@ -150,9 +150,6 @@ const AssetCluster = () => {
 
          const currentX = asset.x.get();
          const currentY = asset.y.get();
-         
-         const speedX = Math.abs(asset.vx.current);
-         const speedY = Math.abs(asset.vy.current);
          
          // Friction
          asset.vx.current *= 0.90;
