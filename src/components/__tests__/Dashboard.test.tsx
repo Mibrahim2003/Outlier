@@ -59,7 +59,8 @@ describe('Dashboard', () => {
     );
 
     // 1. Check if the dynamic time-aware name is rendered
-    expect(screen.getByText(/Good morning, Ibrahim/i)).toBeInTheDocument();
+    expect(screen.getByText(/Good morning,/i)).toBeInTheDocument();
+    expect(screen.getByText(/Ibrahim Tester/i)).toBeInTheDocument();
 
     // 2. Check if upcoming deadlines banner is dynamic
     expect(screen.getByText(/1 upcoming deadline/i)).toBeInTheDocument();
