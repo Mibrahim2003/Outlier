@@ -6,7 +6,7 @@ import { UserProfileSchema } from '../schemas';
 import { useProfile } from '../domain/profile/useProfile';
 import { Button, Input, cardVariants } from './ui';
 import { DEFAULT_GRADING_SCALE } from '../utils/gpaEngine';
-import { Trash2, Plus, Settings as SettingsIcon, GraduationCap, ArrowRight } from 'lucide-react';
+import { Trash2, Plus, Settings as SettingsIcon, GraduationCap, ArrowRight, Swords, Heart, Terminal, Cpu } from 'lucide-react';
 
 type SettingsFormValues = z.infer<typeof UserProfileSchema>;
 
@@ -18,6 +18,8 @@ export const Settings = () => {
     control,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<SettingsFormValues>({
     resolver: zodResolver(UserProfileSchema),
@@ -30,6 +32,8 @@ export const Settings = () => {
       currentCgpa: 0,
       courseCount: 0,
       gradingScale: DEFAULT_GRADING_SCALE,
+      aiPersona: 'tactical',
+      autoGenerateInsights: false,
     },
   });
 
@@ -44,6 +48,8 @@ export const Settings = () => {
       reset({
         ...userProfile,
         gradingScale: userProfile.gradingScale || DEFAULT_GRADING_SCALE,
+        aiPersona: userProfile.aiPersona || 'tactical',
+        autoGenerateInsights: userProfile.autoGenerateInsights ?? false,
       });
     }
   }, [userProfile, reset]);
@@ -174,6 +180,64 @@ export const Settings = () => {
                 </button>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* AI Engine Section */}
+        <section className={`p-8 bg-[#E6E6FA] border-4 border-ink ${cardVariants({ shadow: 'md' })} space-y-6`}>
+          <div className="flex items-center gap-3 border-b-4 border-ink pb-4">
+            <Cpu size={28} className="text-ink" />
+            <h3 className="text-2xl font-black uppercase tracking-widest text-ink">AI Engine</h3>
+          </div>
+          
+          <div className="space-y-8 pt-4">
+            {/* Persona Selector */}
+            <div className="space-y-4">
+              <label className="text-[10px] font-black uppercase tracking-widest block">AI Persona</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { value: 'tactical', label: 'Tactical', icon: Swords, quote: "Cold, precise, direct. I will apply pressure." },
+                  { value: 'supportive', label: 'Supportive', icon: Heart, quote: "Encouraging and patient. You're doing great." },
+                  { value: 'bare_minimum', label: 'Bare Minimum', icon: Terminal, quote: "Zero filler. Just facts and raw numbers." }
+                ].map((persona) => {
+                  const Icon = persona.icon;
+                  const isSelected = watch('aiPersona') === persona.value;
+                  return (
+                    <div 
+                      key={persona.value}
+                      onClick={() => setValue('aiPersona', persona.value as any, { shouldDirty: true })}
+                      className={`cursor-pointer p-4 border-3 border-ink transition-all ${
+                        isSelected 
+                          ? 'bg-ink text-white shadow-none translate-y-[4px] translate-x-[4px]' 
+                          : 'bg-white text-ink shadow-[4px_4px_0px_#1A1A1A] hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_#1A1A1A]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <Icon size={20} />
+                        <span className="font-black uppercase tracking-widest">{persona.label}</span>
+                      </div>
+                      <p className={`text-sm font-medium opacity-80 ${isSelected ? 'text-white' : 'text-ink/70'}`}>
+                        "{persona.quote}"
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Automation Toggle */}
+            <div className="p-4 bg-white border-3 border-ink shadow-[4px_4px_0px_#1A1A1A] flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-black uppercase tracking-widest text-lg">Auto-Generate Daily Insights</h4>
+                <p className="text-xs font-bold text-error uppercase tracking-widest mt-1">
+                  Warning: Turning this on will consume Gemini API tokens automatically every day you log in.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" {...register('autoGenerateInsights')} className="sr-only peer" />
+                <div className="relative w-16 h-8 bg-white border-4 border-ink peer-checked:bg-secondary after:content-[''] after:absolute after:top-0 after:left-0 after:bg-ink after:h-full after:w-6 after:transition-transform peer-checked:after:translate-x-8 shadow-[2px_2px_0px_#1A1A1A]"></div>
+              </label>
+            </div>
           </div>
         </section>
 

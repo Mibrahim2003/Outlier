@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Stat } from '../types';
 import { Sparkles, AlertCircle, Clock, CheckCircle2, Calendar, Loader2, Plus, ListChecks } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
 import { useProfile } from '../domain/profile/useProfile';
 import { useCourses } from '../domain/courses/useCourses';
 import { useDeadlines } from '../domain/deadlines/useDeadlines';
@@ -15,6 +15,193 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { WidgetErrorFallback } from './ErrorBoundary';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Button, Card, Badge } from './ui';
+import { VectorStar, RobotHead, FacetedPolygon, IsometricCube, Pyramid } from './BannerAssets';
+import React from 'react';
+
+type AssetPhysicsState = {
+  x: any;
+  y: any;
+  vx: React.MutableRefObject<number>;
+  vy: React.MutableRefObject<number>;
+  isDragging: React.MutableRefObject<boolean>;
+  ref: React.RefObject<HTMLDivElement>;
+  baseX: React.MutableRefObject<number>;
+  baseY: React.MutableRefObject<number>;
+};
+
+const PhysicsAsset = ({ children, className, index, registerAsset }: { children: React.ReactNode, className?: string, index: number, registerAsset: (i: number, s: AssetPhysicsState) => void }) => {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const isDragging = React.useRef(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+  
+  const vx = React.useRef((Math.random() - 0.5) * 0.15);
+  const vy = React.useRef((Math.random() - 0.5) * 0.15);
+  const baseX = React.useRef(0);
+  const baseY = React.useRef(0);
+
+  React.useEffect(() => {
+    if (ref.current && ref.current.parentElement) {
+       const parentRect = ref.current.parentElement.getBoundingClientRect();
+       const rect = ref.current.getBoundingClientRect();
+       baseX.current = (rect.left - parentRect.left) + rect.width / 2;
+       baseY.current = (rect.top - parentRect.top) + rect.height / 2;
+    }
+    registerAsset(index, { x, y, vx, vy, isDragging, ref, baseX, baseY });
+  }, [index, registerAsset]);
+
+  return (
+    <motion.div
+      ref={ref}
+      drag
+      dragMomentum={false}
+      onDragStart={() => (isDragging.current = true)}
+      onDrag={(e, info) => {
+         x.set(x.get() + info.delta.x);
+         y.set(y.get() + info.delta.y);
+      }}
+      onDragEnd={(e, info) => {
+         isDragging.current = false;
+         vx.current = info.velocity.x * 0.02;
+         vy.current = info.velocity.y * 0.02;
+      }}
+      style={{ x, y, touchAction: 'none' }}
+      className={`cursor-grab active:cursor-grabbing ${className}`}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+const AssetCluster = () => {
+  const physicsStateArray = React.useRef<AssetPhysicsState[]>([]);
+
+  const registerAsset = React.useCallback((index: number, state: AssetPhysicsState) => {
+    physicsStateArray.current[index] = state;
+  }, []);
+
+  React.useEffect(() => {
+    let animationFrameId: number;
+    const NUM_ASSETS = 17;
+
+    const loop = () => {
+      const assets = physicsStateArray.current;
+      if (assets.filter(Boolean).length !== NUM_ASSETS) {
+         animationFrameId = requestAnimationFrame(loop);
+         return;
+      }
+
+      // 1. Resolve Collisions (Circle-based O(N^2))
+      for (let i = 0; i < assets.length; i++) {
+         for (let j = i + 1; j < assets.length; j++) {
+            const a1 = assets[i];
+            const a2 = assets[j];
+            
+            const cx1 = a1.baseX.current + a1.x.get();
+            const cy1 = a1.baseY.current + a1.y.get();
+            const cx2 = a2.baseX.current + a2.x.get();
+            const cy2 = a2.baseY.current + a2.y.get();
+
+            const dx = cx2 - cx1;
+            const dy = cy2 - cy1;
+            const distSq = dx*dx + dy*dy;
+            const radius = 25; 
+            const minDistSq = (radius * 2) * (radius * 2);
+
+            if (distSq < minDistSq && distSq > 0.1) {
+               const dist = Math.sqrt(distSq);
+               const overlap = (radius * 2) - dist;
+               
+               const nx = dx / dist;
+               const ny = dy / dist;
+
+               if (!a1.isDragging.current) {
+                  a1.x.set(a1.x.get() - nx * (overlap / 2));
+                  a1.y.set(a1.y.get() - ny * (overlap / 2));
+               }
+               if (!a2.isDragging.current) {
+                  a2.x.set(a2.x.get() + nx * (overlap / 2));
+                  a2.y.set(a2.y.get() + ny * (overlap / 2));
+               }
+
+               const dvx = a1.vx.current - a2.vx.current;
+               const dvy = a1.vy.current - a2.vy.current;
+               const dotProduct = dvx * nx + dvy * ny;
+
+               if (dotProduct > 0) {
+                  const impulse = dotProduct;
+                  if (!a1.isDragging.current) {
+                     a1.vx.current -= impulse * nx;
+                     a1.vy.current -= impulse * ny;
+                  }
+                  if (!a2.isDragging.current) {
+                     a2.vx.current += impulse * nx;
+                     a2.vy.current += impulse * ny;
+                  }
+               }
+            }
+         }
+      }
+
+      // 2. Apply Forces & Move
+      for (let i = 0; i < assets.length; i++) {
+         const asset = assets[i];
+         if (asset.isDragging.current) continue;
+
+         const currentX = asset.x.get();
+         const currentY = asset.y.get();
+         
+         const speedX = Math.abs(asset.vx.current);
+         const speedY = Math.abs(asset.vy.current);
+         
+         // Friction
+         asset.vx.current *= 0.90;
+         asset.vy.current *= 0.90;
+
+         // Home Gravity (pull towards 0, 0 offset)
+         const k = 0.001; 
+         asset.vx.current -= currentX * k;
+         asset.vy.current -= currentY * k;
+
+         // Micro Brownian motion to keep them "alive"
+         asset.vx.current += (Math.random() - 0.5) * 0.02;
+         asset.vy.current += (Math.random() - 0.5) * 0.02;
+
+         asset.x.set(currentX + asset.vx.current);
+         asset.y.set(currentY + asset.vy.current);
+      }
+
+      animationFrameId = requestAnimationFrame(loop);
+    };
+    loop();
+    return () => cancelAnimationFrame(animationFrameId);
+  }, []);
+
+  return (
+    <>
+      {/* Top Row Assets */}
+      <PhysicsAsset index={0} registerAsset={registerAsset} className="absolute top-4 left-[4%]"><VectorStar fill="#68D391" size={32} className="-rotate-12" /></PhysicsAsset>
+      <PhysicsAsset index={1} registerAsset={registerAsset} className="absolute top-2 left-[15%]"><VectorStar fill="#FF69B4" size={48} className="rotate-6" /></PhysicsAsset>
+      <PhysicsAsset index={2} registerAsset={registerAsset} className="absolute top-10 left-[30%]"><RobotHead size={40} className="rotate-12" /></PhysicsAsset>
+      <PhysicsAsset index={3} registerAsset={registerAsset} className="absolute top-8 left-[42%]"><VectorStar fill="#4299E1" size={28} className="-rotate-6" /></PhysicsAsset>
+      <PhysicsAsset index={4} registerAsset={registerAsset} className="absolute -top-4 left-[55%]"><FacetedPolygon fill="#FF69B4" size={56} className="rotate-45" /></PhysicsAsset>
+      <PhysicsAsset index={5} registerAsset={registerAsset} className="absolute top-6 left-[65%]"><RobotHead size={32} className="-rotate-6" /></PhysicsAsset>
+      <PhysicsAsset index={6} registerAsset={registerAsset} className="absolute top-2 left-[75%]"><FacetedPolygon fill="#68D391" size={64} className="-rotate-12" /></PhysicsAsset>
+      <PhysicsAsset index={7} registerAsset={registerAsset} className="absolute top-4 left-[85%]"><VectorStar fill="#4299E1" size={32} className="rotate-12" /></PhysicsAsset>
+      <PhysicsAsset index={8} registerAsset={registerAsset} className="absolute top-10 right-[4%]"><VectorStar fill="#FF69B4" size={48} className="rotate-6" /></PhysicsAsset>
+      <PhysicsAsset index={9} registerAsset={registerAsset} className="absolute top-[40%] left-[80%]"><IsometricCube fill="#FF69B4" size={24} className="rotate-12" /></PhysicsAsset>
+
+      {/* Bottom Row Assets */}
+      <PhysicsAsset index={10} registerAsset={registerAsset} className="absolute bottom-2 left-[2%]"><FacetedPolygon fill="#FF69B4" size={40} className="rotate-12" /></PhysicsAsset>
+      <PhysicsAsset index={11} registerAsset={registerAsset} className="absolute bottom-2 left-[40%]"><VectorStar fill="#68D391" size={40} className="-rotate-6" /></PhysicsAsset>
+      <PhysicsAsset index={12} registerAsset={registerAsset} className="absolute bottom-6 left-[50%]"><RobotHead size={32} className="rotate-12" /></PhysicsAsset>
+      <PhysicsAsset index={13} registerAsset={registerAsset} className="absolute bottom-0 left-[62%]"><Pyramid fill="#4299E1" size={56} className="-rotate-12" /></PhysicsAsset>
+      <PhysicsAsset index={14} registerAsset={registerAsset} className="absolute bottom-8 left-[75%]"><RobotHead size={36} className="-rotate-12" /></PhysicsAsset>
+      <PhysicsAsset index={15} registerAsset={registerAsset} className="absolute bottom-4 right-[12%]"><Pyramid fill="#4299E1" size={72} className="rotate-12" /></PhysicsAsset>
+      <PhysicsAsset index={16} registerAsset={registerAsset} className="absolute bottom-8 right-[2%]"><FacetedPolygon fill="#68D391" size={40} className="-rotate-12" /></PhysicsAsset>
+    </>
+  );
+};
 
 export const Dashboard = () => {
   const { userProfile } = useProfile();
@@ -40,6 +227,15 @@ export const Dashboard = () => {
     insightMutation.mutate();
   };
 
+  const hasAutoFetched = React.useRef(false);
+  React.useEffect(() => {
+    // Only auto-fetch if enabled, insight is missing, and we haven't already fired it this mount.
+    if (userProfile?.autoGenerateInsights && !insight && !hasAutoFetched.current) {
+      hasAutoFetched.current = true;
+      handleGenerateInsight();
+    }
+  }, [userProfile?.autoGenerateInsights, insight]);
+
   const userName = userProfile?.name || 'Student';
   const greeting = getGreeting();
 
@@ -54,43 +250,65 @@ export const Dashboard = () => {
   const completedTodayTodos = todayTodos.filter(t => t.completed);
 
   const dynamicStats: Stat[] = [
-    { label: 'Pending Tasks', value: uncompletedTodayTodos.length.toString(), color: 'bg-secondary' },
-    { label: 'Deadlines', value: deadlines.length.toString(), color: 'bg-primary' },
+    { label: 'Pending Tasks', value: uncompletedTodayTodos.length.toString(), color: 'bg-[#4299E1]' },
+    { label: 'Deadlines', value: deadlines.length.toString(), color: 'bg-[#FF69B4]' },
   ];
 
   return (
     <div className="space-y-12">
       {/* Welcome Banner */}
-      <Card shadow="md" className="bg-primary-container p-6 md:p-10 flex flex-col md:flex-row justify-between items-start md:items-center overflow-hidden relative">
-        <div className="space-y-4 z-10">
-          <Badge variant="secondary" className="-rotate-2 mb-2 shadow-[2px_2px_0px_#1A1A1A]">
-            <span className="flex items-center gap-2 text-xs uppercase tracking-tighter">
-              <Sparkles size={14} fill="currentColor" /> AI Insights
+      <div className="relative border-[4px] border-ink bg-[#FFE8A3] shadow-[8px_8px_0px_#1A1A1A] flex flex-col overflow-hidden mb-12 p-8 md:p-12 min-h-[200px] justify-center cursor-default">
+        
+        {/* Scattered Background Assets (Tossable Physics) */}
+        <div className="absolute inset-0 z-0 pointer-events-auto">
+          <AssetCluster />
+        </div>
+
+        {/* Foreground Content */}
+        <div className="z-10 relative space-y-4 max-w-4xl pointer-events-none">
+          <div className="inline-block bg-[#FF69B4] text-white px-3 py-1 border-[3px] border-ink shadow-[4px_4px_0px_#1A1A1A] cursor-default pointer-events-auto">
+            <span className="flex items-center gap-2 text-xs md:text-sm font-black uppercase tracking-widest">
+              <Sparkles size={16} fill="currentColor" /> AI Insights
             </span>
-          </Badge>
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-none">{greeting}, {userName}</h1>
-          <p className="text-lg md:text-xl font-medium opacity-80">
-            You have <span className="underline decoration-4 decoration-secondary">{deadlines.length} upcoming {deadlines.length === 1 ? 'deadline' : 'deadlines'}</span> this week.
+          </div>
+          
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-tight pointer-events-auto flex flex-wrap items-center gap-x-2 gap-y-4">
+            <span>{greeting},</span>
+            <span className="inline-block bg-white px-4 py-1 border-[4px] border-ink shadow-[4px_4px_0px_#1A1A1A] font-black -rotate-2">
+              {userName}
+            </span>
+          </h1>
+          
+          <p className="text-base md:text-lg font-bold text-ink pointer-events-auto flex flex-wrap items-center gap-x-2 mt-4">
+            <span>You have</span>
+            <span className="inline-block bg-[#68D391] px-3 py-1 border-[3px] border-ink shadow-[3px_3px_0px_#1A1A1A] font-black rotate-1">
+              <span className="text-white px-1.5 py-0.5 bg-ink mr-2">{deadlines.length}</span>
+              upcoming {deadlines.length === 1 ? 'deadline' : 'deadlines'}
+            </span>
+            <span>this week.</span>
           </p>
         </div>
-        <div className="hidden lg:block absolute right-[-20px] top-[-20px] bottom-[-20px] w-64 border-l-4 border-ink shadow-[-6px_0px_0px_rgba(0,0,0,0.1)] hazard-stripes skew-x-[-15deg]">
-        </div>
-      </Card>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
         {/* Left: Main Dashboard Content */}
         <div className="lg:col-span-8 space-y-12">
           {/* Quick Stats Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             {dynamicStats.map((stat) => (
-              <Card key={stat.label} shadow="sm" className="group hover:translate-y-[-2px] transition-all">
-                <div className={`h-3 ${stat.color} border-b-4 border-ink`}></div>
-                <div className="p-4 text-center">
-                  <p className="text-[10px] font-black uppercase tracking-widest opacity-60">{stat.label}</p>
-                  <p className="text-3xl md:text-4xl font-black mt-1">{stat.value}</p>
+              <div 
+                key={stat.label} 
+                className="group relative border-[4px] border-ink bg-[#FFF5E1] shadow-[8px_8px_0px_#1A1A1A] hover:shadow-[0px_0px_0px_#1A1A1A] hover:translate-x-[8px] hover:translate-y-[8px] transition-all duration-150 ease-out cursor-pointer p-[6px]"
+              >
+                <div className="border-[3px] border-ink bg-white flex flex-col justify-center items-center py-6 h-full">
+                  <p className="text-[12px] md:text-sm font-black uppercase tracking-widest text-ink mb-2">
+                    {stat.label}
+                  </p>
+                  <p className="text-6xl md:text-7xl font-black text-ink">
+                    {stat.value}
+                  </p>
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
 
@@ -119,32 +337,42 @@ export const Dashboard = () => {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {courses.map((course) => (
-                  <Link key={course.id} to={`/courses/${course.id}`}>
-                    <motion.div 
-                      whileHover={{ y: -4, x: -4, boxShadow: '10px 10px 0px #1A1A1A' }}
-                      className="bg-white border-3 border-ink shadow-[6px_6px_0px_#1A1A1A] flex flex-col cursor-pointer h-full"
-                    >
-                      <div className={`h-4 ${getThemeBgClass(course.themeColor)} border-b-4 border-ink`}></div>
-                      <div className="p-6 flex-1 space-y-4">
-                        <div className="flex justify-between items-start">
-                          <Badge>{course.code}</Badge>
-                          <span className="text-[10px] font-bold uppercase opacity-60">{course.credits} Credits</span>
-                        </div>
-                        <h3 className="text-xl md:text-2xl font-black leading-tight">{course.name}</h3>
-                        <div className="pt-4">
-                          <div className="flex justify-between text-[10px] font-black mb-1 uppercase tracking-tighter">
-                            <span>Grade Progress</span>
-                            <span>{course.gradeProgress}%</span>
+                {courses.map((course) => {
+                  return (
+                    <Link key={course.id} to={`/courses/${course.id}`}>
+                      <motion.div 
+                        whileHover={{ y: -4, x: -4, boxShadow: '12px 12px 0px #1A1A1A' }}
+                        className={`border-[4px] border-ink shadow-[8px_8px_0px_#1A1A1A] flex flex-col cursor-pointer h-full transition-shadow duration-150 ${getThemeBgClass(course.themeColor)}`}
+                      >
+                        <div className="p-6 md:p-8 flex flex-col h-full justify-between gap-6">
+                          {/* Top Row */}
+                          <div className="flex justify-between items-center">
+                            <div className="bg-white border-[3px] border-ink px-3 py-1 font-black text-ink text-sm md:text-base">
+                              {course.code}
+                            </div>
+                            <span className="text-xs md:text-sm font-black text-ink tracking-widest">{course.credits} CREDITS</span>
                           </div>
-                          <div className="w-full h-3 bg-background border-2 border-ink">
-                            <div className={`h-full ${getThemeBgClass(course.themeColor)}`} style={{ width: `${course.gradeProgress}%` }}></div>
+                          
+                          {/* Course Name */}
+                          <h3 className="text-3xl md:text-4xl font-black text-ink leading-tight tracking-tighter uppercase mt-4 mb-8">
+                            {course.name}
+                          </h3>
+                          
+                          {/* Progress */}
+                          <div className="mt-auto">
+                            <div className="flex justify-between text-[11px] md:text-[12px] font-black text-ink mb-2 tracking-widest uppercase">
+                              <span>Grade Progress</span>
+                              <span>{course.gradeProgress}%</span>
+                            </div>
+                            <div className="w-full h-4 bg-white border-[3px] border-ink flex">
+                              <div className="h-full bg-ink" style={{ width: `${course.gradeProgress}%` }}></div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  </Link>
-                ))}
+                      </motion.div>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>

@@ -156,7 +156,7 @@ export const Onboarding = () => {
                 <div>
                   <label className="block font-headline text-lg font-bold uppercase mb-2 text-on-background/80">THEME</label>
                   <div className="flex gap-2 mt-4">
-                    {(['yellow', 'pink', 'green', 'blue'] as ThemeColor[]).map((color) => (
+                    {(['blue', 'yellow', 'purple', 'pink', 'green'] as ThemeColor[]).map((color) => (
                       <button
                         key={color}
                         type="button"

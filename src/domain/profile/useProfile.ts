@@ -27,6 +27,8 @@ export function useProfile() {
         semester: data.semester,
         courseCount: Number(data.course_count ?? 0),
         gradingScale: data.grading_scale,
+        aiPersona: data.ai_persona || 'tactical',
+        autoGenerateInsights: data.auto_generate_insights ?? false,
       } as UserProfile;
     },
     enabled: !!userId,
@@ -47,6 +49,8 @@ export function useProfile() {
         semester: profile.semester,
         course_count: profile.courseCount,
         grading_scale: profile.gradingScale,
+        ai_persona: profile.aiPersona,
+        auto_generate_insights: profile.autoGenerateInsights,
       }, { onConflict: 'user_id' });
       if (error) throw error;
     },

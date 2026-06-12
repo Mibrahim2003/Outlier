@@ -636,7 +636,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
                           disabled={aiLoading}
                           className="mt-4 bg-white/10 border-2 border-white/50 px-3 py-1 text-[10px] font-black uppercase block hover:bg-white hover:text-secondary transition-all disabled:opacity-50"
                         >
-                          {aiLoading ? 'Re-analyzing...' : 'Request Re-Analysis'}
+                          {scopeMutation.isPending ? 'Re-analyzing...' : 'Request Re-Analysis'}
                         </button>
                       </div>
                     ) : (
@@ -645,7 +645,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
                         disabled={aiLoading}
                         variant="outline" size="sm" className="bg-white text-ink"
                       >
-                        {aiLoading ? 'Analyzing Scope...' : 'Analyze Scope'}
+                        {scopeMutation.isPending ? 'Analyzing Scope...' : 'Analyze Scope'}
                       </Button>
                     )}
                   </Card>
@@ -665,7 +665,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
                         disabled={aiLoading}
                         variant="primary" size="sm"
                       >
-                        {aiLoading ? 'Generating Milestones...' : 'Generate & Inject Milestones'}
+                        {milestoneMutation.isPending ? 'Generating Milestones...' : 'Generate & Inject Milestones'}
                       </Button>
                     )}
                   </Card>
@@ -694,7 +694,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
                       disabled={aiLoading}
                       variant="outline" size="sm" className="bg-white text-ink mt-4"
                     >
-                      {aiLoading ? 'Analyzing...' : 'Regenerate Insight'}
+                      {insightMutation.isPending ? 'Analyzing...' : 'Regenerate Insight'}
                     </Button>
                   </div>
                 ) : (
@@ -707,7 +707,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
                       disabled={aiLoading}
                       variant="outline" size="sm" className="bg-white text-ink mt-4"
                     >
-                      {aiLoading ? 'Analyzing...' : 'Generate Insight'}
+                      {insightMutation.isPending ? 'Analyzing...' : 'Generate Insight'}
                     </Button>
                   </div>
                 )}
@@ -738,7 +738,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
                         disabled={aiLoading}
                         variant="outline" size="sm" className="bg-white text-ink mt-2"
                       >
-                        {aiLoading ? 'Generating Plan...' : 'Generate Study Plan'}
+                        {studyPlanMutation.isPending ? 'Generating Plan...' : 'Generate Study Plan'}
                       </Button>
                     )}
                   </>
@@ -753,7 +753,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
                       disabled={aiLoading}
                       variant="secondary" size="sm" className="mt-2 flex items-center gap-2"
                     >
-                      <Sparkles size={14} /> {aiLoading ? 'Analyzing...' : 'Scan for Weaknesses'}
+                      <Sparkles size={14} /> {criticalActionMutation.isPending ? 'Analyzing...' : 'Scan for Weaknesses'}
                     </Button>
                   </>
                 )}

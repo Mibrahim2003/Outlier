@@ -62,6 +62,8 @@ export const UserProfileSchema = z.object({
     gpc: z.number(),
     minPercentage: z.number().optional(),
   })).optional(),
+  aiPersona: z.enum(['tactical', 'supportive', 'bare_minimum']).default('tactical'),
+  autoGenerateInsights: z.boolean().default(false),
 });
 
 export const OnboardingStateSchema = z.object({
