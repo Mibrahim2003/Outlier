@@ -21,6 +21,10 @@ export type GradingScale = { grade: string; gpc: number; minPercentage?: number 
  * or falls back to absolute grading based on percentage using the provided grading scale.
  */
 export function estimateGrade(score: number, maxScore: number, gradingScale: GradingScale = DEFAULT_GRADING_SCALE, classAvg?: number, classStdDev?: number): { grade: string; gpc: number } {
+  // gradingScale can arrive as null (a profile that never set a custom scale) or
+  // empty (all rows deleted in Settings); a default parameter only covers
+  // `undefined`, so coerce those cases to the default explicitly.
+  const effectiveScale = gradingScale && gradingScale.length > 0 ? gradingScale : DEFAULT_GRADING_SCALE;
   const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
 
   if (classAvg !== undefined && classStdDev !== undefined && classStdDev > 0) {
@@ -42,7 +46,7 @@ export function estimateGrade(score: number, maxScore: number, gradingScale: Gra
 
   // Absolute fallback based on standard percentage cutoffs dynamically
   // Sort by minPercentage descending
-  const sortedScale = [...gradingScale].sort((a, b) => (b.minPercentage || 0) - (a.minPercentage || 0));
+  const sortedScale = [...effectiveScale].sort((a, b) => (b.minPercentage || 0) - (a.minPercentage || 0));
   
   for (const scale of sortedScale) {
     if (percentage >= (scale.minPercentage || 0)) {

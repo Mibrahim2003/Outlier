@@ -26,7 +26,7 @@ export function useProfile() {
         targetGpa: Number(data.target_gpa),
         semester: data.semester,
         courseCount: Number(data.course_count ?? 0),
-        gradingScale: data.grading_scale,
+        gradingScale: data.grading_scale ?? undefined,
         aiPersona: data.ai_persona || 'tactical',
         autoGenerateInsights: data.auto_generate_insights ?? false,
       } as UserProfile;
