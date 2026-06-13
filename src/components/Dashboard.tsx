@@ -1,16 +1,17 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Stat } from '../types';
-import { Sparkles, AlertCircle, Clock, CheckCircle2, Calendar, Loader2, Plus, ListChecks } from 'lucide-react';
+import { Sparkles, AlertCircle, Clock, CheckCircle2, Loader2, Plus, ListChecks } from 'lucide-react';
 import { motion, useMotionValue } from 'motion/react';
 import { useProfile } from '../domain/profile/useProfile';
 import { useCourses } from '../domain/courses/useCourses';
 import { useDeadlines } from '../domain/deadlines/useDeadlines';
 import { useTodos } from '../domain/todos/useTodos';
 import { useAI } from '../hooks/useAI';
+import { useCourseProgress } from '../hooks/useCourseProgress';
 import { useMutation } from '@tanstack/react-query';
 
 import { getThemeBgClass } from '../utils/impactStyles';
-import { getGreeting, getDeadlineStatus, isSameDay } from '../utils/dateUtils';
+import { getGreeting, getDeadlineStatus, isSameDay, parseLocalDate } from '../utils/dateUtils';
 import { ErrorBoundary } from 'react-error-boundary';
 import { WidgetErrorFallback } from './ErrorBoundary';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -209,6 +210,7 @@ export const Dashboard = () => {
   const { todos, toggleTodo } = useTodos();
   const { getDashboardInsight } = useAI();
   const navigate = useNavigate();
+  const courseProgress = useCourseProgress(courses);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const [insight, setInsight] = useLocalStorage<string | null>(`daily-insight-${todayStr}`, null);
@@ -248,6 +250,20 @@ export const Dashboard = () => {
   const uncompletedTodayTodos = todayTodos.filter(t => !t.completed);
   const completedTodayTodos = todayTodos.filter(t => t.completed);
 
+  // Deadlines falling within the next 7 days (today → today + 7), soonest first.
+  const weekStart = new Date();
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  weekEnd.setHours(23, 59, 59, 999);
+
+  const upcomingDeadlines = deadlines
+    .filter((d) => {
+      const due = parseLocalDate(d.dueDate);
+      return !isNaN(due.getTime()) && due >= weekStart && due <= weekEnd;
+    })
+    .sort((a, b) => parseLocalDate(a.dueDate).getTime() - parseLocalDate(b.dueDate).getTime());
+
   const dynamicStats: Stat[] = [
     { label: 'Pending Tasks', value: uncompletedTodayTodos.length.toString(), color: 'bg-[#4299E1]' },
     { label: 'Deadlines', value: deadlines.length.toString(), color: 'bg-[#FF69B4]' },
@@ -281,8 +297,8 @@ export const Dashboard = () => {
           <p className="text-base md:text-lg font-bold text-ink pointer-events-auto flex flex-wrap items-center gap-x-2 mt-4">
             <span>You have</span>
             <span className="inline-block bg-[#68D391] px-3 py-1 border-[3px] border-ink shadow-[3px_3px_0px_#1A1A1A] font-black rotate-1">
-              <span className="text-white px-1.5 py-0.5 bg-ink mr-2">{deadlines.length}</span>
-              upcoming {deadlines.length === 1 ? 'deadline' : 'deadlines'}
+              <span className="text-white px-1.5 py-0.5 bg-ink mr-2">{upcomingDeadlines.length}</span>
+              upcoming {upcomingDeadlines.length === 1 ? 'deadline' : 'deadlines'}
             </span>
             <span>this week.</span>
           </p>
@@ -337,38 +353,40 @@ export const Dashboard = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {courses.map((course) => {
+                  const progress = courseProgress.get(course.id) ?? 0;
                   return (
                     <Link key={course.id} to={`/courses/${course.id}`}>
-                      <motion.div 
-                        whileHover={{ y: -4, x: -4, boxShadow: '12px 12px 0px #1A1A1A' }}
-                        className={`border-[4px] border-ink shadow-[8px_8px_0px_#1A1A1A] flex flex-col cursor-pointer h-full transition-shadow duration-150 ${getThemeBgClass(course.themeColor)}`}
+                      <div
+                        className={`border-[4px] border-ink shadow-[8px_8px_0px_#1A1A1A] hover:shadow-[0px_0px_0px_#1A1A1A] hover:translate-x-[8px] hover:translate-y-[8px] transition-all duration-150 ease-out flex flex-col cursor-pointer aspect-square overflow-hidden ${getThemeBgClass(course.themeColor)}`}
                       >
-                        <div className="p-6 md:p-8 flex flex-col h-full justify-between gap-6">
+                        <div className="p-6 md:p-8 flex flex-col h-full gap-4">
                           {/* Top Row */}
-                          <div className="flex justify-between items-center">
+                          <div className="flex justify-between items-center flex-shrink-0">
                             <div className="bg-white border-[3px] border-ink px-3 py-1 font-black text-ink text-sm md:text-base">
                               {course.code}
                             </div>
                             <span className="text-xs md:text-sm font-black text-ink tracking-widest">{course.credits} CREDITS</span>
                           </div>
-                          
-                          {/* Course Name */}
-                          <h3 className="text-3xl md:text-4xl font-black text-ink leading-tight tracking-tighter uppercase mt-4 mb-8">
-                            {course.name}
-                          </h3>
+
+                          {/* Course Name — fills the leftover space between header and progress */}
+                          <div className="flex-1 min-h-0 flex items-center overflow-hidden">
+                            <h3 className="text-2xl md:text-3xl font-black text-ink leading-tight tracking-tighter uppercase line-clamp-3 break-words">
+                              {course.name}
+                            </h3>
+                          </div>
                           
                           {/* Progress */}
-                          <div className="mt-auto">
+                          <div className="flex-shrink-0">
                             <div className="flex justify-between text-[11px] md:text-[12px] font-black text-ink mb-2 tracking-widest uppercase">
                               <span>Grade Progress</span>
-                              <span>{course.gradeProgress}%</span>
+                              <span>{progress}%</span>
                             </div>
                             <div className="w-full h-4 bg-white border-[3px] border-ink flex">
-                              <div className="h-full bg-ink" style={{ width: `${course.gradeProgress}%` }}></div>
+                              <div className="h-full bg-ink" style={{ width: `${progress}%` }}></div>
                             </div>
                           </div>
                         </div>
-                      </motion.div>
+                      </div>
                     </Link>
                   );
                 })}
@@ -432,14 +450,18 @@ export const Dashboard = () => {
             </div>
             <div className="p-6 space-y-3 bg-[#FFF6E3]">
               {todayTodos.length === 0 ? (
-                <div className="text-center p-6 border-2 border-dashed border-ink opacity-40 font-bold">
-                  <CheckCircle2 className="mx-auto mb-2" size={28} />
-                  <p className="uppercase tracking-widest text-xs">No tasks for today</p>
+                <div className="text-center p-6 font-bold">
+                  <img
+                    src="/sleeping-face.png"
+                    alt="Sleeping face — no tasks today"
+                    className="mx-auto mb-3 w-24 h-24 object-contain"
+                  />
+                  <p className="uppercase tracking-widest text-base font-black mb-1">No tasks today</p>
                   <button
                     onClick={() => navigate('/calendar?action=add-task')}
-                    className="mt-3 text-[10px] font-black uppercase tracking-widest underline decoration-2 hover:text-secondary transition-colors"
+                    className="mt-2 text-xs font-black uppercase tracking-widest underline decoration-2 hover:text-secondary transition-colors"
                   >
-                    Add a task →
+                    Add a task —
                   </button>
                 </div>
               ) : (
@@ -489,12 +511,22 @@ export const Dashboard = () => {
               <h2 className="text-xl md:text-2xl font-black uppercase tracking-tighter">📅 Deadlines</h2>
             </div>
             <div className="p-6 space-y-6">
-              {deadlines.length === 0 ? (
-                <div className="text-center p-6 border-2 border-dashed border-ink opacity-60 font-bold">
-                  <Calendar className="mx-auto mb-2" size={32} />
-                  <p className="uppercase tracking-widest text-xs">No upcoming deadlines!</p>
+              {upcomingDeadlines.length === 0 ? (
+                <div className="text-center p-6 font-bold">
+                  <img
+                    src="/phew-face.png"
+                    alt="Relieved face — no deadlines this week"
+                    className="mx-auto mb-3 w-24 h-24 object-contain"
+                  />
+                  <p className="uppercase tracking-widest text-base font-black mb-1">No deadlines this week</p>
+                  <button
+                    onClick={() => navigate('/calendar?action=add-deadline')}
+                    className="mt-2 text-xs font-black uppercase tracking-widest underline decoration-2 hover:text-secondary transition-colors"
+                  >
+                    Add a deadline —
+                  </button>
                 </div>
-              ) : deadlines.map((deadline) => {
+              ) : upcomingDeadlines.map((deadline) => {
                 const status = getDeadlineStatus(deadline.dueDate);
                 return (
                   <Card 

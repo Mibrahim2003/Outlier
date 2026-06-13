@@ -13,6 +13,12 @@ import { isDateInRange } from '../utils/dateUtils';
 import { Todo } from '../types';
 import { Card, Button, Badge, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from './ui';
 
+/** Extract the semester number from values like "3", "SEMESTER 03", or "Semester 3". */
+const semesterToNumber = (semester?: string): number => {
+  const n = parseInt(String(semester ?? '').replace(/\D/g, ''), 10);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+};
+
 export const Analytics = () => {
   const { userProfile } = useProfile();
   const { courses } = useCourses();
@@ -55,9 +61,9 @@ export const Analytics = () => {
     if (advancedPastCredits && !isNaN(parseInt(advancedPastCredits))) {
       return parseInt(advancedPastCredits);
     }
-    const semStr = userProfile?.semester || '1';
-    const semNum = parseInt(semStr) || 1;
-    // Past semesters × average 15 credit hours per semester
+    // Past semesters × average 15 credit hours per semester. Robust to both the
+    // numeric ("3") and legacy ("SEMESTER 03") stored formats.
+    const semNum = semesterToNumber(userProfile?.semester);
     return Math.max(0, (semNum - 1) * 15);
   })();
 
@@ -156,7 +162,7 @@ export const Analytics = () => {
         </div>
         <Badge variant="tertiary" size="lg" className="flex items-center gap-2">
           <Calendar size={16} />
-          {activeSemester?.name || userProfile?.semester ? `Semester ${userProfile?.semester}` : 'Current Semester'}
+          {activeSemester?.name || userProfile?.semester ? `Semester ${semesterToNumber(userProfile?.semester)}` : 'Current Semester'}
         </Badge>
       </div>
 

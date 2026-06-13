@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom';
 import { BookOpen, AlertCircle, TrendingUp } from 'lucide-react';
 import { useCourses } from '../domain/courses/useCourses';
+import { useCourseProgress } from '../hooks/useCourseProgress';
 import { getThemeBgClass, getThemeBottomBorderClass } from '../utils/impactStyles';
 import { Card, Badge } from './ui';
 
 export const CourseList = () => {
   const { courses } = useCourses();
+  const courseProgress = useCourseProgress(courses);
 
   return (
     <div className="space-y-8 pb-20">
@@ -22,9 +24,11 @@ export const CourseList = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {courses.map((course) => (
-            <Link 
-              key={course.id} 
+          {courses.map((course) => {
+            const progress = courseProgress.get(course.id) ?? 0;
+            return (
+            <Link
+              key={course.id}
               to={`/courses/${course.id}`}
             >
               <Card 
@@ -43,12 +47,12 @@ export const CourseList = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
                       <span>Grade Progress</span>
-                      <span>{course.gradeProgress}%</span>
+                      <span>{progress}%</span>
                     </div>
                     <div className="w-full h-2 bg-background border-2 border-ink overflow-hidden">
-                      <div 
-                        className={`h-full ${getThemeBgClass(course.themeColor)}`} 
-                        style={{ width: `${course.gradeProgress}%` }}
+                      <div
+                        className={`h-full ${getThemeBgClass(course.themeColor)}`}
+                        style={{ width: `${progress}%` }}
                       />
                     </div>
                   </div>
@@ -71,7 +75,8 @@ export const CourseList = () => {
                 </div>
               </Card>
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

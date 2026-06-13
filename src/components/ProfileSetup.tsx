@@ -14,7 +14,7 @@ export const ProfileSetup = () => {
     graduationYear: userProfile?.graduationYear || '',
     currentCgpa: userProfile?.currentCgpa || 0,
     targetGpa: userProfile?.targetGpa || 0,
-    semester: userProfile?.semester || 'SEMESTER 01',
+    semester: userProfile?.semester || '1',
     courseCount: userProfile?.courseCount || 5,
   });
 
@@ -142,14 +142,14 @@ export const ProfileSetup = () => {
                     value={formData.semester}
                     onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
                   >
-                    <option>SEMESTER 01</option>
-                    <option>SEMESTER 02</option>
-                    <option>SEMESTER 03</option>
-                    <option>SEMESTER 04</option>
-                    <option>SEMESTER 05</option>
-                    <option>SEMESTER 06</option>
-                    <option>SEMESTER 07</option>
-                    <option>SEMESTER 08</option>
+                    <option value="1">SEMESTER 01</option>
+                    <option value="2">SEMESTER 02</option>
+                    <option value="3">SEMESTER 03</option>
+                    <option value="4">SEMESTER 04</option>
+                    <option value="5">SEMESTER 05</option>
+                    <option value="6">SEMESTER 06</option>
+                    <option value="7">SEMESTER 07</option>
+                    <option value="8">SEMESTER 08</option>
                   </select>
                 </div>
               </div>

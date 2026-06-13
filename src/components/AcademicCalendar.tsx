@@ -10,8 +10,9 @@ import {
   getSemesterWeekNumber, 
   isBreakDay, 
   isDateInRange, 
-  isSameDay, 
-  formatDateShort 
+  isSameDay,
+  formatDateShort,
+  parseLocalDate
 } from '../utils/dateUtils';
 import { SemesterInfo, Deadline, Todo } from '../types';
 import { exportToICS } from '../utils/icsExport';
@@ -86,14 +87,14 @@ export const AcademicCalendar = () => {
   // Unified modal: Task vs Deadline mode
   const [eventType, setEventType] = useState<'task' | 'deadline'>('task');
 
-  // Handle ?action=add-task query param from Dashboard navigation
+  // Handle ?action=add-task / ?action=add-deadline query param from Dashboard navigation
   useEffect(() => {
     const action = searchParams.get('action');
     let timeoutId: ReturnType<typeof setTimeout>;
-    if (action === 'add-task' && academicCalendar) {
+    if ((action === 'add-task' || action === 'add-deadline') && academicCalendar) {
       timeoutId = setTimeout(() => {
         setSelectedDate(new Date());
-        setEventType('task');
+        setEventType(action === 'add-deadline' ? 'deadline' : 'task');
         setIsAddModalOpen(true);
         // Clear the param so it doesn't re-trigger
         setSearchParams({}, { replace: true });
@@ -172,14 +173,14 @@ export const AcademicCalendar = () => {
   const getDeadlinesForDate = (date: Date) => {
     return deadlines.filter(d => {
       if (hideNormalPriority && d.priority === 'normal') return false;
-      const dd = new Date(d.dueDate);
+      const dd = parseLocalDate(d.dueDate);
       return isSameDay(dd, date);
     });
   };
 
   const getTodosForDate = (date: Date) => {
     return todos.filter(t => {
-      const td = new Date(t.dueDate + 'T00:00:00');
+      const td = parseLocalDate(t.dueDate);
       return isSameDay(td, date);
     });
   };

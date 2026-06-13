@@ -5,9 +5,21 @@ export function getGreeting(): string {
   return 'Good evening';
 }
 
+/**
+ * Parse a date string as LOCAL time. A bare 'YYYY-MM-DD' is otherwise parsed as
+ * UTC midnight by the Date constructor, which shifts it to the previous day for
+ * users in negative-UTC-offset timezones. Other formats pass through unchanged.
+ */
+export function parseLocalDate(dateStr: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return new Date(dateStr + 'T00:00:00');
+  }
+  return new Date(dateStr);
+}
+
 export function getDeadlineStatus(dueDateStr: string): { text: string; isUrgent: boolean } {
   // Try to parse the date. If invalid, return the raw string.
-  const dueDate = new Date(dueDateStr);
+  const dueDate = parseLocalDate(dueDateStr);
   if (isNaN(dueDate.getTime())) {
     return { text: dueDateStr, isUrgent: false };
   }

@@ -20,6 +20,10 @@ vi.mock('../../domain/courses/useCourses', () => ({
   useCourses: () => ({ courses: [ { id: '1', credits: 3, gradeProgress: 90, impactLevel: 'heavy' }, { id: '2', credits: 4, gradeProgress: 80, impactLevel: 'standard' } ] })
 }));
 
+vi.mock('../../domain/deliverables/useDeliverables', () => ({
+  useDeliverables: () => ({ deliverables: [] })
+}));
+
 vi.mock('../../domain/deadlines/useDeadlines', () => ({
   useDeadlines: () => ({ deadlines: [ { id: '1', title: 'Test Deadline', dueDate: '2026-05-30', topic: 'Tests', course: 'CS-201', priority: 'urgent' } ] })
 }));
