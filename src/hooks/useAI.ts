@@ -1,16 +1,10 @@
 import { useCallback } from 'react';
 import { Course, Deadline } from '../types';
-import { z } from 'zod';
 import * as schemas from '../schemas';
 import { useProfile } from '../domain/profile/useProfile';
 import { invokeAI } from '../lib/aiClient';
 import { buildPrompt } from '../lib/promptBuilder';
-
-function parseAIResponse<T>(text: string, schema: z.ZodType<T>): T {
-  const cleanedText = text.replace(/```json/i, '').replace(/```json/g, '').replace(/```/g, '').trim();
-  const rawJson = JSON.parse(cleanedText);
-  return schema.parse(rawJson);
-}
+import { parseAIResponse } from '../lib/aiResponse';
 
 export function useAI() {
   const { userProfile } = useProfile();

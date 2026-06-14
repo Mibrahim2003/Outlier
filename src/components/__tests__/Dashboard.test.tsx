@@ -24,9 +24,17 @@ vi.mock('../../domain/deliverables/useDeliverables', () => ({
   useDeliverables: () => ({ deliverables: [] })
 }));
 
-vi.mock('../../domain/deadlines/useDeadlines', () => ({
-  useDeadlines: () => ({ deadlines: [ { id: '1', title: 'Test Deadline', dueDate: '2026-05-30', topic: 'Tests', course: 'CS-201', priority: 'urgent' } ] })
-}));
+vi.mock('../../domain/deadlines/useDeadlines', () => {
+  // Two days out so the deadline lands inside the dashboard's next-7-days
+  // window no matter when the suite runs (the old hard-coded 2026-05-30 rotted
+  // into the past and got filtered out).
+  const soon = new Date();
+  soon.setDate(soon.getDate() + 2);
+  const dueDate = `${soon.getFullYear()}-${String(soon.getMonth() + 1).padStart(2, '0')}-${String(soon.getDate()).padStart(2, '0')}`;
+  return {
+    useDeadlines: () => ({ deadlines: [ { id: '1', title: 'Test Deadline', dueDate, topic: 'Tests', course: 'CS-201', priority: 'urgent' } ] })
+  };
+});
 
 vi.mock('../../domain/todos/useTodos', () => ({
   useTodos: () => ({
@@ -44,15 +52,17 @@ vi.mock('../../hooks/useAI', () => ({
   })
 }));
 
-vi.mock('../../utils/dateUtils', () => ({
-  getGreeting: () => 'Good morning',
-  getDeadlineStatus: () => ({ text: '2 days left', isUrgent: true }),
-  isSameDay: (a: Date, b: Date) => {
-    return a.getFullYear() === b.getFullYear() &&
-      a.getMonth() === b.getMonth() &&
-      a.getDate() === b.getDate();
-  },
-}));
+vi.mock('../../utils/dateUtils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../utils/dateUtils')>();
+  return {
+    // Keep the real helpers (parseLocalDate, isSameDay, …) so the deadline
+    // window filter works; only pin the two time-of-day-dependent functions so
+    // assertions stay deterministic regardless of when the suite runs.
+    ...actual,
+    getGreeting: () => 'Good morning',
+    getDeadlineStatus: () => ({ text: '2 days left', isUrgent: true }),
+  };
+});
 
 describe('Dashboard', () => {
   it('renders dynamic stats and enhancements correctly', () => {
