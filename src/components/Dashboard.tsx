@@ -264,9 +264,11 @@ export const Dashboard = () => {
     })
     .sort((a, b) => parseLocalDate(a.dueDate).getTime() - parseLocalDate(b.dueDate).getTime());
 
-  const dynamicStats: Stat[] = [
-    { label: 'Pending Tasks', value: uncompletedTodayTodos.length.toString(), color: 'bg-[#4299E1]' },
-    { label: 'Deadlines', value: deadlines.length.toString(), color: 'bg-[#FF69B4]' },
+  // Deadlines counts the same next-7-days window as the banner above it,
+  // so the two numbers can never contradict each other.
+  const dynamicStats: (Stat & { to: string })[] = [
+    { label: 'Pending Tasks', value: uncompletedTodayTodos.length.toString(), color: 'bg-[#4299E1]', to: '/calendar' },
+    { label: 'Deadlines', value: upcomingDeadlines.length.toString(), color: 'bg-[#FF69B4]', to: '/calendar' },
   ];
 
   return (
@@ -305,9 +307,10 @@ export const Dashboard = () => {
           {/* Quick Stats Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             {dynamicStats.map((stat) => (
-              <div 
-                key={stat.label} 
-                className="group relative border-[4px] border-ink bg-[#FFF5E1] shadow-[8px_8px_0px_#1A1A1A] hover:shadow-[0px_0px_0px_#1A1A1A] hover:translate-x-[8px] hover:translate-y-[8px] transition-all duration-150 ease-out cursor-pointer p-[6px]"
+              <Link
+                key={stat.label}
+                to={stat.to}
+                className="group relative block border-[4px] border-ink bg-[#FFF5E1] shadow-[8px_8px_0px_#1A1A1A] hover:shadow-[0px_0px_0px_#1A1A1A] hover:translate-x-[8px] hover:translate-y-[8px] transition-all duration-150 ease-out cursor-pointer p-[6px]"
               >
                 <div className="border-[3px] border-ink bg-white flex flex-col justify-center items-center py-6 h-full">
                   <p className="text-[12px] md:text-sm font-black uppercase tracking-widest text-ink mb-2">
@@ -317,7 +320,7 @@ export const Dashboard = () => {
                     {stat.value}
                   </p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 
@@ -523,10 +526,14 @@ export const Dashboard = () => {
               ) : upcomingDeadlines.map((deadline) => {
                 const status = getDeadlineStatus(deadline.dueDate);
                 return (
-                  <Card 
+                  <Card
                     key={deadline.id}
                     shadow="sm" interactive
-                    className="p-4 relative overflow-hidden"
+                    onClick={() => navigate('/calendar')}
+                    role="link"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter') navigate('/calendar'); }}
+                    className="p-4 relative overflow-hidden cursor-pointer"
                   >
                     <div className={`absolute left-0 top-0 bottom-0 w-2 ${
                       deadline.priority === 'urgent' ? 'bg-secondary' : 

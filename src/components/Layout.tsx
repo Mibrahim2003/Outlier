@@ -10,7 +10,6 @@ import {
   Settings, 
   PlusCircle,
   LogOut,
-  Bell,
   Menu,
   X,
   Calendar
@@ -19,6 +18,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { LayoutErrorFallback } from './ErrorBoundary';
 import { GlobalSearch } from './GlobalSearch';
+import { NotificationBell } from './NotificationBell';
 
 interface SidebarItemProps {
   to: string;
@@ -77,10 +77,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
           <GlobalSearch />
         </div>
         <div className="flex items-center gap-6">
-          <div className="relative group cursor-pointer hover:bg-primary-container p-2 transition-all active:translate-x-[2px] active:translate-y-[2px] border-2 border-transparent hover:border-ink">
-            <Bell size={24} />
-            <span className="absolute top-1 right-1 w-3 h-3 bg-secondary border-2 border-ink"></span>
-          </div>
+          <NotificationBell />
           <div className="hidden sm:flex items-center gap-3 group cursor-pointer">
             <div className={`w-10 h-10 overflow-hidden ${cardVariants({ shadow: 'sm' })}`}>
               <img 
