@@ -10,7 +10,6 @@ import {
   Settings, 
   PlusCircle,
   LogOut,
-  Search,
   Bell,
   Menu,
   X,
@@ -19,6 +18,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { LayoutErrorFallback } from './ErrorBoundary';
+import { GlobalSearch } from './GlobalSearch';
 
 interface SidebarItemProps {
   to: string;
@@ -74,14 +74,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
           <Link to="/" className="text-2xl font-black uppercase tracking-tighter text-ink">
             Outlier
           </Link>
-          <div className={`hidden md:flex items-center px-4 py-2 w-96 ${cardVariants({ shadow: 'sm' })}`}>
-            <Search size={18} className="mr-2 text-ink" />
-            <input 
-              className="bg-transparent border-none focus:ring-0 w-full font-medium text-sm outline-none" 
-              placeholder="Search courses and tasks..." 
-              type="text"
-            />
-          </div>
+          <GlobalSearch />
         </div>
         <div className="flex items-center gap-6">
           <div className="relative group cursor-pointer hover:bg-primary-container p-2 transition-all active:translate-x-[2px] active:translate-y-[2px] border-2 border-transparent hover:border-ink">
