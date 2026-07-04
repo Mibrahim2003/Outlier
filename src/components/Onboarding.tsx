@@ -4,7 +4,7 @@ import { useCourses } from '../domain/courses/useCourses';
 import { useOnboarding } from '../domain/onboarding/useOnboarding';
 import { useProfile } from '../domain/profile/useProfile';
 import { Course } from '../types';
-import { getImpactStyles, ThemeColor, getThemeBgClass } from '../utils/impactStyles';
+import { getImpactStyles, getImpactLevelForCredits, ThemeColor, getThemeBgClass } from '../utils/impactStyles';
 
 export const Onboarding = () => {
   const navigate = useNavigate();
@@ -40,21 +40,15 @@ export const Onboarding = () => {
 
   const totalCredits = courses.reduce((acc, c) => acc + c.credits, 0);
 
-  const getImpactLevel = (credits: number): 'heavy' | 'standard' | 'minimal' => {
-    if (credits >= 4) return 'heavy';
-    if (credits === 3) return 'standard';
-    return 'minimal';
-  };
-
   const handleAddCourse = () => {
     if (!isTerminalValid) return;
-    
+
     addCourse({
       id: crypto.randomUUID(),
       code: newCourse.code!.toUpperCase(),
       name: newCourse.name!.toUpperCase(),
       credits: Number(newCourse.credits),
-      impactLevel: getImpactLevel(Number(newCourse.credits)),
+      impactLevel: getImpactLevelForCredits(Number(newCourse.credits)),
       themeColor: newCourse.themeColor || 'yellow',
       gradeProgress: 0,
       grade: 'N/A',

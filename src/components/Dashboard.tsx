@@ -332,8 +332,8 @@ export const Dashboard = () => {
             <div className="flex items-end justify-between">
               <h2 className="text-3xl md:text-4xl font-black tracking-tighter uppercase">My Courses</h2>
               <div className="flex gap-4">
-                <Button 
-                  onClick={() => navigate('/onboarding')}
+                <Button
+                  onClick={() => navigate('/courses?action=add')}
                   variant="tertiary" size="xs"
                   className="flex items-center gap-1"
                 >
@@ -346,14 +346,14 @@ export const Dashboard = () => {
             {courses.length === 0 ? (
               <Card shadow="sm" className="border-dashed p-10 text-center">
                 <p className="text-lg font-bold mb-4 opacity-60 uppercase tracking-widest">No Active Courses</p>
-                <Button onClick={() => navigate('/onboarding')}>
+                <Button onClick={() => navigate('/courses?action=add')}>
                   Add Your First Course
                 </Button>
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {courses.map((course) => {
-                  const progress = courseProgress.get(course.id) ?? 0;
+                  const progress = courseProgress.get(course.id)?.progress ?? 0;
                   return (
                     <Link key={course.id} to={`/courses/${course.id}`}>
                       <div

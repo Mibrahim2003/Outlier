@@ -75,7 +75,12 @@ export function useCourses() {
       await queryClient.cancelQueries({ queryKey: ['courses', userId] });
       const previousCourses = queryClient.getQueryData(['courses', userId]);
       const normalized = normalizeCourse(newCourse as unknown as DbCourseRow);
-      queryClient.setQueryData(['courses', userId], (old: Course[] = []) => [...old, normalized]);
+      // Mirror the DB upsert: replace an existing course in place, append a new one.
+      queryClient.setQueryData(['courses', userId], (old: Course[] = []) =>
+        old.some((c) => c.id === normalized.id)
+          ? old.map((c) => (c.id === normalized.id ? normalized : c))
+          : [...old, normalized]
+      );
       return { previousCourses };
     },
     onError: (_err, _, context: any) => {

@@ -4,6 +4,13 @@
 
 export type ImpactLevel = 'heavy' | 'standard' | 'minimal';
 
+/** Derive a course's impact level from its credit hours. */
+export const getImpactLevelForCredits = (credits: number): ImpactLevel => {
+  if (credits >= 4) return 'heavy';
+  if (credits === 3) return 'standard';
+  return 'minimal';
+};
+
 export const getImpactStyles = (impactLevel: ImpactLevel = 'standard'): string => {
   if (impactLevel === 'heavy') return 'bg-secondary-container text-white border-on-background';
   if (impactLevel === 'standard') return 'bg-primary-container text-on-background border-on-background';

@@ -4,24 +4,34 @@ import { useDeliverables } from '../domain/deliverables/useDeliverables';
 import { useProfile } from '../domain/profile/useProfile';
 import { calculateCourseStatus } from '../utils/gpaEngine';
 
+export interface CourseProgressEntry {
+  /** Share (0–100) of the course's grade weight that has been graded so far. */
+  progress: number;
+  /** Letter grade projected from the graded weight, or 'N/A' when nothing is graded. */
+  estimatedGrade: string;
+}
+
 /**
- * Maps each course id to its "grade progress" — the share (0–100) of the course's
- * grade weight that has actually been graded so far. Replaces the legacy
- * `course.gradeProgress` field, which was created as 0 and never updated.
+ * Maps each course id to its live grade status. Replaces the legacy
+ * `course.gradeProgress` / `course.grade` fields, which were created at
+ * onboarding and never updated.
  */
-export function useCourseProgress(courses: Course[]): Map<string, number> {
+export function useCourseProgress(courses: Course[]): Map<string, CourseProgressEntry> {
   const { deliverables } = useDeliverables();
   const { userProfile } = useProfile();
 
   return useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, CourseProgressEntry>();
     for (const course of courses) {
       const status = calculateCourseStatus(
         course,
         deliverables.filter((d) => d.courseId === course.id),
         userProfile?.gradingScale,
       );
-      map.set(course.id, Math.round(status.coveredWeight));
+      map.set(course.id, {
+        progress: Math.round(status.coveredWeight),
+        estimatedGrade: status.estimatedGrade,
+      });
     }
     return map;
   }, [courses, deliverables, userProfile?.gradingScale]);

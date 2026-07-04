@@ -1,12 +1,12 @@
 import { useState, FormEvent, ChangeEvent } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAI } from '../hooks/useAI';
 import { useMutation } from '@tanstack/react-query';
-import { CourseDeliverable } from '../types';
-import { 
-  ArrowLeft, 
-  Sparkles, 
-  FileText, 
+import { CourseDeliverable, Deadline } from '../types';
+import {
+  ArrowLeft,
+  Sparkles,
+  FileText,
   CheckCircle2,
   Target,
   Calendar,
@@ -14,17 +14,44 @@ import {
   Upload,
   Plus,
   Folder,
-  Settings
+  Settings,
+  Pencil,
+  Bell
 } from 'lucide-react';
 import { useProfile } from '../domain/profile/useProfile';
 import { useCourses } from '../domain/courses/useCourses';
 import { useDeliverables } from '../domain/deliverables/useDeliverables';
+import { useDeadlines } from '../domain/deadlines/useDeadlines';
 import { useTodos } from '../domain/todos/useTodos';
 import { getThemeBgClass, getThemeTextClass, ThemeColor } from '../utils/impactStyles';
 import { calculateCourseStatus } from '../utils/gpaEngine';
+import { parseLocalDate, formatDateShort } from '../utils/dateUtils';
 import { Button, Card, Badge, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from './ui';
+import { CourseFormModal } from './CourseFormModal';
 
 const TABS = ['Quizzes', 'Assignments', 'Midterm', 'Final', 'Project', 'AI Insights'];
+
+const TYPE_LABELS: Record<CourseDeliverable['type'], { singular: string; plural: string }> = {
+  quiz: { singular: 'Quiz', plural: 'quizzes' },
+  assignment: { singular: 'Assignment', plural: 'assignments' },
+  midterm: { singular: 'Midterm', plural: 'midterms' },
+  final: { singular: 'Final', plural: 'finals' },
+  project: { singular: 'Project', plural: 'projects' },
+};
+
+/** ISO dates render as "Oct 12, 2026"; legacy free-text dates pass through unchanged. */
+const formatDeliverableDate = (dateStr: string): string => {
+  const d = parseLocalDate(dateStr);
+  return isNaN(d.getTime()) ? dateStr : formatDateShort(d);
+};
+
+const isTodayOrFuture = (dateStr: string): boolean => {
+  const d = parseLocalDate(dateStr);
+  if (isNaN(d.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return d >= today;
+};
 
 // Real performance chart: one pair of bars (you vs. class average) per graded
 // deliverable. Ungraded items (no score or no class average yet) are hidden;
@@ -102,16 +129,22 @@ export const CourseDetail = () => {
 };
 
 const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
+  const navigate = useNavigate();
   const { userProfile } = useProfile();
-  const { deliverables, addDeliverable, updateDeliverable } = useDeliverables();
+  const { addCourse, removeCourse } = useCourses();
+  const { deliverables, addDeliverable, updateDeliverable, setDeliverables } = useDeliverables();
+  const { addDeadline } = useDeadlines();
   const { addTodo } = useTodos();
   const { getCourseInsight, getCourseCriticalAction, generateCourseStudyPlan, extractClassMarks, analyzeProjectScope, generateProjectMilestones } = useAI();
-  
+
   const [activeTab, setActiveTab] = useState(0);
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [criticalAction, setCriticalAction] = useState<{topic: string, insight: string} | null>(null);
   const [studyPlanGenerated, setStudyPlanGenerated] = useState(false);
-  
+
+  // Edit Course Modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   // Add Deliverable Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'quiz' | 'assignment' | 'midterm' | 'final' | 'project'>('quiz');
@@ -119,10 +152,12 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
   const [newDate, setNewDate] = useState('');
   const [newTopics, setNewTopics] = useState('');
   const [newTotalMarks, setNewTotalMarks] = useState('100');
+  const [newQuizNumber, setNewQuizNumber] = useState('');
+  const [newLectureRange, setNewLectureRange] = useState('');
 
   // Upload Marks Modal
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [uploadDeliverableType, setUploadDeliverableType] = useState<'quiz' | 'midterm' | 'final' | 'project'>('quiz');
+  const [uploadDeliverableType, setUploadDeliverableType] = useState<'quiz' | 'assignment' | 'midterm' | 'final' | 'project'>('quiz');
   const [uploadDeliverableId, setUploadDeliverableId] = useState('');
   const [uploadMode, setUploadMode] = useState<'manual' | 'bulk'>('manual');
   const [myScore, setMyScore] = useState('');
@@ -135,12 +170,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
   const [initProjectIdea, setInitProjectIdea] = useState('');
   const [initProjectDeadline, setInitProjectDeadline] = useState('');
   
-  // AI Destructuring moved to top
-
-  const course = {
-    ...localCourse,
-    instructor: 'Dr. AI Professor',
-  };
+  const course = localCourse;
 
   const courseDeliverables = deliverables.filter(d => d.courseId === localCourse.id);
   const quizzes = courseDeliverables.filter(d => d.type === 'quiz');
@@ -236,13 +266,53 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
   const handleGenerateCriticalAction = () => criticalActionMutation.mutate();
   const handleGenerateStudyPlan = () => studyPlanMutation.mutate();
 
+  // ─── Reminders ────────────────────────────────────────────────
+  // A "reminder" is a real deadline row, so scheduled deliverables show up on
+  // the dashboard and calendar. Only today-or-future dates get one — a
+  // reminder that is born overdue is just noise.
+
+  const buildReminder = (deliverable: CourseDeliverable): Deadline | null => {
+    if (!isTodayOrFuture(deliverable.date)) return null;
+    const priority: Deadline['priority'] =
+      deliverable.type === 'midterm' || deliverable.type === 'final' ? 'urgent'
+      : deliverable.type === 'assignment' ? 'normal'
+      : 'moderate';
+    return {
+      id: crypto.randomUUID(),
+      title: `${course.code}: ${deliverable.title}`,
+      course: course.code,
+      topic: deliverable.metadata?.lectureRange
+        ? `Lectures ${deliverable.metadata.lectureRange}`
+        : deliverable.metadata?.topics || TYPE_LABELS[deliverable.type].singular,
+      dueDate: deliverable.date,
+      priority,
+    };
+  };
+
+  const handleSetReminder = (deliverable: CourseDeliverable) => {
+    const reminder = buildReminder(deliverable);
+    if (!reminder) return;
+    addDeadline(reminder);
+    updateDeliverable({ ...deliverable, metadata: { ...deliverable.metadata, deadlineId: reminder.id } });
+  };
+
+  // ─── Course edit / delete ─────────────────────────────────────
+
+  const handleDeleteCourse = () => {
+    // course_deliverables has no FK to courses, so orphaned rows must be
+    // removed explicitly alongside the course.
+    setDeliverables(deliverables.filter(d => d.courseId !== course.id));
+    removeCourse(course.id);
+    navigate('/courses');
+  };
+
   // Project Functions
 
   const handleInitializeProject = (e: FormEvent) => {
     e.preventDefault();
     if (!initProjectTitle || !initProjectDeadline) return;
 
-    addDeliverable({
+    const project: CourseDeliverable = {
       id: crypto.randomUUID(),
       courseId: course.id,
       type: 'project',
@@ -253,7 +323,14 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
         projectIdea: initProjectIdea,
         totalMarks: 100
       }
-    });
+    };
+
+    const reminder = buildReminder(project);
+    if (reminder) {
+      project.metadata!.deadlineId = reminder.id;
+      addDeadline(reminder);
+    }
+    addDeliverable(project);
   };
 
 
@@ -293,7 +370,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
     e.preventDefault();
     if (!newTitle) return;
 
-    addDeliverable({
+    const deliverable: CourseDeliverable = {
       id: crypto.randomUUID(),
       courseId: course.id,
       type: modalType,
@@ -303,14 +380,33 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
       metadata: {
         topics: newTopics || undefined,
         totalMarks: parseFloat(newTotalMarks) || 100,
+        quizNumber: modalType === 'quiz' && newQuizNumber ? parseInt(newQuizNumber) : undefined,
+        lectureRange: modalType === 'quiz' && newLectureRange ? newLectureRange : undefined,
       }
-    });
+    };
+
+    const reminder = buildReminder(deliverable);
+    if (reminder) {
+      deliverable.metadata!.deadlineId = reminder.id;
+      addDeadline(reminder);
+    }
+    addDeliverable(deliverable);
 
     setIsModalOpen(false);
     setNewTitle('');
     setNewDate('');
     setNewTopics('');
     setNewTotalMarks('100');
+    setNewQuizNumber('');
+    setNewLectureRange('');
+  };
+
+  // Auto-title quizzes from the quiz number, but never clobber a custom title.
+  const handleQuizNumberChange = (value: string) => {
+    setNewQuizNumber(value);
+    if (value && (newTitle === '' || /^Quiz \d+$/.test(newTitle))) {
+      setNewTitle(`Quiz ${value}`);
+    }
   };
 
   const marksMutation = useMutation({
@@ -406,12 +502,12 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
     setIsModalOpen(true);
   };
 
-  const renderAssessments = (title: string, items: CourseDeliverable[], type: 'quiz' | 'midterm' | 'final') => (
+  const renderAssessments = (title: string, items: CourseDeliverable[], type: 'quiz' | 'assignment' | 'midterm' | 'final') => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-2xl font-black uppercase tracking-tighter">{title}</h3>
         <div className="flex gap-3">
-          <Button 
+          <Button
             onClick={() => { setUploadDeliverableType(type); setIsUploadModalOpen(true); }}
             variant="outline" size="xs"
             className="flex items-center gap-2"
@@ -419,13 +515,13 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
             <Upload size={14} />
             Upload Marks
           </Button>
-          <Button 
+          <Button
             onClick={() => openModal(type)}
             variant="primary" size="xs"
             className="flex items-center gap-2"
           >
             <Plus size={14} />
-            Add {type === 'quiz' ? 'Quiz' : type === 'midterm' ? 'Midterm' : 'Final'}
+            Add {TYPE_LABELS[type].singular}
           </Button>
         </div>
       </div>
@@ -446,10 +542,11 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
                   <span className="bg-ink/10 text-ink px-2 py-0.5 text-[10px] font-black uppercase border border-ink/30">Scheduled</span>
                 )}
               </div>
-              <div className="flex items-center gap-4 text-xs font-bold opacity-60">
-                <span className="flex items-center gap-1"><Calendar size={12} /> {item.date}</span>
+              <div className="flex items-center gap-4 text-xs font-bold opacity-60 flex-wrap">
+                <span className="flex items-center gap-1"><Calendar size={12} /> {formatDeliverableDate(item.date)}</span>
                 {item.score && <span className="flex items-center gap-1"><Star size={12} /> Score: {item.score}</span>}
                 {item.metadata?.classAvg && <span className="italic">Class Avg: {item.metadata.classAvg}</span>}
+                {item.metadata?.lectureRange && <span className="italic">Lectures: {item.metadata.lectureRange}</span>}
                 {item.metadata?.topics && <span className="italic">Topics: {item.metadata.topics}</span>}
               </div>
             </div>
@@ -460,9 +557,19 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
                 </div>
               )}
               {item.status === 'scheduled' && (
-                <Button variant="outline" size="xs" className="px-3 py-1 text-[10px]">
-                  Set Reminder
-                </Button>
+                item.metadata?.deadlineId ? (
+                  <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-tertiary">
+                    <CheckCircle2 size={12} /> Reminder Set
+                  </span>
+                ) : isTodayOrFuture(item.date) ? (
+                  <Button
+                    onClick={() => handleSetReminder(item)}
+                    variant="outline" size="xs"
+                    className="px-3 py-1 text-[10px] flex items-center gap-1"
+                  >
+                    <Bell size={10} /> Set Reminder
+                  </Button>
+                ) : null
               )}
             </div>
           </div>
@@ -470,7 +577,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
       ))}
       {items.length === 0 && (
         <div className="text-center p-8 border-2 border-dashed border-ink opacity-60 font-bold uppercase tracking-widest text-xs">
-          No {type === 'quiz' ? 'quizzes' : type === 'midterm' ? 'midterms' : 'finals'} found.
+          No {TYPE_LABELS[type].plural} found.
         </div>
       )}
     </div>
@@ -478,12 +585,19 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
 
   return (
     <div className="space-y-8 pb-20">
-      {/* Back Button */}
-      <div className="flex items-center gap-4">
+      {/* Back Button + Edit */}
+      <div className="flex items-center justify-between gap-4">
         <Link to="/dashboard" className="flex items-center gap-2 text-xs font-black uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity">
           <ArrowLeft size={16} />
           Back to Dashboard
         </Link>
+        <Button
+          onClick={() => setIsEditModalOpen(true)}
+          variant="outline" size="xs"
+          className="flex items-center gap-2"
+        >
+          <Pencil size={12} /> Edit Course
+        </Button>
       </div>
 
       {/* Course Header — Yellow card */}
@@ -495,7 +609,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
           </div>
           <Card shadow="sm" className="bg-white text-ink p-4 text-center min-w-[100px]">
             <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Est. Grade</p>
-            <p className="text-4xl font-black leading-none mt-1">{course.grade}</p>
+            <p className="text-4xl font-black leading-none mt-1">{courseStatus.estimatedGrade}</p>
           </Card>
         </div>
         
@@ -548,39 +662,8 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
           {/* Assignments Tab */}
           {activeTab === 1 && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-2xl font-black uppercase tracking-tighter">Assignments</h3>
-                <Button 
-                  onClick={() => openModal('assignment')}
-                  variant="primary" size="xs"
-                  className="flex items-center gap-2"
-                >
-                  <Plus size={14} />
-                  Add Assignment
-                </Button>
-              </div>
-              {assignments.map((item) => (
-                <Card key={item.id} shadow="sm" className="p-6 flex justify-between items-center">
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 border-2 border-ink bg-tertiary text-white">
-                      <CheckCircle2 size={18} />
-                    </div>
-                    <div>
-                      <h4 className="font-black text-lg">{item.title}</h4>
-                      <p className="text-xs font-bold opacity-40 uppercase tracking-widest">{item.date}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black uppercase opacity-40">Score</p>
-                    <p className="font-black text-xl">{item.score || '-'}</p>
-                  </div>
-                </Card>
-              ))}
-              {assignments.length === 0 && (
-                <div className="text-center p-8 border-2 border-dashed border-ink opacity-60 font-bold uppercase tracking-widest text-xs">
-                  No assignments found.
-                </div>
-              )}
+              {renderAssessments('Assignments', assignments, 'assignment')}
+              <PerformanceChart title="Your Performance vs Class Average" items={assignments} themeColor={course.themeColor} />
             </div>
           )}
 
@@ -622,12 +705,11 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
                     </div>
                     <div>
                       <label className="text-xs font-black uppercase tracking-widest opacity-60">Final Deadline</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="date"
                         value={initProjectDeadline}
                         onChange={(e) => setInitProjectDeadline(e.target.value)}
                         className="w-full bg-background border-2 border-ink p-3 font-bold focus:outline-none focus:ring-2 focus:ring-tertiary"
-                        placeholder="e.g., Dec 15"
                         required
                       />
                     </div>
@@ -656,7 +738,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
                     <div>
                       <span className="bg-white/20 text-white px-2 py-1 text-[10px] font-black uppercase tracking-widest border border-white/30">Course Project</span>
                       <h3 className="text-3xl font-black uppercase tracking-tighter mt-2">{projects[0].title}</h3>
-                      <p className="text-sm font-bold opacity-80 mt-1">Due: {projects[0].date}</p>
+                      <p className="text-sm font-bold opacity-80 mt-1">Due: {formatDeliverableDate(projects[0].date)}</p>
                     </div>
                     <Button 
                       onClick={() => { setUploadDeliverableType('project'); setIsUploadModalOpen(true); }}
@@ -859,15 +941,42 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
         <ModalContent>
           <ModalHeader onClose={() => setIsModalOpen(false)}>
             <h3 className="text-2xl font-black uppercase tracking-tighter leading-none">
-              Add {modalType === 'quiz' ? 'Quiz' : modalType === 'midterm' ? 'Midterm' : modalType === 'final' ? 'Final' : 'Assignment'}
+              Add {TYPE_LABELS[modalType].singular}
             </h3>
           </ModalHeader>
           <form onSubmit={handleAddSubmit}>
             <ModalBody className="space-y-6">
+              {modalType === 'quiz' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-black uppercase tracking-widest opacity-60">Quiz Number</label>
+                    <select
+                      value={newQuizNumber}
+                      onChange={(e) => handleQuizNumberChange(e.target.value)}
+                      className="w-full bg-background border-2 border-ink p-3 font-bold focus:outline-none focus:ring-2 focus:ring-primary-container"
+                    >
+                      <option value="">Select...</option>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <option key={n} value={n}>Quiz {n}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black uppercase tracking-widest opacity-60">Lecture Range</label>
+                    <input
+                      type="text"
+                      value={newLectureRange}
+                      onChange={(e) => setNewLectureRange(e.target.value)}
+                      className="w-full bg-background border-2 border-ink p-3 font-bold placeholder:opacity-30 focus:outline-none focus:ring-2 focus:ring-primary-container"
+                      placeholder="e.g., 1-5"
+                    />
+                  </div>
+                </div>
+              )}
               <div className="space-y-2">
                 <label className="text-xs font-black uppercase tracking-widest opacity-60">Title</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   className="w-full bg-background border-2 border-ink p-3 font-bold placeholder:opacity-30 focus:outline-none focus:ring-2 focus:ring-primary-container"
@@ -876,19 +985,23 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-black uppercase tracking-widest opacity-60">Date (Optional)</label>
-                <input 
-                  type="text" 
+                <label className="text-xs font-black uppercase tracking-widest opacity-60">Date</label>
+                <input
+                  type="date"
                   value={newDate}
                   onChange={(e) => setNewDate(e.target.value)}
-                  className="w-full bg-background border-2 border-ink p-3 font-bold placeholder:opacity-30 focus:outline-none focus:ring-2 focus:ring-primary-container"
-                  placeholder="e.g., Dec 01"
+                  className="w-full bg-background border-2 border-ink p-3 font-bold focus:outline-none focus:ring-2 focus:ring-primary-container"
                 />
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-50">
+                  {(!newDate || isTodayOrFuture(newDate))
+                    ? 'A reminder will be added to your deadlines'
+                    : 'Past date — recorded without a reminder'}
+                </p>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-black uppercase tracking-widest opacity-60">Topics / Syllabus (Optional)</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={newTopics}
                   onChange={(e) => setNewTopics(e.target.value)}
                   className="w-full bg-background border-2 border-ink p-3 font-bold placeholder:opacity-30 focus:outline-none focus:ring-2 focus:ring-primary-container"
@@ -897,8 +1010,8 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-black uppercase tracking-widest opacity-60">Total Marks</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   value={newTotalMarks}
                   onChange={(e) => setNewTotalMarks(e.target.value)}
                   className="w-full bg-background border-2 border-ink p-3 font-bold placeholder:opacity-30 focus:outline-none focus:ring-2 focus:ring-primary-container"
@@ -908,12 +1021,12 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
               </div>
             </ModalBody>
             <ModalFooter>
-              <Button 
+              <Button
                 type="submit"
                 variant="ink" size="lg"
                 className="w-full"
               >
-                Set Reminder
+                Add {TYPE_LABELS[modalType].singular}
               </Button>
             </ModalFooter>
           </form>
@@ -1017,7 +1130,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
               )}
             </ModalBody>
             <ModalFooter>
-              <Button 
+              <Button
                 type="submit"
                 variant="tertiary" size="lg"
                 className="w-full"
@@ -1028,6 +1141,17 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
           </form>
         </ModalContent>
       </Modal>
+
+      {/* Edit Course Modal */}
+      {isEditModalOpen && (
+        <CourseFormModal
+          onClose={() => setIsEditModalOpen(false)}
+          course={course}
+          onSubmit={(updated) => addCourse(updated)}
+          onDelete={handleDeleteCourse}
+          deliverableCount={courseDeliverables.length}
+        />
+      )}
     </div>
   );
 };
