@@ -8,6 +8,8 @@ export function Auth() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgot, setIsForgot] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
@@ -25,6 +27,30 @@ export function Auth() {
       playSound('error');
       setIsLoading(false);
     }
+  };
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setAuthError(null);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    setIsLoading(false);
+    if (error) {
+      setAuthError(error.message);
+      playSound('error');
+    } else {
+      setResetSent(true);
+    }
+  };
+
+  const backToLogin = () => {
+    setIsForgot(false);
+    setResetSent(false);
+    setAuthError(null);
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
@@ -77,7 +103,7 @@ export function Auth() {
       <div className="w-full lg:w-1/2 bg-[#FFDE59] flex items-center justify-center p-6 lg:p-20 min-h-[70vh] lg:min-h-screen relative">
         <div className="w-full max-w-md bg-white border-4 border-black p-8 shadow-[8px_8px_0px_#1A1A1A]">
           <h2 className="text-3xl font-black uppercase tracking-tighter mb-8">
-            {isLogin ? 'Initiate Session' : 'Establish Record'}
+            {isForgot ? 'Recover Access' : isLogin ? 'Initiate Session' : 'Establish Record'}
           </h2>
 
           {authError && (
@@ -87,6 +113,63 @@ export function Auth() {
             </div>
           )}
 
+          {isForgot ? (
+            resetSent ? (
+              <div className="space-y-8">
+                <div className="p-4 bg-[#daf5bc] border-4 border-black font-bold tracking-wide text-sm">
+                  Reset link dispatched to <span className="font-black">{email}</span>. Check your inbox — the link opens a page to set a new password.
+                </div>
+                <button
+                  onClick={backToLogin}
+                  className="w-full bg-black text-white border-4 border-black p-4 flex items-center justify-center gap-3 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_#1A1A1A] transition-all"
+                >
+                  <span className="font-bold uppercase tracking-wider text-xl">Back to Login</span>
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotSubmit} className="space-y-6">
+                <p className="text-sm font-bold uppercase tracking-wider opacity-60">
+                  Enter your email and we&apos;ll send you a password reset link.
+                </p>
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold uppercase tracking-wider">Operator Email</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Mail className="h-5 w-5 text-black" />
+                    </div>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full bg-white border-4 border-black p-3 pl-12 font-medium focus:outline-none focus:bg-[#FFF6E3] focus:shadow-[4px_4px_0px_#A8275A] transition-all"
+                      placeholder="ID@outlier.com"
+                      required
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-black text-white border-4 border-black p-4 flex items-center justify-center gap-3 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_#1A1A1A] transition-all disabled:opacity-50"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-6 h-6 animate-spin text-white" />
+                  ) : (
+                    <>
+                      <span className="font-bold uppercase tracking-wider text-xl">Send Reset Link</span>
+                      <ArrowRight className="w-6 h-6 text-white" />
+                    </>
+                  )}
+                </button>
+                <div className="text-center">
+                  <button type="button" onClick={backToLogin} className="font-bold uppercase tracking-wider hover:underline">
+                    Back to login
+                  </button>
+                </div>
+              </form>
+            )
+          ) : (
+          <>
           <button
             onClick={handleGoogleLogin}
             disabled={isLoading}
@@ -129,7 +212,11 @@ export function Auth() {
               <div className="flex justify-between items-center">
                 <label className="block text-sm font-bold uppercase tracking-wider">Access Code</label>
                 {isLogin && (
-                  <button type="button" className="text-xs font-bold uppercase tracking-wider text-[#A8275A] hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => { setIsForgot(true); setAuthError(null); }}
+                    className="text-xs font-bold uppercase tracking-wider text-[#A8275A] hover:underline"
+                  >
                     Forgot Key?
                   </button>
                 )}
@@ -166,13 +253,15 @@ export function Auth() {
           </form>
 
           <div className="mt-8 text-center">
-            <button 
+            <button
               onClick={() => setIsLogin(!isLogin)}
               className="font-bold uppercase tracking-wider hover:underline"
             >
               {isLogin ? "No record? Create one." : "Already an operator? Log in."}
             </button>
           </div>
+          </>
+          )}
         </div>
         
         {/* Decorative blueprint lines */}

@@ -7,6 +7,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Layout } from './components/Layout';
 import { LandingPage } from './components/LandingPage';
 import { Auth } from './components/Auth';
+import { ResetPassword } from './components/ResetPassword';
 import { Dashboard } from './components/Dashboard';
 import { Analytics } from './components/Analytics';
 import { Onboarding } from './components/Onboarding';
@@ -73,6 +74,10 @@ export default function App() {
             <Auth />
           </PublicOnlyRoute>
         } />
+
+        {/* Recovery links land here with a recovery session, so this route
+            must stay outside PublicOnlyRoute (which bounces signed-in users). */}
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* ─── Post-Auth Gate ────────────────────────────────── */}
         {/* The single canonical routing decision point.         */}
