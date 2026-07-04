@@ -42,6 +42,7 @@ Outlier is a web app for university students. It tracks course grades, predicts 
 - `npm run test` — run the Vitest suite once (`vitest run`)
 - Single test file: `npx vitest run src/components/__tests__/Dashboard.test.tsx`
 - Tests matching a name: `npx vitest run -t "deadline"`
+- `npx supabase functions deploy gemini-proxy` — ship the AI proxy after editing [supabase/functions/gemini-proxy/index.ts](supabase/functions/gemini-proxy/index.ts) (editing the file does **not** deploy it)
 
 Tests use Vitest + Testing Library in `jsdom` (configured inline in [vite.config.ts](vite.config.ts)). There is no global setup file — each test needing DOM matchers imports `'@testing-library/jest-dom/vitest'` at the top. Component tests `vi.mock` the domain hooks (see [Dashboard.test.tsx](src/components/__tests__/Dashboard.test.tsx)) so components render against fixed data without touching Supabase.
 
@@ -74,6 +75,14 @@ Every persisted entity has a folder under [src/domain/](src/domain/) exporting a
 
 Global config in [src/App.tsx](src/App.tsx): a `MutationCache.onError` shows a Sonner error toast for every failed mutation unless `mutation.meta.silent` is set; queries default to 5-min `staleTime` and `retry: 1`.
 
+### Row Level Security — the security boundary
+
+All private data (GPA, marks, profiles, everything) sits behind the **public anon key**, so the *database*, not the client, is what isolates accounts. **Every table has RLS enabled with `auth.uid() = user_id` policies** — see [supabase/migration.sql](supabase/migration.sql) plus the per-feature migrations covering `profiles`, `courses`, `deadlines`, `onboarding_states`, `todos`, `course_deliverables`, `academic_calendars`, and `ai_usage`/`ai_usage_global`. A user can only ever read or write their own rows; the gemini-proxy uses a token-scoped client so `auth.uid()` resolves to the caller there too. This is the boundary protecting the privacy stance on GPA — do not weaken it.
+
+Implications for new code:
+- **A new table must enable RLS and add `auth.uid() = user_id` policies in the same migration**, or it ships world-readable/writable through the anon key.
+- Domain hooks still scope every query and mutation by `user_id` (e.g. `.eq('user_id', userId)`). Keep doing so — it's defense-in-depth and intent-revealing; RLS is the enforced backstop, not a license to drop the filter.
+
 ### Types & validation
 
 Domain types are **derived from Zod schemas**, not hand-written. [src/schemas.ts](src/schemas.ts) defines schemas; [src/types.ts](src/types.ts) re-exports them as `z.infer<...>`. Change a field on the schema and the type follows. Zod also validates AI responses at runtime (see AI subsystem).
@@ -92,7 +101,7 @@ The frontend never calls Gemini directly. Flow:
 3. **`invokeAI()`** ([src/lib/aiClient.ts](src/lib/aiClient.ts)) calls the `gemini-proxy` Edge Function, retries 500/502/503 with exponential backoff, and throws a non-retryable `AIQuotaError` on HTTP 429.
 4. JSON responses are stripped of code fences and **validated with the matching Zod schema** before use.
 
-The proxy ([supabase/functions/gemini-proxy/index.ts](supabase/functions/gemini-proxy/index.ts), Deno) verifies the caller's JWT, validates the body, enforces per-user + global daily quotas via the `consume_ai_quota` Postgres RPC (fails **closed** — no quota check, no paid call), then calls `gemini-2.5-flash` at `temperature: 0.2`. CORS allows any localhost port plus origins in the `ALLOWED_ORIGINS` secret. Quotas and origins are tunable via secrets without redeploying.
+The proxy ([supabase/functions/gemini-proxy/index.ts](supabase/functions/gemini-proxy/index.ts), Deno) verifies the caller's JWT, validates the body, enforces per-user + global daily quotas via the `consume_ai_quota` Postgres RPC (fails **closed** — no quota check, no paid call), then calls `gemini-2.5-flash` at `temperature: 0.2`. CORS allows any localhost port plus origins in the `ALLOWED_ORIGINS` secret. Quotas and origins are tunable via secrets without redeploying, but **code changes to the proxy require `npx supabase functions deploy gemini-proxy`** to take effect.
 
 ### Database migrations
 

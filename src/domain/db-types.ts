@@ -72,6 +72,9 @@ export interface DbProfileRow {
   target_gpa: number;
   semester: string;
   course_count?: number;
+  ai_persona?: string;
+  auto_generate_insights?: boolean;
+  sound_enabled?: boolean;
 }
 
 export interface DbAcademicCalendarRow {

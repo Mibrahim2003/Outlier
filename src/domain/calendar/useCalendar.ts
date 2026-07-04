@@ -26,6 +26,7 @@ export function useCalendar() {
   });
 
   const setAcademicCalendarMutation = useMutation({
+    meta: { sound: 'success' },
     mutationFn: async (calendar: AcademicCalendarData | null) => {
       if (calendar) {
         const { error } = await supabase.from('academic_calendars').upsert({

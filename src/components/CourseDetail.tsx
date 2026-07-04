@@ -20,11 +20,69 @@ import { useProfile } from '../domain/profile/useProfile';
 import { useCourses } from '../domain/courses/useCourses';
 import { useDeliverables } from '../domain/deliverables/useDeliverables';
 import { useTodos } from '../domain/todos/useTodos';
-import { getThemeBgClass, getThemeTextClass } from '../utils/impactStyles';
+import { getThemeBgClass, getThemeTextClass, ThemeColor } from '../utils/impactStyles';
 import { calculateCourseStatus } from '../utils/gpaEngine';
 import { Button, Card, Badge, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from './ui';
 
 const TABS = ['Quizzes', 'Assignments', 'Midterm', 'Final', 'Project', 'AI Insights'];
+
+// Real performance chart: one pair of bars (you vs. class average) per graded
+// deliverable. Ungraded items (no score or no class average yet) are hidden;
+// if nothing is graded the chart renders nothing so we never show fake bars.
+const PerformanceChart = ({ title, items, themeColor }: { title: string; items: CourseDeliverable[]; themeColor: ThemeColor }) => {
+  const graded = items
+    .map((item) => {
+      const score = parseFloat(item.score || '');
+      const classAvg = parseFloat(item.metadata?.classAvg as string ?? '');
+      const total = item.metadata?.totalMarks || 100;
+      if (isNaN(score) || isNaN(classAvg) || total <= 0) return null;
+      const clamp = (n: number) => Math.max(0, Math.min(100, n));
+      return {
+        id: item.id,
+        title: item.title,
+        yourPct: clamp((score / total) * 100),
+        classPct: clamp((classAvg / total) * 100),
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  if (graded.length === 0) return null;
+
+  return (
+    <Card shadow="sm" className="p-8">
+      <h4 className="text-sm font-black uppercase tracking-widest mb-6">{title}</h4>
+      <div className="relative h-48 w-full border-b-4 border-ink flex items-end justify-around px-8 gap-8">
+        {graded.map((bar) => (
+          <div key={bar.id} className="flex-1 flex items-end justify-center gap-2 h-full">
+            <div className="flex flex-col items-center justify-end gap-1 flex-1 h-full">
+              <span className="text-[10px] font-black">{bar.yourPct.toFixed(0)}%</span>
+              <div
+                className={`w-full ${getThemeBgClass(themeColor)} border-2 border-ink`}
+                style={{ height: `${bar.yourPct}%` }}
+              ></div>
+            </div>
+            <div className="flex flex-col items-center justify-end gap-1 flex-1 h-full">
+              <span className="text-[10px] font-black opacity-50">{bar.classPct.toFixed(0)}%</span>
+              <div
+                className="w-full bg-ink/20 border-2 border-ink"
+                style={{ height: `${bar.classPct}%` }}
+              ></div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-around text-[10px] font-black uppercase tracking-widest mt-3 px-8 gap-8">
+        {graded.map((bar) => (
+          <span key={bar.id} className="flex-1 text-center truncate" title={bar.title}>{bar.title}</span>
+        ))}
+      </div>
+      <div className="flex items-center justify-center gap-6 mt-4">
+        <div className="flex items-center gap-2 text-[10px] font-bold"><div className={`w-3 h-3 ${getThemeBgClass(themeColor)} border border-ink`}></div> You</div>
+        <div className="flex items-center gap-2 text-[10px] font-bold"><div className="w-3 h-3 bg-ink/20 border border-ink"></div> Class Average</div>
+      </div>
+    </Card>
+  );
+};
 
 export const CourseDetail = () => {
   const { id } = useParams();
@@ -96,27 +154,32 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
   
   const statYourAverage = courseStatus.coveredWeight > 0 ? courseStatus.projectedScore.toFixed(1) + '%' : 'N/A';
   
-  // Calculate class average (basic average of all entered classAvgs)
+  // Average the class average and std deviation across deliverables. Both are
+  // stored in raw marks, so normalize each to a percentage of that
+  // deliverable's total marks before averaging — otherwise items scored out of
+  // different totals can't be combined.
   let classAvgsCount = 0;
   let classAvgsSum = 0;
   let stdDevCount = 0;
   let stdDevSum = 0;
-  
+
   courseDeliverables.forEach(d => {
+    const total = d.metadata?.totalMarks || 100;
+    if (total <= 0) return;
     const avg = parseFloat(d.metadata?.classAvg as string || 'NaN');
     if (!isNaN(avg)) {
-      classAvgsSum += avg;
+      classAvgsSum += (avg / total) * 100;
       classAvgsCount++;
     }
     const stdDev = parseFloat(d.metadata?.classStdDev as unknown as string || 'NaN');
     if (!isNaN(stdDev)) {
-      stdDevSum += stdDev;
+      stdDevSum += (stdDev / total) * 100;
       stdDevCount++;
     }
   });
-  
+
   const statClassAverage = classAvgsCount > 0 ? (classAvgsSum / classAvgsCount).toFixed(1) + '%' : 'N/A';
-  const statStdDeviation = stdDevCount > 0 ? (stdDevSum / stdDevCount).toFixed(1) : 'N/A';
+  const statStdDeviation = stdDevCount > 0 ? (stdDevSum / stdDevCount).toFixed(1) + '%' : 'N/A';
   
   const statProjectedGrade = courseStatus.estimatedGrade;
   const statProjectedNote = `Based on weightage (${courseStatus.coveredWeight}% of final grade accounted for)`;
@@ -478,37 +541,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
             <div className="space-y-6">
               {renderAssessments('Active Quizzes', quizzes, 'quiz')}
 
-              {/* Performance Chart */}
-              <Card shadow="sm" className="p-8">
-                <h4 className="text-sm font-black uppercase tracking-widest mb-6">Your Performance vs Class Average</h4>
-                <div className="relative h-48 w-full border-b-4 border-ink flex items-end justify-around px-8 gap-8">
-                  {['Quiz 1', 'Quiz 2', 'Quiz 3'].map((label, i) => (
-                    <div key={label} className="flex-1 flex items-end justify-center gap-2 h-full">
-                      <div className="flex flex-col items-center gap-1 flex-1">
-                        <div 
-                          className={`w-full ${getThemeBgClass(course.themeColor)} border-2 border-ink`} 
-                          style={{ height: i === 0 ? '80%' : i === 1 ? '50%' : '10%' }}
-                        ></div>
-                      </div>
-                      <div className="flex flex-col items-center gap-1 flex-1">
-                        <div 
-                          className="w-full bg-ink/20 border-2 border-ink" 
-                          style={{ height: i === 0 ? '65%' : i === 1 ? '72%' : '10%' }}
-                        ></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-around text-[10px] font-black uppercase tracking-widest mt-3 px-8">
-                  <span>Quiz 1</span>
-                  <span>Quiz 2</span>
-                  <span>Quiz 3</span>
-                </div>
-                <div className="flex items-center justify-center gap-6 mt-4">
-                  <div className="flex items-center gap-2 text-[10px] font-bold"><div className={`w-3 h-3 ${getThemeBgClass(course.themeColor)} border border-ink`}></div> You</div>
-                  <div className="flex items-center gap-2 text-[10px] font-bold"><div className="w-3 h-3 bg-ink/20 border border-ink"></div> Class Average</div>
-                </div>
-              </Card>
+              <PerformanceChart title="Your Performance vs Class Average" items={quizzes} themeColor={course.themeColor} />
             </div>
           )}
 
@@ -552,10 +585,20 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
           )}
 
           {/* Midterms Tab */}
-          {activeTab === 2 && renderAssessments('Midterms', midterms, 'midterm')}
+          {activeTab === 2 && (
+            <div className="space-y-6">
+              {renderAssessments('Midterms', midterms, 'midterm')}
+              <PerformanceChart title="Your Performance vs Class Average" items={midterms} themeColor={course.themeColor} />
+            </div>
+          )}
 
           {/* Finals Tab */}
-          {activeTab === 3 && renderAssessments('Finals', finals, 'final')}
+          {activeTab === 3 && (
+            <div className="space-y-6">
+              {renderAssessments('Finals', finals, 'final')}
+              <PerformanceChart title="Your Performance vs Class Average" items={finals} themeColor={course.themeColor} />
+            </div>
+          )}
 
           {/* Project Tab */}
           {activeTab === 4 && (

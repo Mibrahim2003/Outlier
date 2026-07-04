@@ -64,6 +64,7 @@ export const UserProfileSchema = z.object({
   })).optional(),
   aiPersona: z.enum(['tactical', 'supportive', 'bare_minimum']).optional(),
   autoGenerateInsights: z.boolean().optional(),
+  soundEnabled: z.boolean().optional(),
 });
 
 export const OnboardingStateSchema = z.object({

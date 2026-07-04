@@ -41,6 +41,7 @@ export function useDeliverables() {
   });
 
   const addDeliverableMutation = useMutation({
+    meta: { sound: 'success' },
     mutationFn: async (deliverable: CourseDeliverable) => {
       const { error } = await supabase.from('course_deliverables').upsert(toPayload(deliverable, userId!), { onConflict: 'user_id,id' });
       if (error) throw error;

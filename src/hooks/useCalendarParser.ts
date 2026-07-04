@@ -1,15 +1,10 @@
 import { useState } from 'react';
 import { SemesterInfo } from '../types';
-import { z } from 'zod';
 import * as schemas from '../schemas';
 import { invokeAI } from '../lib/aiClient';
 import { buildPrompt } from '../lib/promptBuilder';
-
-function parseAIResponse<T>(text: string, schema: z.ZodType<T>): T {
-  const cleanedText = text.replace(/```json/i, '').replace(/```json/g, '').replace(/```/g, '').trim();
-  const rawJson = JSON.parse(cleanedText);
-  return schema.parse(rawJson);
-}
+import { parseAIResponse } from '../lib/aiResponse';
+import { playSound } from '../utils/sound';
 
 export function useCalendarParser() {
   const [parsing, setParsing] = useState(false);
@@ -56,6 +51,7 @@ export function useCalendarParser() {
     } catch (e: any) {
       console.error('Calendar parsing error:', e);
       setParseError(e.message || 'Failed to parse calendar. Please try again.');
+      playSound('error');
       return null;
     } finally {
       setParsing(false);

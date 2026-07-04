@@ -28,6 +28,7 @@ Expected columns:
 ### `profiles`
 - `user_id` (unique, text/uuid)
 - `name`, `degree`, `university_name`, `graduation_year`, `current_cgpa`, `target_gpa`, `semester`, `course_count`
+- `grading_scale` (json), `ai_persona` (text), `auto_generate_insights` (boolean), `sound_enabled` (boolean, default true)
 
 ### `courses`
 - `id` (text)

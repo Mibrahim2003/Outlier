@@ -65,6 +65,7 @@ export function useCourses() {
   });
 
   const addCourseMutation = useMutation({
+    meta: { sound: 'success' },
     mutationFn: async (course: Course) => {
       const normalized = normalizeCourse(course as unknown as DbCourseRow);
       const { error } = await supabase.from('courses').upsert(toPayload(normalized, userId!), { onConflict: 'user_id,id' });

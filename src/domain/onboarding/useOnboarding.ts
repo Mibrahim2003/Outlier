@@ -32,6 +32,7 @@ export function useOnboarding() {
   });
 
   const commitLoadoutMutation = useMutation({
+    meta: { sound: 'success' },
     mutationFn: async () => {
       const next = {
         loadoutCommitted: true,

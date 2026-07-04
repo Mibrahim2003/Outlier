@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -6,9 +6,33 @@ import { UserProfileSchema } from '../schemas';
 import { useProfile } from '../domain/profile/useProfile';
 import { Button, Input, cardVariants } from './ui';
 import { DEFAULT_GRADING_SCALE } from '../utils/gpaEngine';
-import { Trash2, Plus, Settings as SettingsIcon, GraduationCap, ArrowRight, Swords, Heart, Terminal, Cpu } from 'lucide-react';
+import { Trash2, Plus, Settings as SettingsIcon, GraduationCap, ArrowRight, Swords, Heart, Terminal, Cpu, Volume2 } from 'lucide-react';
 
 type SettingsFormValues = z.infer<typeof UserProfileSchema>;
+
+type SectionId = 'profile' | 'grading' | 'ai' | 'feedback';
+
+const SECTIONS: { id: SectionId; label: string; icon: typeof GraduationCap }[] = [
+  { id: 'profile', label: 'Academic Profile', icon: GraduationCap },
+  { id: 'grading', label: 'Grading Scale', icon: SettingsIcon },
+  { id: 'ai', label: 'AI Engine', icon: Cpu },
+  { id: 'feedback', label: 'Feedback & Sound', icon: Volume2 },
+];
+
+// Which section owns each form field, so validation errors can route there.
+const FIELD_SECTIONS: Partial<Record<keyof SettingsFormValues, SectionId>> = {
+  name: 'profile',
+  universityName: 'profile',
+  degree: 'profile',
+  semester: 'profile',
+  targetGpa: 'profile',
+  currentCgpa: 'profile',
+  courseCount: 'profile',
+  gradingScale: 'grading',
+  aiPersona: 'ai',
+  autoGenerateInsights: 'ai',
+  soundEnabled: 'feedback',
+};
 
 export const Settings = () => {
   const { userProfile, setUserProfile } = useProfile();
@@ -33,6 +57,7 @@ export const Settings = () => {
       gradingScale: DEFAULT_GRADING_SCALE,
       aiPersona: 'tactical',
       autoGenerateInsights: false,
+      soundEnabled: true,
     },
   });
 
@@ -49,6 +74,7 @@ export const Settings = () => {
         gradingScale: userProfile.gradingScale || DEFAULT_GRADING_SCALE,
         aiPersona: userProfile.aiPersona || 'tactical',
         autoGenerateInsights: userProfile.autoGenerateInsights ?? false,
+        soundEnabled: userProfile.soundEnabled ?? true,
       });
     }
   }, [userProfile, reset]);
@@ -59,8 +85,19 @@ export const Settings = () => {
 
   const currentPersona = useWatch({ control, name: 'aiPersona' });
 
+  const [activeSection, setActiveSection] = useState<SectionId>('profile');
+
+  // On a failed submit, jump to the first section (in nav order) that has an error.
+  const onInvalid = (formErrors: typeof errors) => {
+    const erroredFields = Object.keys(formErrors) as (keyof SettingsFormValues)[];
+    const firstSection = SECTIONS.find((section) =>
+      erroredFields.some((field) => FIELD_SECTIONS[field] === section.id)
+    );
+    if (firstSection) setActiveSection(firstSection.id);
+  };
+
   return (
-    <div className="max-w-4xl space-y-10">
+    <div className="max-w-5xl space-y-10">
       {/* Page Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
@@ -69,10 +106,35 @@ export const Settings = () => {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-12">
-        
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+        {/* Section Navigation */}
+        <nav className="md:col-span-4 lg:col-span-3 flex md:flex-col gap-3 overflow-x-auto md:overflow-visible md:sticky md:top-8">
+          {SECTIONS.map((section) => {
+            const Icon = section.icon;
+            const isActive = activeSection === section.id;
+            return (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => setActiveSection(section.id)}
+                className={`flex items-center gap-3 shrink-0 p-4 border-3 border-ink text-left font-black uppercase tracking-widest transition-all ${
+                  isActive
+                    ? 'bg-ink text-white shadow-none translate-x-[2px] translate-y-[2px]'
+                    : 'bg-white text-ink shadow-[4px_4px_0px_#1A1A1A] hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[6px_6px_0px_#1A1A1A]'
+                }`}
+              >
+                <Icon size={20} />
+                <span className="text-sm">{section.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Active Section Content */}
+        <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="md:col-span-8 lg:col-span-9 space-y-12">
+
         {/* Academic Profile Section */}
-        <section className={`p-8 bg-white border-4 border-ink ${cardVariants({ shadow: 'md' })} space-y-6`}>
+        <section className={`${activeSection === 'profile' ? '' : 'hidden'} p-8 bg-white border-4 border-ink ${cardVariants({ shadow: 'md' })} space-y-6`}>
           <div className="flex items-center gap-3 border-b-4 border-ink pb-4">
             <GraduationCap size={28} className="text-ink" />
             <h3 className="text-2xl font-black uppercase tracking-widest text-ink">Academic Profile</h3>
@@ -113,7 +175,7 @@ export const Settings = () => {
         </section>
 
         {/* Grading Scale Section */}
-        <section className={`p-8 bg-background border-4 border-ink ${cardVariants({ shadow: 'md' })} space-y-6`}>
+        <section className={`${activeSection === 'grading' ? '' : 'hidden'} p-8 bg-background border-4 border-ink ${cardVariants({ shadow: 'md' })} space-y-6`}>
           <div className="flex items-center justify-between border-b-4 border-ink pb-4">
             <div className="flex items-center gap-3">
               <SettingsIcon size={28} className="text-ink" />
@@ -185,7 +247,7 @@ export const Settings = () => {
         </section>
 
         {/* AI Engine Section */}
-        <section className={`p-8 bg-[#E6E6FA] border-4 border-ink ${cardVariants({ shadow: 'md' })} space-y-6`}>
+        <section className={`${activeSection === 'ai' ? '' : 'hidden'} p-8 bg-[#E6E6FA] border-4 border-ink ${cardVariants({ shadow: 'md' })} space-y-6`}>
           <div className="flex items-center gap-3 border-b-4 border-ink pb-4">
             <Cpu size={28} className="text-ink" />
             <h3 className="text-2xl font-black uppercase tracking-widest text-ink">AI Engine</h3>
@@ -242,6 +304,30 @@ export const Settings = () => {
           </div>
         </section>
 
+        {/* Feedback & Sound Section */}
+        <section className={`${activeSection === 'feedback' ? '' : 'hidden'} p-8 bg-white border-4 border-ink ${cardVariants({ shadow: 'md' })} space-y-6`}>
+          <div className="flex items-center gap-3 border-b-4 border-ink pb-4">
+            <Volume2 size={28} className="text-ink" />
+            <h3 className="text-2xl font-black uppercase tracking-widest text-ink">Feedback &amp; Sound</h3>
+          </div>
+
+          <div className="space-y-8 pt-4">
+            {/* Sound Toggle */}
+            <div className="p-4 bg-background border-3 border-ink shadow-[4px_4px_0px_#1A1A1A] flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-black uppercase tracking-widest text-lg">Interface Sounds</h4>
+                <p className="text-sm font-bold opacity-70 mt-1">
+                  Play a subtle confirmation sound when you save changes. Off keeps the app fully silent.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" {...register('soundEnabled')} className="sr-only peer" />
+                <div className="relative w-16 h-8 bg-white border-4 border-ink peer-checked:bg-tertiary after:content-[''] after:absolute after:top-0 after:left-0 after:bg-ink after:h-full after:w-6 after:transition-transform peer-checked:after:translate-x-8 shadow-[2px_2px_0px_#1A1A1A]"></div>
+              </label>
+            </div>
+          </div>
+        </section>
+
         {/* Submit Actions */}
         <div className="flex justify-end pt-4">
           <Button
@@ -254,7 +340,8 @@ export const Settings = () => {
             <ArrowRight size={20} />
           </Button>
         </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 };

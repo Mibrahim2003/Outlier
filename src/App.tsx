@@ -22,12 +22,19 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { GlobalErrorFallback } from './components/ErrorBoundary';
 import { QueryClient, QueryClientProvider, MutationCache } from '@tanstack/react-query';
 import { Toaster, toast } from 'sonner';
+import { playSound } from './utils/sound';
 
 const queryClient = new QueryClient({
   mutationCache: new MutationCache({
+    // Opt-in success chime: only mutations tagged `meta: { sound: 'success' }`
+    // (meaningful save/commit moments) make a sound. Routine updates stay silent.
+    onSuccess: (_data, _variables, _context, mutation) => {
+      if (mutation.meta?.sound === 'success') playSound('success');
+    },
     onError: (error, _variables, _context, mutation) => {
       if (mutation.meta?.silent) return;
 
+      playSound('error');
       toast.error('Sync Failed', {
         description: error.message || 'Check your connection and try again.',
       });

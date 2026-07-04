@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Loader2, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { playSound } from '../utils/sound';
 
 export function Auth() {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export function Auth() {
     
     if (error) {
       setAuthError(error.message);
+      playSound('error');
       setIsLoading(false);
     }
   };
@@ -36,6 +38,7 @@ export function Auth() {
       
     if (error) {
       setAuthError(error.message);
+      playSound('error');
       setIsLoading(false);
     } else {
       setIsLoading(false);
