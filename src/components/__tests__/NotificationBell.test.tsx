@@ -37,6 +37,10 @@ vi.mock('../../domain/deliverables/useDeliverables', () => ({
 vi.mock('../../domain/todos/useTodos', () => ({
   useTodos: () => ({ todos: [] }),
 }));
+// Layout also renders the initials avatar, which pulls the profile hook.
+vi.mock('../../domain/profile/useProfile', () => ({
+  useProfile: () => ({ userProfile: { name: 'Ibrahim Tester' } }),
+}));
 
 beforeEach(() => {
   fixtures.deadlines = [];

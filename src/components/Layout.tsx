@@ -19,6 +19,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { LayoutErrorFallback } from './ErrorBoundary';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationBell';
+import { useProfile } from '../domain/profile/useProfile';
 
 interface SidebarItemProps {
   to: string;
@@ -45,7 +46,15 @@ const SidebarItem = ({ to, icon: Icon, label, active }: SidebarItemProps) => (
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { userProfile } = useProfile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const initials = (userProfile?.name ?? '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join('') || '?';
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -78,16 +87,15 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         </div>
         <div className="flex items-center gap-6">
           <NotificationBell />
-          <div className="hidden sm:flex items-center gap-3 group cursor-pointer">
-            <div className={`w-10 h-10 overflow-hidden ${cardVariants({ shadow: 'sm' })}`}>
-              <img 
-                alt="User avatar" 
-                className="w-full h-full object-cover" 
-                src="https://picsum.photos/seed/user/100/100"
-                referrerPolicy="no-referrer"
-              />
+          <Link
+            to="/settings"
+            aria-label="Account settings"
+            className="hidden sm:flex items-center gap-3 group cursor-pointer"
+          >
+            <div className={`w-10 h-10 bg-primary-container flex items-center justify-center font-black text-sm tracking-tighter ${cardVariants({ shadow: 'sm' })}`}>
+              {initials}
             </div>
-          </div>
+          </Link>
         </div>
       </nav>
 
@@ -121,10 +129,10 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             <Button
               variant="tertiary" size="default"
               className="w-full flex items-center justify-center gap-2"
-              onClick={() => navigate('/onboarding')}
+              onClick={() => navigate('/courses?action=add')}
             >
               <PlusCircle size={18} />
-              <span>New Project</span>
+              <span>Add Course</span>
             </Button>
             <div className="pt-4 flex flex-col gap-1">
               <button

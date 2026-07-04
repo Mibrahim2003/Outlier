@@ -18,6 +18,11 @@ vi.mock('../../lib/supabase', () => ({
   supabase: { auth: { signOut: vi.fn().mockResolvedValue({ error: null }) } },
 }));
 
+// Layout renders the initials avatar, which pulls the profile hook.
+vi.mock('../../domain/profile/useProfile', () => ({
+  useProfile: () => ({ userProfile: { name: 'Ibrahim Tester' } }),
+}));
+
 vi.mock('../../domain/courses/useCourses', () => ({
   useCourses: () => ({
     courses: [
