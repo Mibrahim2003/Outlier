@@ -1,4 +1,4 @@
-import { TrendingUp, Calendar, Target, AlertCircle, Clock, Loader2, ChevronDown, ChevronUp, Plus, Check, Zap } from 'lucide-react';
+import { TrendingUp, Calendar, Target, AlertCircle, Clock, Loader2, ChevronDown, ChevronUp, Plus, Check, Zap, Eye, EyeOff } from 'lucide-react';
 import { useProfile } from '../domain/profile/useProfile';
 import { useCourses } from '../domain/courses/useCourses';
 import { useDeadlines } from '../domain/deadlines/useDeadlines';
@@ -19,6 +19,19 @@ const semesterToNumber = (semester?: string): number => {
   return Number.isFinite(n) && n > 0 ? n : 1;
 };
 
+/**
+ * Placeholder rendered in place of a real GPA/CGPA number while it is hidden.
+ * Product rule (CLAUDE.md → "GPA & CGPA"): GPA/CGPA is private — kept hidden by
+ * default behind an explicit reveal action and never rendered on load. We render
+ * this mask *instead of* the value (conditional render, not a CSS blur) so the real
+ * number is genuinely absent from the DOM until the user reveals it. `select-none`
+ * keeps it uncopyable and `aria-hidden` keeps it out of the accessibility tree.
+ * Inherits its parent's font size/weight so revealing causes no layout shift.
+ */
+const GpaMask = ({ className = '' }: { className?: string }) => (
+  <span className={`select-none ${className}`} aria-hidden="true">•.••</span>
+);
+
 export const Analytics = () => {
   const { userProfile } = useProfile();
   const { courses } = useCourses();
@@ -36,6 +49,11 @@ export const Analytics = () => {
   });
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [advancedPastCredits, setAdvancedPastCredits] = useState<string>('');
+
+  // GPA/CGPA is private: hidden by default, shown only after an explicit reveal, never on load
+  // (CLAUDE.md → "GPA & CGPA"). This flag is intentionally ephemeral — it is NOT persisted, so
+  // every fresh load and every remount of Analytics starts hidden.
+  const [gpaRevealed, setGpaRevealed] = useState(false);
 
   // What-If Calculator state
   const [whatIfCourseId, setWhatIfCourseId] = useState<string>('');
@@ -172,14 +190,27 @@ export const Analytics = () => {
         <Card shadow="md" className="lg:col-span-2 bg-primary-container p-8 flex flex-col justify-between relative overflow-hidden">
           <div className="absolute -right-8 -top-8 w-48 h-48 border-3 border-ink rotate-12 opacity-10 pointer-events-none"></div>
           <div>
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-start gap-3">
               <span className="font-black uppercase tracking-widest text-xs bg-ink text-white px-3 py-1">Academic Standing</span>
-              <span className="bg-white border-2 border-ink px-3 py-1 text-xs font-black uppercase">
-                Target: {targetCGPA.toFixed(2)} CGPA
-              </span>
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                <span className="bg-white border-2 border-ink px-3 py-1 text-xs font-black uppercase">
+                  Target: {gpaRevealed ? targetCGPA.toFixed(2) : <GpaMask />} CGPA
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setGpaRevealed(v => !v)}
+                  aria-pressed={gpaRevealed}
+                  aria-label={gpaRevealed ? 'Hide GPA and CGPA' : 'Reveal GPA and CGPA'}
+                  className="flex items-center gap-1.5"
+                >
+                  {gpaRevealed ? <EyeOff size={14} strokeWidth={3} /> : <Eye size={14} strokeWidth={3} />}
+                  {gpaRevealed ? 'Hide' : 'Reveal'}
+                </Button>
+              </div>
             </div>
             <div className="mt-8 flex items-baseline gap-4">
-              <h3 className="text-7xl md:text-8xl font-black tracking-tighter">{semesterGPA}</h3>
+              <h3 className="text-7xl md:text-8xl font-black tracking-tighter">{gpaRevealed ? semesterGPA : <GpaMask className="text-ink/30" />}</h3>
               <div className="flex flex-col">
                 <span className="text-xl font-bold uppercase tracking-tight leading-none text-ink/60">Estimated</span>
                 <span className="text-xl font-bold uppercase tracking-tight leading-none">Semester GPA</span>
@@ -191,7 +222,7 @@ export const Analytics = () => {
               <div className="mt-4 border-2 border-ink p-3 bg-white/50 flex items-center gap-3">
                 <Target size={18} className="text-tertiary shrink-0" />
                 <span className="text-sm font-bold">
-                  You need a <span className="text-xl font-black text-tertiary">{requiredSemesterGPA.toFixed(2)}</span> semester GPA to reach your {targetCGPA.toFixed(2)} CGPA target.
+                  You need a <span className="text-xl font-black text-tertiary">{gpaRevealed ? requiredSemesterGPA.toFixed(2) : <GpaMask />}</span> semester GPA to reach your {gpaRevealed ? targetCGPA.toFixed(2) : <GpaMask />} CGPA target.
                 </span>
               </div>
             )}
@@ -201,7 +232,7 @@ export const Analytics = () => {
               <div className="mt-4 border-2 border-ink p-4 bg-white/50 flex justify-between items-center">
                 <div className="flex flex-col">
                   <span className="text-[10px] font-black uppercase text-ink/60">Projected CGPA</span>
-                  <span className="text-2xl font-black">{projectedCGPA.toFixed(2)}</span>
+                  <span className="text-2xl font-black">{gpaRevealed ? projectedCGPA.toFixed(2) : <GpaMask className="text-ink/30" />}</span>
                 </div>
                 <div className="flex flex-col items-end">
                   <span className="text-[10px] font-black uppercase text-ink/60">Based on</span>
