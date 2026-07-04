@@ -78,9 +78,10 @@ export function useProfile() {
     },
   });
 
-  return { 
-    userProfile, 
+  return {
+    userProfile,
     isLoading,
-    setUserProfile: setUserProfileMutation.mutate 
+    setUserProfile: setUserProfileMutation.mutate,
+    setUserProfileAsync: setUserProfileMutation.mutateAsync
   };
 }
