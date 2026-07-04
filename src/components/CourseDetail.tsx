@@ -917,22 +917,6 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
               <p className="text-[10px] font-bold uppercase mt-2 opacity-60">{statProjectedNote}</p>
             </div>
           </Card>
-
-          {/* Recommended Resource */}
-          <Card shadow="sm" className="overflow-hidden p-0">
-            <div className="h-48 bg-ink overflow-hidden relative">
-              <img 
-                alt="Code visualization" 
-                className="w-full h-full object-cover opacity-60 mix-blend-luminosity" 
-                src="https://picsum.photos/seed/code/400/300"
-                referrerPolicy="no-referrer"
-              />
-            </div>
-            <div className="p-6">
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-2">Recommended Resource</p>
-              <h4 className="text-lg font-black leading-tight">Visualizing Data Structures: An Interactive Guide</h4>
-            </div>
-          </Card>
         </div>
       </div>
 

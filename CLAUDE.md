@@ -186,3 +186,4 @@ Planned — **do not build yet**:
 - Bring-your-own LLM key in Settings (Claude, OpenAI, Gemini, others) with a low-cost default; parsing and insights then run on the student's chosen model.
 - Custom emojis in the banner.
 - Pre-finals cohort comparison: one week before finals, prompt the student to upload the pre-finals marksheet (every mark except the final), then show the cohort comparison.
+- AI resource recommendations: after the weakness scan flags a weak topic, Gemini recommends one specific study resource for it (replaces the removed hardcoded "Recommended Resource" card in CourseDetail).

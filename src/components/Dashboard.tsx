@@ -281,12 +281,6 @@ export const Dashboard = () => {
 
         {/* Foreground Content */}
         <div className="z-10 relative space-y-4 max-w-4xl pointer-events-none">
-          <div className="inline-block bg-[#FF69B4] text-white px-3 py-1 border-[3px] border-ink shadow-[4px_4px_0px_#1A1A1A] cursor-default pointer-events-auto">
-            <span className="flex items-center gap-2 text-xs md:text-sm font-black uppercase tracking-widest">
-              <Sparkles size={16} fill="currentColor" /> AI Insights
-            </span>
-          </div>
-          
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-tight pointer-events-auto flex flex-wrap items-center gap-x-2 gap-y-4">
             <span>{greeting},</span>
             <span className="inline-block bg-white px-4 py-1 border-[4px] border-ink shadow-[4px_4px_0px_#1A1A1A] font-black -rotate-2">

@@ -8,8 +8,7 @@ import {
   BookOpen, 
   BarChart3, 
   Settings, 
-  PlusCircle, 
-  HelpCircle, 
+  PlusCircle,
   LogOut,
   Search,
   Bell,
@@ -138,10 +137,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
               <span>New Project</span>
             </Button>
             <div className="pt-4 flex flex-col gap-1">
-              <button className="flex items-center gap-3 p-2 text-xs font-bold uppercase tracking-widest hover:text-secondary transition-colors text-left">
-                <HelpCircle size={14} /> Help
-              </button>
-              <button 
+              <button
                 onClick={handleLogout}
                 className="flex items-center gap-3 p-2 text-xs font-bold uppercase tracking-widest hover:text-error transition-colors text-left"
               >

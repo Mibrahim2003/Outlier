@@ -18,19 +18,19 @@ const itemVariants: Variants = {
 
 export const LandingPage = () => {
   return (
-    <div className="min-h-screen overflow-x-hidden">
+    <div id="top" className="min-h-screen overflow-x-hidden">
       {/* TopNavBar */}
       <nav className={`fixed top-0 w-full z-50 bg-background flex justify-between items-center h-20 px-6 md:px-12 ${cardVariants({ shadow: 'sm' })} !border-x-0 !border-t-0 !border-b-4 !rounded-none`}>
         <div className="text-2xl font-black text-ink uppercase tracking-tighter">
           Outlier
         </div>
         <div className="hidden md:flex gap-8 items-center font-bold tracking-tighter uppercase text-sm">
-          <a className="text-ink border-b-4 border-ink pb-1" href="#">Home</a>
-          <a className="text-ink/60 hover:bg-primary-container hover:shadow-[2px_2px_0px_#1A1A1A] transition-all px-2" href="#">Features</a>
+          <a className="text-ink border-b-4 border-ink pb-1" href="#top">Home</a>
+          <a className="text-ink/60 hover:bg-primary-container hover:shadow-[2px_2px_0px_#1A1A1A] transition-all px-2" href="#features">Features</a>
           <Link className="text-ink/60 hover:bg-primary-container hover:shadow-[2px_2px_0px_#1A1A1A] transition-all px-2" to="/dashboard">Dashboard</Link>
         </div>
         <Link to="/auth">
-          <Button variant="primary" size="sm">Sign In with Google</Button>
+          <Button variant="primary" size="sm">Sign In</Button>
         </Link>
       </nav>
 
@@ -55,7 +55,7 @@ export const LandingPage = () => {
           <div className="flex flex-col md:flex-row gap-6 justify-center">
             <Link to="/auth">
               <Button variant="primary" size="lg" className="px-12 py-6 text-2xl md:text-4xl">
-                Get Started with Google
+                Get Started — Free
               </Button>
             </Link>
           </div>
@@ -74,7 +74,7 @@ export const LandingPage = () => {
       </div>
 
       {/* Bento Grid Features */}
-      <section className="py-24 px-6 md:px-12 bg-white relative border-b-4 border-ink" style={{ backgroundImage: 'radial-gradient(circle, #1A1A1A 1px, transparent 1px)', backgroundSize: '32px 32px' }}>
+      <section id="features" className="py-24 px-6 md:px-12 bg-white relative border-b-4 border-ink" style={{ backgroundImage: 'radial-gradient(circle, #1A1A1A 1px, transparent 1px)', backgroundSize: '32px 32px' }}>
         <div className="absolute inset-0 bg-white/85"></div>
         <motion.div
           variants={containerVariants}
@@ -88,10 +88,10 @@ export const LandingPage = () => {
             <div className="w-16 h-16 border-3 border-ink bg-white flex items-center justify-center">
               <BarChart3 size={32} />
             </div>
-            <h3 className="text-3xl font-black uppercase tracking-tighter">Smart Grade Tracking</h3>
-            <p className="text-lg font-medium">Automatic sync with your university portals. Visualize your trajectory with brutalist precision.</p>
+            <h3 className="text-3xl font-black uppercase tracking-tighter">Know Where You Stand</h3>
+            <p className="text-lg font-medium">Upload your class marksheet — AI extracts every score and shows your standing: class average, Z-score, gap to the topper.</p>
             <div className="mt-auto pt-6 border-t-4 border-ink">
-              <span className="font-black uppercase text-sm">Real-time Sync Enabled</span>
+              <span className="font-black uppercase text-sm">Real Cohort Data</span>
             </div>
           </motion.div>
           {/* Card 2: AI Study Recommendations */}
@@ -100,9 +100,9 @@ export const LandingPage = () => {
               <BrainCircuit size={32} />
             </div>
             <h3 className="text-3xl font-black uppercase tracking-tighter">AI Study Recommendations</h3>
-            <p className="text-lg font-medium">Our neural network identifies your weak spots before you even take the midterm.</p>
+            <p className="text-lg font-medium">AI flags your weak topics from real quiz and assignment scores, so you know what to study before the next exam.</p>
             <div className="mt-auto pt-6 border-t-4 border-ink">
-              <span className="font-black uppercase text-sm bg-white text-ink px-2">98% Accuracy Rate</span>
+              <span className="font-black uppercase text-sm bg-white text-ink px-2">Built on Your Scores</span>
             </div>
           </motion.div>
           {/* Card 3: Assignment Reminders */}
@@ -119,7 +119,7 @@ export const LandingPage = () => {
         </motion.div>
       </section>
 
-      {/* Social Proof / Stats */}
+      {/* How It Works */}
       <section className="bg-ink text-background py-20 px-6 md:px-12 overflow-hidden relative">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -129,14 +129,14 @@ export const LandingPage = () => {
           className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12"
         >
           <div className="text-center md:text-left">
-            <div className="text-7xl md:text-9xl font-black leading-none">50K+</div>
-            <div className="text-xl font-bold uppercase tracking-widest text-primary-container">Students Forging Success</div>
+            <div className="text-7xl md:text-9xl font-black leading-none">How It<br />Works</div>
+            <div className="text-xl font-bold uppercase tracking-widest text-primary-container">Real Marks. Real Standing.</div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-zinc-800 border-2 border-zinc-700 p-4 font-bold uppercase text-xs">A+ Average Increase</div>
-            <div className="bg-zinc-800 border-2 border-zinc-700 p-4 font-bold uppercase text-xs">12 Hours Saved Weekly</div>
-            <div className="bg-zinc-800 border-2 border-zinc-700 p-4 font-bold uppercase text-xs">95% Success Rate</div>
-            <div className="bg-zinc-800 border-2 border-zinc-700 p-4 font-bold uppercase text-xs">GPA Prediction AI</div>
+            <div className="bg-zinc-800 border-2 border-zinc-700 p-4 font-bold uppercase text-xs"><span className="text-primary-container">01</span> Upload Your Class Marksheet</div>
+            <div className="bg-zinc-800 border-2 border-zinc-700 p-4 font-bold uppercase text-xs"><span className="text-primary-container">02</span> AI Extracts Every Score</div>
+            <div className="bg-zinc-800 border-2 border-zinc-700 p-4 font-bold uppercase text-xs"><span className="text-primary-container">03</span> See Your Standing vs. The Class</div>
+            <div className="bg-zinc-800 border-2 border-zinc-700 p-4 font-bold uppercase text-xs"><span className="text-primary-container">04</span> Get a GPA Prediction From Real Data</div>
           </div>
         </motion.div>
       </section>
@@ -154,7 +154,7 @@ export const LandingPage = () => {
             Free Forever
           </div>
           <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-8">Ready to Win?</h2>
-          <p className="text-2xl font-bold mb-12">Join the elite cohort of students using data to destroy their competition.</p>
+          <p className="text-2xl font-bold mb-12">Stop guessing your GPA. See exactly where you stand — and what to study next.</p>
           <Link to="/auth" className={`${buttonVariants({ variant: 'primary', size: 'lg' })} !px-12 !py-6 text-2xl inline-flex w-full md:w-auto`}>
             Start Forging Now
           </Link>
@@ -171,9 +171,7 @@ export const LandingPage = () => {
             </p>
           </div>
           <div className="flex gap-8 font-bold uppercase tracking-widest text-sm">
-            <a className="text-ink hover:text-secondary transition-colors" href="#">Twitter</a>
-            <a className="text-ink hover:text-secondary transition-colors" href="#">Discord</a>
-            <a className="text-ink hover:text-secondary transition-colors" href="#">GitHub</a>
+            <a className="text-ink hover:text-secondary transition-colors" href="https://github.com/Mibrahim2003/My-dashboard" target="_blank" rel="noopener noreferrer">GitHub</a>
           </div>
           <div className="text-xs font-bold uppercase tracking-tighter text-ink/40">
             © 2026 Outlier Academic Systems. No soft corners allowed.

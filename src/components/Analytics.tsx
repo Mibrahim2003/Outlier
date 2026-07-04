@@ -280,7 +280,7 @@ export const Analytics = () => {
                 <span>Analyzing your course load and upcoming deadlines...</span>
               </div>
             ) : priorities ? priorities.map((item: any, i: number) => (
-              <li key={i} className="p-3 border-2 border-ink bg-background hover:bg-secondary/10 transition-colors group cursor-pointer">
+              <li key={i} className="p-3 border-2 border-ink bg-background">
                 <div className="flex justify-between items-start mb-1">
                   <span className="font-bold text-sm">{item.title || item.task}</span>
                   {item.priority === 'critical' ? <AlertCircle size={14} className="text-secondary" /> :
