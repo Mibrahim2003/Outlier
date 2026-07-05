@@ -102,13 +102,18 @@ export function useDeliverables() {
 
   const setDeliverablesMutation = useMutation({
     mutationFn: async (next: CourseDeliverable[]) => {
+      // Errors MUST throw here: this mutation backs the course-delete cascade,
+      // and a swallowed failure would skip the rollback + global error toast,
+      // leaving the UI claiming a deletion the server never performed.
       const removedIds = deliverables.map((d) => d.id).filter((id) => !next.some((n) => n.id === id));
       if (removedIds.length > 0) {
-        await supabase.from('course_deliverables').delete().eq('user_id', userId!).in('id', removedIds);
+        const { error } = await supabase.from('course_deliverables').delete().eq('user_id', userId!).in('id', removedIds);
+        if (error) throw error;
       }
       if (next.length > 0) {
         const payload = next.map((d) => toPayload(d, userId!));
-        await supabase.from('course_deliverables').upsert(payload, { onConflict: 'user_id,id' });
+        const { error } = await supabase.from('course_deliverables').upsert(payload, { onConflict: 'user_id,id' });
+        if (error) throw error;
       }
     },
     onMutate: async (nextDeliverables) => {

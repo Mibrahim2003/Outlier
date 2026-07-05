@@ -149,12 +149,17 @@ export const CohortStandingPanel = ({ standing, courseStatus, themeColor, delive
         </div>
       )}
 
-      {/* Current Projected Grade */}
+      {/* Current Projected Grade. With zero graded work there is no grade to
+          project — say so instead of rendering the engine's 'N/A' sentinel. */}
       <div className={`p-6 ${getThemeBgClass(themeColor)} ${getThemeTextClass(themeColor)} border-t-4 border-ink`}>
         <p className="text-[10px] font-black uppercase tracking-widest mb-1">Current Projected Grade</p>
-        <p className="text-4xl font-black leading-none">{courseStatus.estimatedGrade}</p>
+        <p className="text-4xl font-black leading-none">
+          {courseStatus.coveredWeight > 0 ? courseStatus.estimatedGrade : '—'}
+        </p>
         <p className="text-[10px] font-bold uppercase mt-2 opacity-60">
-          Based on weightage ({courseStatus.coveredWeight}% of final grade accounted for)
+          {courseStatus.coveredWeight > 0
+            ? `Based on weightage (${courseStatus.coveredWeight}% of final grade accounted for)`
+            : 'No graded work yet — upload marks to see a projection'}
         </p>
       </div>
     </Card>

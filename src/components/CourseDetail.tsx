@@ -26,6 +26,7 @@ import { useTodos } from '../domain/todos/useTodos';
 import { getThemeBgClass, getThemeTextClass, ThemeColor } from '../utils/impactStyles';
 import { calculateCourseStatus, calculateCohortStanding, deriveWeakTopics, topPercentOf } from '../utils/gpaEngine';
 import { parseLocalDate, formatDateShort } from '../utils/dateUtils';
+import { buildReminder, isTodayOrFuture } from '../utils/reminders';
 import { Button, Card, Badge, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from './ui';
 import { CourseFormModal } from './CourseFormModal';
 import { CohortStandingPanel } from './CohortStandingPanel';
@@ -44,14 +45,6 @@ const TYPE_LABELS: Record<CourseDeliverable['type'], { singular: string; plural:
 const formatDeliverableDate = (dateStr: string): string => {
   const d = parseLocalDate(dateStr);
   return isNaN(d.getTime()) ? dateStr : formatDateShort(d);
-};
-
-const isTodayOrFuture = (dateStr: string): boolean => {
-  const d = parseLocalDate(dateStr);
-  if (isNaN(d.getTime())) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return d >= today;
 };
 
 // Real performance chart: one pair of bars (you vs. class average) per graded
@@ -240,30 +233,13 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
   const handleGenerateStudyPlan = () => studyPlanMutation.mutate();
 
   // ─── Reminders ────────────────────────────────────────────────
-  // A "reminder" is a real deadline row, so scheduled deliverables show up on
-  // the dashboard and calendar. Only today-or-future dates get one — a
-  // reminder that is born overdue is just noise.
+  // Rules live in utils/reminders.ts (pure + tested); this just binds the course.
 
-  const buildReminder = (deliverable: CourseDeliverable): Deadline | null => {
-    if (!isTodayOrFuture(deliverable.date)) return null;
-    const priority: Deadline['priority'] =
-      deliverable.type === 'midterm' || deliverable.type === 'final' ? 'urgent'
-      : deliverable.type === 'assignment' ? 'normal'
-      : 'moderate';
-    return {
-      id: crypto.randomUUID(),
-      title: `${course.code}: ${deliverable.title}`,
-      course: course.code,
-      topic: deliverable.metadata?.lectureRange
-        ? `Lectures ${deliverable.metadata.lectureRange}`
-        : deliverable.metadata?.topics || TYPE_LABELS[deliverable.type].singular,
-      dueDate: deliverable.date,
-      priority,
-    };
-  };
+  const buildCourseReminder = (deliverable: CourseDeliverable): Deadline | null =>
+    buildReminder(course.code, deliverable);
 
   const handleSetReminder = (deliverable: CourseDeliverable) => {
-    const reminder = buildReminder(deliverable);
+    const reminder = buildCourseReminder(deliverable);
     if (!reminder) return;
     addDeadline(reminder);
     updateDeliverable({ ...deliverable, metadata: { ...deliverable.metadata, deadlineId: reminder.id } });
@@ -298,7 +274,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
       }
     };
 
-    const reminder = buildReminder(project);
+    const reminder = buildCourseReminder(project);
     if (reminder) {
       project.metadata!.deadlineId = reminder.id;
       addDeadline(reminder);
@@ -358,7 +334,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
       }
     };
 
-    const reminder = buildReminder(deliverable);
+    const reminder = buildCourseReminder(deliverable);
     if (reminder) {
       deliverable.metadata!.deadlineId = reminder.id;
       addDeadline(reminder);

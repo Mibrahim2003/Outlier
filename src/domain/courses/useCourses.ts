@@ -113,13 +113,17 @@ export function useCourses() {
   // Bulk add/set courses for Onboarding
   const setCoursesMutation = useMutation({
     mutationFn: async (nextCourses: Course[]) => {
+      // Errors MUST throw so onError rolls the cache back and the global
+      // error toast fires — a swallowed failure here silently loses courses.
       const removedIds = courses.map((c) => c.id).filter((id) => !nextCourses.some((n) => n.id === id));
       if (removedIds.length > 0) {
-        await supabase.from('courses').delete().eq('user_id', userId!).in('id', removedIds);
+        const { error } = await supabase.from('courses').delete().eq('user_id', userId!).in('id', removedIds);
+        if (error) throw error;
       }
       if (nextCourses.length > 0) {
         const payload = nextCourses.map((c) => toPayload(normalizeCourse(c as any), userId!));
-        await supabase.from('courses').upsert(payload, { onConflict: 'user_id,id' });
+        const { error } = await supabase.from('courses').upsert(payload, { onConflict: 'user_id,id' });
+        if (error) throw error;
       }
     },
     onMutate: async (nextCourses) => {

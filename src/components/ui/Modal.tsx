@@ -43,8 +43,9 @@ export const Modal = ({ open, onClose, children, closeOnBackdrop = true }: Modal
         className="absolute inset-0 bg-ink/60 backdrop-blur-sm"
         onClick={closeOnBackdrop ? onClose : undefined}
       />
-      {/* Content floats above backdrop */}
-      <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      {/* Content floats above backdrop. dvh, not vh: on mobile Safari vh
+          ignores the browser chrome, so a 90vh modal clips behind the toolbar. */}
+      <div className="relative z-10 w-full max-w-2xl max-h-[90dvh] overflow-y-auto">
         {children}
       </div>
     </div>
