@@ -74,11 +74,12 @@ export function useAI() {
     return parseAIResponse(result, schema);
   };
 
-  const getCourseInsight = async (course: Course, deliverables: any[]) => {
+  const getCourseInsight = async (course: Course, deliverables: any[], cohortEvidence?: string) => {
     const prompt = buildPrompt({
       task: 'Evaluate one specific course using the course record and the student\'s recent deliverables, then produce a single paragraph that is brutally honest, highly analytical, and directly useful.\nRead the course data and the recent assignments, quizzes, or exams. Infer the student\'s current standing, trends, risks, and likely trajectory in the course. Then write one short paragraph that tells the truth clearly: what is going well, what is going wrong, what the grade situation likely means, and what the student must do next to secure or improve the final grade.',
-      dataContext: `Course: ${JSON.stringify(course)}\nRecent deliverables for this course: ${JSON.stringify(deliverables)}`,
+      dataContext: `Course: ${JSON.stringify(course)}\nRecent deliverables for this course: ${JSON.stringify(deliverables)}${cohortEvidence ? `\nComputed cohort standing (deterministic — these numbers are already weighted by grade impact, trust them over your own arithmetic): ${cohortEvidence}` : ''}`,
       reasoningRules: [
+        ...(cohortEvidence ? ['Ground every claim about class standing in the computed cohort evidence. Never contradict it or re-derive those numbers.'] : []),
         'Analyze overall performance trend, not just single scores.',
         'Analyze strengths and weaknesses in recent work.',
         'Analyze whether performance is improving, stable, or declining.',
@@ -104,11 +105,12 @@ export function useAI() {
     return insight;
   };
 
-  const getCourseCriticalAction = async (course: Course, deliverables: any[]) => {
+  const getCourseCriticalAction = async (course: Course, deliverables: any[], cohortEvidence?: string) => {
     const prompt = buildPrompt({
       task: 'Review one course and the student\'s recent deliverables, then identify the SINGLE most critical weakness or most important area for improvement. Focus on the weakness that is most likely limiting performance right now or will most strongly affect future grades.',
-      dataContext: `Course: ${JSON.stringify(course)}\nDeliverables: ${JSON.stringify(deliverables)}`,
+      dataContext: `Course: ${JSON.stringify(course)}\nDeliverables: ${JSON.stringify(deliverables)}${cohortEvidence ? `\nComputed cohort standing (deterministic — the weakest deliverables vs the class are already identified here, with their lecture ranges): ${cohortEvidence}` : ''}`,
       reasoningRules: [
+        ...(cohortEvidence ? ['The computed evidence already ranks the weakest deliverables against the class. Base the diagnosis on that ranking — explain WHY it is weak and what to study, do not invent a different weakness.'] : []),
         'Read the course data and the recent deliverables carefully.',
         'Infer the student\'s biggest academic weakness from the evidence.',
         'Prioritize patterns over isolated results.',

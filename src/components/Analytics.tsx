@@ -1,4 +1,4 @@
-import { TrendingUp, Calendar, Target, AlertCircle, Clock, Loader2, ChevronDown, ChevronUp, Plus, Check, Zap, Eye, EyeOff } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Calendar, Target, AlertCircle, Clock, Loader2, ChevronDown, ChevronUp, Plus, Check, Zap, Eye, EyeOff, BookOpen } from 'lucide-react';
 import { useProfile } from '../domain/profile/useProfile';
 import { useCourses } from '../domain/courses/useCourses';
 import { useDeadlines } from '../domain/deadlines/useDeadlines';
@@ -8,7 +8,7 @@ import { useCalendar } from '../domain/calendar/useCalendar';
 import { useAI } from '../hooks/useAI';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { calculateSemesterGPA, projectCGPA, estimateGrade } from '../utils/gpaEngine';
+import { calculateSemesterGPA, projectCGPA, estimateGrade, calculateCohortStanding, deriveWeakTopics, topPercentOf } from '../utils/gpaEngine';
 import { isDateInRange } from '../utils/dateUtils';
 import { Todo } from '../types';
 import { Card, Button, Badge, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from './ui';
@@ -68,6 +68,41 @@ export const Analytics = () => {
 
   // Use robust gpaEngine for calculations
   const { semesterGPA, courses: courseStatuses, totalCredits } = calculateSemesterGPA(courses, deliverables, userProfile?.gradingScale);
+
+  // Cohort standing per course — every number comes from the engine, never
+  // re-derived here. Standing is NOT GPA, so it does not sit behind the reveal
+  // (the privacy rule covers GPA/CGPA values only).
+  const standingByCourse = new Map(
+    courses.map(c => [c.id, calculateCohortStanding(c, deliverables.filter(d => d.courseId === c.id))])
+  );
+  const coursesWithCohortData = courses.filter(c => standingByCourse.get(c.id)?.hasData);
+  const semesterAvgPercentile = coursesWithCohortData.length > 0
+    ? coursesWithCohortData.reduce((sum, c) => sum + standingByCourse.get(c.id)!.percentile, 0) / coursesWithCohortData.length
+    : null;
+
+  // Deterministic weak topics across all courses, worst first.
+  const weakTopicRows = courses
+    .flatMap(c =>
+      deriveWeakTopics(c, deliverables.filter(d => d.courseId === c.id))
+        .map(wt => ({ ...wt, courseCode: c.code }))
+    )
+    .sort((a, b) => a.z - b.z);
+
+  // Deliverable ids whose "add study task" button was already used this visit.
+  const [addedWeakTopicIds, setAddedWeakTopicIds] = useState<Set<string>>(new Set());
+
+  const handleAddWeakTopicTask = (row: typeof weakTopicRows[number]) => {
+    const scope = row.lectureRange ? ` (Lectures ${row.lectureRange})` : row.topics ? ` — ${row.topics}` : '';
+    addTodo({
+      id: crypto.randomUUID(),
+      text: `Review ${row.courseCode} ${row.title}${scope}`,
+      completed: false,
+      dueDate: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString(),
+      course: row.courseCode,
+    });
+    setAddedWeakTopicIds(prev => new Set(prev).add(row.deliverableId));
+  };
 
   // Projection based on current CGPA
   const currentCGPA = userProfile?.currentCgpa || 0;
@@ -311,16 +346,52 @@ export const Analytics = () => {
       {/* Course Performance Matrix */}
       <div>
         <h3 className="text-2xl font-black uppercase tracking-tighter mb-6 border-b-4 border-ink inline-block pr-8">Performance Matrix</h3>
+
+        {/* Semester-level standing: average across courses with class data. */}
+        {semesterAvgPercentile !== null && (
+          <div className="mb-6 border-2 border-ink bg-white p-4 flex items-center gap-3">
+            <TrendingUp size={18} className="text-tertiary shrink-0" />
+            <span className="text-sm font-bold">
+              Across {coursesWithCohortData.length} course{coursesWithCohortData.length === 1 ? '' : 's'} with class data, you're averaging the{' '}
+              <span className="text-xl font-black text-tertiary">top {topPercentOf(semesterAvgPercentile)}%</span> of your class.
+            </span>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {courseStatuses.map((cs) => {
             const course = courses.find(c => c.id === cs.courseId);
             if (!course) return null;
+            const standing = standingByCourse.get(course.id);
+            // Z trend: latest deliverable's Z vs the one before it (date order).
+            const trendPoints = standing?.hasData ? standing.deliverables : [];
+            const trendDelta = trendPoints.length >= 2
+              ? trendPoints[trendPoints.length - 1].z - trendPoints[trendPoints.length - 2].z
+              : null;
             return (
               <Card key={course.id} shadow="md" className="flex flex-col">
                 <div className="p-6 bg-ink text-white flex justify-between items-center">
                   <div>
                     <h4 className="text-2xl font-black tracking-tighter">{course.code}</h4>
                     <p className="text-[10px] uppercase font-bold tracking-widest text-primary-container">{course.name}</p>
+                    {standing?.hasData && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="bg-white text-ink px-2 py-0.5 text-[10px] font-black uppercase border-2 border-primary-container">
+                          Top {topPercentOf(standing.percentile)}% of class
+                        </span>
+                        {trendDelta !== null && (
+                          <span
+                            className="flex items-center gap-1 text-[10px] font-black uppercase"
+                            title={`Standing vs class on the latest graded item moved ${trendDelta >= 0 ? 'up' : 'down'} ${Math.abs(trendDelta).toFixed(2)}σ from the one before`}
+                          >
+                            {trendDelta > 0.1 ? <TrendingUp size={12} className="text-tertiary" /> :
+                             trendDelta < -0.1 ? <TrendingDown size={12} className="text-secondary" /> :
+                             <Minus size={12} className="opacity-60" />}
+                            {trendDelta > 0.1 ? 'Climbing' : trendDelta < -0.1 ? 'Slipping' : 'Steady'}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className={`text-4xl font-black ${cs.confidence === 'low' ? 'text-ink/40' : 'text-primary-container'}`}>
                     {cs.estimatedGrade}
@@ -349,6 +420,69 @@ export const Analytics = () => {
           })}
         </div>
       </div>
+
+      {/* Weak Topics — deterministic, from the engine (lowest weighted-Z deliverables) */}
+      {courses.length > 0 && (
+        <Card shadow="md" className="border-t-secondary border-t-[12px] p-8">
+          <div className="flex items-center gap-3 mb-2">
+            <BookOpen size={28} className="text-secondary" />
+            <h3 className="text-2xl font-black tracking-tighter uppercase">Weak Topics</h3>
+          </div>
+          <p className="text-sm text-ink/60 font-medium mb-6">
+            Where you scored furthest below the class, worst first — with the lectures to study before the next exam.
+          </p>
+
+          {weakTopicRows.length > 0 ? (
+            <div className="space-y-3">
+              {weakTopicRows.map(row => (
+                <div key={row.deliverableId} className="border-2 border-ink bg-background p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-black text-sm">{row.courseCode}</span>
+                      <span className="font-bold text-sm">{row.title}</span>
+                      {row.lectureRange && (
+                        <span className="text-xs font-bold text-ink/60 italic">Lectures {row.lectureRange}</span>
+                      )}
+                      {!row.lectureRange && row.topics && (
+                        <span className="text-xs font-bold text-ink/60 italic">{row.topics}</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-secondary mt-1">
+                      Z {row.z.toFixed(1)} · bottom {Math.min(99, Math.max(1, Math.round(row.percentile)))}% of class on this one
+                    </p>
+                  </div>
+                  {addedWeakTopicIds.has(row.deliverableId) ? (
+                    <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-tertiary shrink-0">
+                      <Check size={12} strokeWidth={4} /> Task added
+                    </span>
+                  ) : (
+                    <Button
+                      onClick={() => handleAddWeakTopicTask(row)}
+                      variant="outline" size="xs"
+                      className="flex items-center gap-1 shrink-0"
+                    >
+                      <Plus size={12} /> Add study task
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : coursesWithCohortData.length > 0 ? (
+            <div className="border-2 border-dashed border-ink p-6 text-center">
+              <p className="text-sm font-bold">
+                No weak topics detected — you're at or above the class average on everything measured so far.
+              </p>
+            </div>
+          ) : (
+            <div className="border-2 border-dashed border-ink p-6 text-center space-y-1">
+              <p className="text-sm font-bold">No class data yet.</p>
+              <p className="text-sm font-medium text-ink/60">
+                Upload a class marksheet on a graded quiz or exam (from any course page) and weak topics will show up here automatically.
+              </p>
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* What-If Calculator */}
       <Card shadow="md" className="border-t-tertiary border-t-[12px] p-8">

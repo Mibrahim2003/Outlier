@@ -24,10 +24,11 @@ import { useDeliverables } from '../domain/deliverables/useDeliverables';
 import { useDeadlines } from '../domain/deadlines/useDeadlines';
 import { useTodos } from '../domain/todos/useTodos';
 import { getThemeBgClass, getThemeTextClass, ThemeColor } from '../utils/impactStyles';
-import { calculateCourseStatus } from '../utils/gpaEngine';
+import { calculateCourseStatus, calculateCohortStanding, deriveWeakTopics, topPercentOf } from '../utils/gpaEngine';
 import { parseLocalDate, formatDateShort } from '../utils/dateUtils';
 import { Button, Card, Badge, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from './ui';
 import { CourseFormModal } from './CourseFormModal';
+import { CohortStandingPanel } from './CohortStandingPanel';
 
 const TABS = ['Quizzes', 'Assignments', 'Midterm', 'Final', 'Project', 'AI Insights'];
 
@@ -179,65 +180,37 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
   const finals = courseDeliverables.filter(d => d.type === 'final');
   const projects = courseDeliverables.filter(d => d.type === 'project');
 
-  // Use the new gpaEngine for all calculations
+  // All grade/cohort math comes from the engine — components never re-derive it.
   const courseStatus = calculateCourseStatus(course, courseDeliverables, userProfile?.gradingScale);
-  
-  const statYourAverage = courseStatus.coveredWeight > 0 ? courseStatus.projectedScore.toFixed(1) + '%' : 'N/A';
-  
-  // Average the class average and std deviation across deliverables. Both are
-  // stored in raw marks, so normalize each to a percentage of that
-  // deliverable's total marks before averaging — otherwise items scored out of
-  // different totals can't be combined.
-  let classAvgsCount = 0;
-  let classAvgsSum = 0;
-  let stdDevCount = 0;
-  let stdDevSum = 0;
+  const standing = calculateCohortStanding(course, courseDeliverables);
+  const standingById = new Map(standing.deliverables.map(s => [s.id, s]));
+  const weakTopics = deriveWeakTopics(course, courseDeliverables);
 
-  courseDeliverables.forEach(d => {
-    const total = d.metadata?.totalMarks || 100;
-    if (total <= 0) return;
-    const avg = parseFloat(d.metadata?.classAvg as string || 'NaN');
-    if (!isNaN(avg)) {
-      classAvgsSum += (avg / total) * 100;
-      classAvgsCount++;
-    }
-    const stdDev = parseFloat(d.metadata?.classStdDev as unknown as string || 'NaN');
-    if (!isNaN(stdDev)) {
-      stdDevSum += (stdDev / total) * 100;
-      stdDevCount++;
-    }
-  });
-
-  const statClassAverage = classAvgsCount > 0 ? (classAvgsSum / classAvgsCount).toFixed(1) + '%' : 'N/A';
-  const statStdDeviation = stdDevCount > 0 ? (stdDevSum / stdDevCount).toFixed(1) + '%' : 'N/A';
-  
-  const statProjectedGrade = courseStatus.estimatedGrade;
-  const statProjectedNote = `Based on weightage (${courseStatus.coveredWeight}% of final grade accounted for)`;
-  
-  let statDistanceTopper = 'N/A';
-  let maxGapSum = 0;
-  let gapCount = 0;
-  courseDeliverables.forEach(d => {
-    const highest = d.metadata?.highestScore;
-    const score = parseFloat(d.score || '0');
-    if (highest !== undefined && !isNaN(score)) {
-       const max = d.metadata?.totalMarks || 100;
-       maxGapSum += ((highest - score) / max) * 100;
-       gapCount++;
-    }
-  });
-  
-  if (gapCount > 0) {
-    statDistanceTopper = '-' + (maxGapSum / gapCount).toFixed(1) + '%';
-  }
+  // Deterministic evidence for the AI: it narrates these computed facts
+  // instead of guessing a diagnosis from raw rows.
+  const cohortEvidence = standing.hasData
+    ? JSON.stringify({
+        weightedZScore: Number(standing.weightedZ.toFixed(2)),
+        classPercentile: Number(standing.percentile.toFixed(1)),
+        percentOfGradeWithClassData: standing.statsCoveredWeight,
+        weightedPointsBehindTopper: standing.gapToTopper ? Number(standing.gapToTopper.points.toFixed(1)) : null,
+        biggestGapCategory: standing.gapToTopper?.topCategory ?? null,
+        weakestDeliverablesVsClass: weakTopics.map(w => ({
+          title: w.title,
+          zScore: Number(w.z.toFixed(2)),
+          lectureRange: w.lectureRange,
+          topics: w.topics,
+        })),
+      })
+    : undefined;
 
   const insightMutation = useMutation({
-    mutationFn: () => getCourseInsight(course, courseDeliverables),
+    mutationFn: () => getCourseInsight(course, courseDeliverables, cohortEvidence),
     onSuccess: (insight) => { if (insight) setAiInsight(insight); }
   });
 
   const criticalActionMutation = useMutation({
-    mutationFn: () => getCourseCriticalAction(course, courseDeliverables),
+    mutationFn: () => getCourseCriticalAction(course, courseDeliverables, cohortEvidence),
     onSuccess: (action) => {
       if (action) {
         setCriticalAction(action);
@@ -451,6 +424,7 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
 
     let highest = extractedHighestScore;
     let toppers = extractedToppersCount;
+    let sampleSize: number | undefined;
 
     if (uploadMode === 'bulk') {
       const scores = bulkScores.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
@@ -458,7 +432,8 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
         finalAvg = scores.reduce((a, b) => a + b, 0) / scores.length;
         const squareDiffs = scores.map(s => Math.pow(s - finalAvg, 2));
         finalStdDev = Math.sqrt(squareDiffs.reduce((a, b) => a + b, 0) / scores.length);
-        
+        sampleSize = scores.length;
+
         if (highest === undefined) {
            highest = Math.max(...scores);
            toppers = scores.filter(s => s === highest).length;
@@ -482,7 +457,8 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
         classStdDev: isNaN(finalStdDev) || finalStdDev === 0 ? undefined : Number(finalStdDev.toFixed(2)),
         progress: isNaN(progress) ? undefined : progress,
         highestScore: highest,
-        toppersCount: toppers
+        toppersCount: toppers,
+        classSize: sampleSize ?? deliverable.metadata?.classSize
       }
     };
 
@@ -541,11 +517,33 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
                 {item.status === 'scheduled' && (
                   <span className="bg-ink/10 text-ink px-2 py-0.5 text-[10px] font-black uppercase border border-ink/30">Scheduled</span>
                 )}
+                {(() => {
+                  const ds = standingById.get(item.id);
+                  if (!ds) return null;
+                  return (
+                    <span
+                      className="bg-white text-ink px-2 py-0.5 text-[10px] font-black uppercase border-2 border-ink"
+                      title={`Z-score ${ds.z.toFixed(2)} vs the class on this ${TYPE_LABELS[item.type].singular.toLowerCase()}`}
+                    >
+                      Top {topPercentOf(ds.percentile)}% · Z {ds.z >= 0 ? '+' : ''}{ds.z.toFixed(1)}
+                    </span>
+                  );
+                })()}
               </div>
               <div className="flex items-center gap-4 text-xs font-bold opacity-60 flex-wrap">
                 <span className="flex items-center gap-1"><Calendar size={12} /> {formatDeliverableDate(item.date)}</span>
                 {item.score && <span className="flex items-center gap-1"><Star size={12} /> Score: {item.score}</span>}
                 {item.metadata?.classAvg && <span className="italic">Class Avg: {item.metadata.classAvg}</span>}
+                {item.metadata?.highestScore !== undefined && (
+                  <span className="italic">
+                    High: {item.metadata.highestScore}
+                    {item.metadata?.toppersCount
+                      ? item.metadata.highestScore === (item.metadata.totalMarks || 100)
+                        ? ` — ${item.metadata.toppersCount} hit full marks`
+                        : ` (${item.metadata.toppersCount} at the top)`
+                      : ''}
+                  </span>
+                )}
                 {item.metadata?.lectureRange && <span className="italic">Lectures: {item.metadata.lectureRange}</span>}
                 {item.metadata?.topics && <span className="italic">Topics: {item.metadata.topics}</span>}
               </div>
@@ -889,34 +887,12 @@ const CourseDetailContent = ({ localCourse }: { localCourse: any }) => {
 
         {/* Right Sidebar */}
         <div className="lg:col-span-4 space-y-8">
-          {/* Quick Stats */}
-          <Card shadow="sm" className="p-0">
-            <div className="p-6 border-b-4 border-ink">
-              <h3 className="text-xl font-black uppercase tracking-tighter">Quick Stats</h3>
-            </div>
-            <div className="p-6 space-y-5">
-              {[
-                { label: 'Your Average', value: statYourAverage },
-                { label: 'Class Average', value: statClassAverage },
-                { label: 'Std Deviation', value: statStdDeviation },
-              ].map((stat) => (
-                <div key={stat.label} className="flex justify-between items-center border-b border-ink/10 pb-3">
-                  <span className="text-[10px] font-black uppercase tracking-widest opacity-60">{stat.label}</span>
-                  <span className="text-xl font-black">{stat.value}</span>
-                </div>
-              ))}
-              <div className="flex justify-between items-center border-b border-ink/10 pb-3">
-                <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Distance from Topper</span>
-                <span className="text-xl font-black text-secondary">{statDistanceTopper}</span>
-              </div>
-            </div>
-            {/* Current Projected Grade */}
-            <div className={`p-6 ${getThemeBgClass(course.themeColor)} ${getThemeTextClass(course.themeColor)} border-t-4 border-ink`}>
-              <p className="text-[10px] font-black uppercase tracking-widest mb-1">Current Projected Grade</p>
-              <p className="text-4xl font-black leading-none">{statProjectedGrade}</p>
-              <p className="text-[10px] font-bold uppercase mt-2 opacity-60">{statProjectedNote}</p>
-            </div>
-          </Card>
+          <CohortStandingPanel
+            standing={standing}
+            courseStatus={courseStatus}
+            themeColor={course.themeColor}
+            deliverables={courseDeliverables}
+          />
         </div>
       </div>
 

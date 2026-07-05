@@ -34,6 +34,18 @@ export const getThemeTextClass = (_theme?: ThemeColor): string => {
   return 'text-ink';
 };
 
+/** Raw hex of the course accent — for SVG fills, where Tailwind classes can't reach. */
+export const getThemeHexColor = (theme?: ThemeColor): string => {
+  switch (theme) {
+    case 'blue': return '#a2d9f9';
+    case 'yellow': return '#fff1c9';
+    case 'purple': return '#d7bcf5';
+    case 'pink': return '#f5c3bb';
+    case 'green': return '#daf5bc';
+    default: return '#fff1c9';
+  }
+};
+
 export const getThemeBorderClass = (theme?: ThemeColor): string => {
   switch (theme) {
     case 'blue': return 'border-[#a2d9f9]';
