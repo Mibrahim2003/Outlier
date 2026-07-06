@@ -1,0 +1,16 @@
+<svg viewBox="0 0 240 230" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Zee the Outlier — floating above the curve at plus two sigma</title>
+<line x1="4" y1="210" x2="236" y2="210" stroke="#1A1A1A" stroke-width="4"/>
+<polyline points="4,195.5 16,190.4 28,181.7 40,168.4 52,150.5 64,129.8 76,109.9 88,95.4 100,90 112,95.4 124,109.9 136,129.8 148,150.5 160,168.4 172,181.7 184,190.4 196,195.5 208,198.1 220,199.3 236,199.8" fill="none" stroke="#1A1A1A" stroke-width="4"/>
+<line x1="176" y1="168" x2="176" y2="210" stroke="#1A1A1A" stroke-width="2" stroke-dasharray="4 3" opacity="0.4"/>
+<path d="M108 86 L150 116" stroke="#1A1A1A" stroke-width="3" stroke-dasharray="6 5"/>
+<circle cx="100" cy="86" r="8" fill="#a8275a" stroke="#1A1A1A" stroke-width="4"/>
+<rect x="152" y="46" width="82" height="82" fill="#1A1A1A"/>
+<rect x="162" y="122" width="10" height="14" fill="#1A1A1A"/>
+<rect x="208" y="122" width="10" height="14" fill="#1A1A1A"/>
+<rect x="154" y="134" width="20" height="8" fill="#1A1A1A"/>
+<rect x="208" y="134" width="20" height="8" fill="#1A1A1A"/>
+<rect x="146" y="40" width="82" height="82" fill="#ffde59" stroke="#1A1A1A" stroke-width="6"/>
+<circle cx="172" cy="70" r="6" fill="#1A1A1A"/><circle cx="202" cy="70" r="6" fill="#1A1A1A"/>
+<path d="M178 96 Q190 104 206 92" stroke="#1A1A1A" stroke-width="5" fill="none" stroke-linecap="square"/>
+</svg>

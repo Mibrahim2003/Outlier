@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, CalendarClock } from 'lucide-react';
 import { useDeadlines } from '../domain/deadlines/useDeadlines';
 import { getDeadlineStatus, parseLocalDate } from '../utils/dateUtils';
+import { ZeeMascot } from './ui';
 
 /**
  * Top-bar deadline popover. The dot lights up only when a deadline is due
@@ -70,9 +71,12 @@ export const NotificationBell = () => {
             </span>
           </div>
           {upcoming.length === 0 ? (
-            <p className="p-6 text-sm font-bold uppercase tracking-widest text-ink/40 text-center">
-              Nothing due this week
-            </p>
+            <div className="p-6 text-center">
+              <ZeeMascot variant="smug" size={56} className="mx-auto mb-2" />
+              <p className="text-sm font-bold uppercase tracking-widest text-ink/40">
+                Nothing due this week
+              </p>
+            </div>
           ) : (
             <div className="max-h-80 overflow-y-auto">
               {upcoming.map((deadline) => {

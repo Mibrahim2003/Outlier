@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "outlier-dev",
+      "runtimeExecutable": "C:\\Users\\DELL\\Desktop\\Outlier\\My-dashboard\\.claude\\dev.cmd",
+      "runtimeArgs": [],
+      "port": 3000,
+      "autoPort": false
+    }
+  ]
+}

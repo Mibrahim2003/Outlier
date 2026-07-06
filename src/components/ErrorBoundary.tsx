@@ -1,6 +1,7 @@
 
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 import { FallbackProps } from 'react-error-boundary';
+import { ZeeMascot } from './ui/ZeeMascot';
 
 // Tier 1: Catastrophic App Failure (No Sidebar, Full Screen)
 export const GlobalErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => {
@@ -8,7 +9,7 @@ export const GlobalErrorFallback = ({ error, resetErrorBoundary }: FallbackProps
     <div className="min-h-screen bg-bg text-ink flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-lg border-4 border-ink bg-[#FFDE59] p-8 shadow-[8px_8px_0px_#1A1A1A]">
         <div className="flex items-center gap-4 mb-6">
-          <AlertTriangle size={48} className="text-ink flex-shrink-0" />
+          <ZeeMascot variant="cooked" size={80} className="flex-shrink-0" />
           <div>
             <h1 className="text-3xl font-black uppercase tracking-tighter">System Error</h1>
             <p className="text-lg font-medium leading-tight">A critical error crashed the application.</p>
@@ -37,7 +38,7 @@ export const LayoutErrorFallback = ({ error, resetErrorBoundary }: FallbackProps
     <div className="w-full h-full flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-2xl border-4 border-ink bg-error text-white p-8 shadow-[8px_8px_0px_#1A1A1A]">
         <div className="flex items-center gap-4 mb-6">
-          <AlertTriangle size={40} className="text-white flex-shrink-0" />
+          <ZeeMascot variant="cooked" size={72} className="flex-shrink-0" />
           <div>
             <h2 className="text-2xl font-black uppercase tracking-tighter">View Crashed</h2>
             <p className="text-base font-medium leading-tight">This specific page encountered an error, but your navigation is safe.</p>

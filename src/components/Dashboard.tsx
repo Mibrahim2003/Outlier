@@ -10,12 +10,11 @@ import { useAI } from '../hooks/useAI';
 import { useCourseProgress } from '../hooks/useCourseProgress';
 import { useMutation } from '@tanstack/react-query';
 
-import { getThemeBgClass } from '../utils/impactStyles';
-import { getGreeting, getDeadlineStatus, isSameDay, parseLocalDate } from '../utils/dateUtils';
+import { getGreeting, getDeadlineStatus, isSameDay, parseLocalDate, toLocalISODate } from '../utils/dateUtils';
 import { ErrorBoundary } from 'react-error-boundary';
 import { WidgetErrorFallback } from './ErrorBoundary';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { Button, Card } from './ui';
+import { Button, Card, CourseCard, ZeeMascot } from './ui';
 import { VectorStar, RobotHead, FacetedPolygon, IsometricCube, Pyramid } from './BannerAssets';
 import React from 'react';
 
@@ -212,7 +211,7 @@ export const Dashboard = () => {
   const navigate = useNavigate();
   const courseProgress = useCourseProgress(courses);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = toLocalISODate();
   const [insight, setInsight] = useLocalStorage<string | null>(`daily-insight-${todayStr}`, null);
 
   const insightMutation = useMutation({
@@ -342,6 +341,7 @@ export const Dashboard = () => {
             
             {courses.length === 0 ? (
               <Card shadow="sm" className="border-dashed p-10 text-center">
+                <ZeeMascot variant="study" size={80} className="mx-auto mb-4" />
                 <p className="text-lg font-bold mb-4 opacity-60 uppercase tracking-widest">No Active Courses</p>
                 <Button onClick={() => navigate('/courses?action=add')}>
                   Add Your First Course
@@ -349,44 +349,13 @@ export const Dashboard = () => {
               </Card>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {courses.map((course) => {
-                  const progress = courseProgress.get(course.id)?.progress ?? 0;
-                  return (
-                    <Link key={course.id} to={`/courses/${course.id}`}>
-                      <div
-                        className={`border-[4px] border-ink shadow-[8px_8px_0px_#1A1A1A] hover:shadow-[0px_0px_0px_#1A1A1A] hover:translate-x-[8px] hover:translate-y-[8px] transition-all duration-150 ease-out flex flex-col cursor-pointer aspect-square overflow-hidden ${getThemeBgClass(course.themeColor)}`}
-                      >
-                        <div className="p-6 md:p-8 flex flex-col h-full gap-4">
-                          {/* Top Row */}
-                          <div className="flex justify-between items-center flex-shrink-0">
-                            <div className="bg-white border-[3px] border-ink px-3 py-1 font-black text-ink text-sm md:text-base">
-                              {course.code}
-                            </div>
-                            <span className="text-xs md:text-sm font-black text-ink tracking-widest">{course.credits} CREDITS</span>
-                          </div>
-
-                          {/* Course Name — fills the leftover space between header and progress */}
-                          <div className="flex-1 min-h-0 flex items-center overflow-hidden">
-                            <h3 className="text-2xl md:text-3xl font-black text-ink leading-tight tracking-tighter uppercase line-clamp-3 break-words">
-                              {course.name}
-                            </h3>
-                          </div>
-                          
-                          {/* Progress */}
-                          <div className="flex-shrink-0">
-                            <div className="flex justify-between text-[11px] md:text-[12px] font-black text-ink mb-2 tracking-widest uppercase">
-                              <span>Grade Progress</span>
-                              <span>{progress}%</span>
-                            </div>
-                            <div className="w-full h-4 bg-white border-[3px] border-ink flex">
-                              <div className="h-full bg-ink" style={{ width: `${progress}%` }}></div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
+                {courses.map((course) => (
+                  <CourseCard
+                    key={course.id}
+                    course={course}
+                    progress={courseProgress.get(course.id)?.progress ?? 0}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -448,11 +417,7 @@ export const Dashboard = () => {
             <div className="p-6 space-y-3 bg-[#FFF6E3]">
               {todayTodos.length === 0 ? (
                 <div className="text-center p-6 font-bold">
-                  <img
-                    src="/sleeping-face.png"
-                    alt="Sleeping face — no tasks today"
-                    className="mx-auto mb-3 w-24 h-24 object-contain"
-                  />
+                  <ZeeMascot variant="fuel-up" size={96} className="mx-auto mb-3" />
                   <p className="uppercase tracking-widest text-base font-black mb-1">No tasks today</p>
                   <button
                     onClick={() => navigate('/calendar?action=add-task')}
@@ -510,11 +475,7 @@ export const Dashboard = () => {
             <div className="p-6 space-y-6">
               {upcomingDeadlines.length === 0 ? (
                 <div className="text-center p-6 font-bold">
-                  <img
-                    src="/phew-face.png"
-                    alt="Relieved face — no deadlines this week"
-                    className="mx-auto mb-3 w-24 h-24 object-contain"
-                  />
+                  <ZeeMascot variant="smug" size={96} className="mx-auto mb-3" />
                   <p className="uppercase tracking-widest text-base font-black mb-1">No deadlines this week</p>
                   <button
                     onClick={() => navigate('/calendar?action=add-deadline')}

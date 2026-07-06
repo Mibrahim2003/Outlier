@@ -1,0 +1,16 @@
+<svg viewBox="0 0 240 230" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Zee the Outlier — locked in</title>
+<rect x="58" y="58" width="140" height="140" fill="#1A1A1A"/>
+<rect x="80" y="190" width="14" height="24" fill="#1A1A1A"/>
+<rect x="146" y="190" width="14" height="24" fill="#1A1A1A"/>
+<rect x="66" y="212" width="28" height="12" fill="#1A1A1A"/>
+<rect x="146" y="212" width="28" height="12" fill="#1A1A1A"/>
+<rect x="50" y="50" width="140" height="140" fill="#ffde59" stroke="#1A1A1A" stroke-width="6"/>
+<path d="M52 140 L30 166" stroke="#1A1A1A" stroke-width="12" stroke-linecap="square"/>
+<path d="M188 140 L210 166" stroke="#1A1A1A" stroke-width="12" stroke-linecap="square"/>
+<circle cx="95" cy="106" r="9" fill="#1A1A1A"/><circle cx="145" cy="106" r="9" fill="#1A1A1A"/>
+<path d="M82 84 L108 92 M158 84 L132 92" stroke="#1A1A1A" stroke-width="7" stroke-linecap="square" fill="none"/>
+<path d="M102 146 Q120 157 138 146" stroke="#1A1A1A" stroke-width="6" fill="none" stroke-linecap="square"/>
+<path d="M176 44 L196 22" stroke="#1A1A1A" stroke-width="3" stroke-dasharray="6 5"/>
+<circle cx="200" cy="17" r="8" fill="#a8275a" stroke="#1A1A1A" stroke-width="4"/>
+</svg>

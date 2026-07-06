@@ -1,0 +1,18 @@
+<svg viewBox="0 0 240 230" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Zee the Outlier — study mode</title>
+<rect x="58" y="58" width="140" height="140" fill="#1A1A1A"/>
+<rect x="80" y="190" width="14" height="24" fill="#1A1A1A"/>
+<rect x="146" y="190" width="14" height="24" fill="#1A1A1A"/>
+<rect x="66" y="212" width="28" height="12" fill="#1A1A1A"/>
+<rect x="146" y="212" width="28" height="12" fill="#1A1A1A"/>
+<rect x="50" y="50" width="140" height="140" fill="#ffde59" stroke="#1A1A1A" stroke-width="6"/>
+<path d="M52 138 L76 160" stroke="#1A1A1A" stroke-width="12" stroke-linecap="square"/>
+<path d="M188 138 L164 160" stroke="#1A1A1A" stroke-width="12" stroke-linecap="square"/>
+<path d="M84 94 H106 M134 94 H156" stroke="#1A1A1A" stroke-width="6" stroke-linecap="square" fill="none"/>
+<circle cx="95" cy="110" r="8" fill="#1A1A1A"/><circle cx="145" cy="110" r="8" fill="#1A1A1A"/>
+<rect x="72" y="148" width="48" height="38" fill="#FFF6E3" stroke="#1A1A1A" stroke-width="4"/>
+<rect x="120" y="148" width="48" height="38" fill="#FFF6E3" stroke="#1A1A1A" stroke-width="4"/>
+<path d="M80 158 H112 M80 166 H112 M128 158 H160 M128 166 H160" stroke="#1A1A1A" stroke-width="2.5" fill="none"/>
+<path d="M176 44 L196 22" stroke="#1A1A1A" stroke-width="3" stroke-dasharray="6 5"/>
+<circle cx="200" cy="17" r="8" fill="#a8275a" stroke="#1A1A1A" stroke-width="4"/>
+</svg>

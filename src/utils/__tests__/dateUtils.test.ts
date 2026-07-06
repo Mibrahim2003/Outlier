@@ -5,8 +5,16 @@ import {
   isDateInRange, 
   isBreakDay, 
   isSameDay,
-  getDeadlineStatus 
+  getDeadlineStatus,
+  toLocalISODate
 } from '../dateUtils';
+
+describe('toLocalISODate', () => {
+  it('formats the local calendar date, zero-padded', () => {
+    expect(toLocalISODate(new Date(2026, 6, 5, 0, 30))).toBe('2026-07-05');
+    expect(toLocalISODate(new Date(2026, 0, 1, 23, 59))).toBe('2026-01-01');
+  });
+});
 
 describe('getSemesterWeekNumber', () => {
   it('returns 1 for the first week of the semester', () => {

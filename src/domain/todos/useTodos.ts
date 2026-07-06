@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { Todo } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { toLocalISODate } from '../../utils/dateUtils';
 import { useEffect } from 'react';
 
 export function useTodos() {
@@ -139,9 +140,11 @@ export function useTodos() {
   useEffect(() => {
     const checkMidnightClear = () => {
       if (!userId || !todos.length) return;
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = toLocalISODate();
       const toRemove = todos.filter(
-        (t) => t.completed && t.completedAt && t.completedAt.split('T')[0] < todayStr
+        // completedAt is a UTC timestamp — convert to the user's local calendar
+        // date before comparing, or todos completed after ~7pm (in +TZ) clear early.
+        (t) => t.completed && t.completedAt && toLocalISODate(new Date(t.completedAt)) < todayStr
       );
       if (toRemove.length > 0) {
         clearCompleted(toRemove.map(t => t.id));

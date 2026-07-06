@@ -6,6 +6,16 @@ import { invokeAI } from '../lib/aiClient';
 import { buildPrompt } from '../lib/promptBuilder';
 import { parseAIResponse } from '../lib/aiResponse';
 
+/**
+ * `grade` and `gradeProgress` are legacy onboarding snapshots that are never
+ * updated (see useCourseProgress). Strip them before prompting so the AI
+ * reasons from engine-computed status, not a stale grade.
+ */
+const stripLegacyCourseFields = (course: Course) => {
+  const { grade: _grade, gradeProgress: _gradeProgress, ...facts } = course;
+  return facts;
+};
+
 export function useAI() {
   const { userProfile } = useProfile();
   const userPersona = userProfile?.aiPersona || 'tactical';
@@ -13,7 +23,7 @@ export function useAI() {
   const getDashboardInsight = useCallback(async (courses: Course[], deadlines: Deadline[]) => {
     const prompt = buildPrompt({
       task: 'Assess the user\'s current academic state and upcoming deadlines, then deliver the most urgent, actionable guidance for today.',
-      dataContext: `Courses: ${JSON.stringify(courses)}\nDeadlines: ${JSON.stringify(deadlines)}`,
+      dataContext: `Courses: ${JSON.stringify(courses.map(stripLegacyCourseFields))}\nDeadlines: ${JSON.stringify(deadlines)}`,
       reasoningRules: [
         'Treat any deadline due within 48 hours as the highest priority.',
         'If multiple deadlines exist, rank them by earliest due date, then by impact on grade, then by effort required to complete.',
@@ -41,7 +51,7 @@ export function useAI() {
   const getStudyPriorities = useCallback(async (courses: Course[], deadlines: Deadline[]) => {
     const prompt = buildPrompt({
       task: 'Generate exactly 3 study priority tasks based on this data.',
-      dataContext: `Courses: ${JSON.stringify(courses)}\nDeadlines: ${JSON.stringify(deadlines)}`,
+      dataContext: `Courses: ${JSON.stringify(courses.map(stripLegacyCourseFields))}\nDeadlines: ${JSON.stringify(deadlines)}`,
       constraints: {
         outputType: 'json',
         exactFormat: `[\n  { \n    "title": "[Course Code]: [Short Task]", \n    "desc": "[1 sentence explanation of why this matters]", \n    "priority": "critical" | "high" | "medium"\n  }\n]`,
@@ -66,18 +76,20 @@ export function useAI() {
         noMarkdown: true,
         noCommentary: true
       },
-      voice: userPersona
+      voice: userPersona,
+      // Pure OCR/number extraction — keep Zee's persona out of the parser.
+      brand: false
     });
-    
+
     const result = await invokeAI({ prompt, mimeType, data: base64Data });
     const schema = schemas.AIClassMarksSchema;
     return parseAIResponse(result, schema);
   };
 
-  const getCourseInsight = async (course: Course, deliverables: any[], cohortEvidence?: string) => {
+  const getCourseInsight = async (course: Course, deliverables: any[], cohortEvidence?: string, engineStatus?: string) => {
     const prompt = buildPrompt({
       task: 'Evaluate one specific course using the course record and the student\'s recent deliverables, then produce a single paragraph that is brutally honest, highly analytical, and directly useful.\nRead the course data and the recent assignments, quizzes, or exams. Infer the student\'s current standing, trends, risks, and likely trajectory in the course. Then write one short paragraph that tells the truth clearly: what is going well, what is going wrong, what the grade situation likely means, and what the student must do next to secure or improve the final grade.',
-      dataContext: `Course: ${JSON.stringify(course)}\nRecent deliverables for this course: ${JSON.stringify(deliverables)}${cohortEvidence ? `\nComputed cohort standing (deterministic — these numbers are already weighted by grade impact, trust them over your own arithmetic): ${cohortEvidence}` : ''}`,
+      dataContext: `Course: ${JSON.stringify(stripLegacyCourseFields(course))}\nRecent deliverables for this course: ${JSON.stringify(deliverables)}${engineStatus ? `\nComputed grade status (engine truth — trust these over any raw fields): ${engineStatus}` : ''}${cohortEvidence ? `\nComputed cohort standing (deterministic — these numbers are already weighted by grade impact, trust them over your own arithmetic): ${cohortEvidence}` : ''}`,
       reasoningRules: [
         ...(cohortEvidence ? ['Ground every claim about class standing in the computed cohort evidence. Never contradict it or re-derive those numbers.'] : []),
         'Analyze overall performance trend, not just single scores.',
@@ -105,10 +117,10 @@ export function useAI() {
     return insight;
   };
 
-  const getCourseCriticalAction = async (course: Course, deliverables: any[], cohortEvidence?: string) => {
+  const getCourseCriticalAction = async (course: Course, deliverables: any[], cohortEvidence?: string, engineStatus?: string) => {
     const prompt = buildPrompt({
       task: 'Review one course and the student\'s recent deliverables, then identify the SINGLE most critical weakness or most important area for improvement. Focus on the weakness that is most likely limiting performance right now or will most strongly affect future grades.',
-      dataContext: `Course: ${JSON.stringify(course)}\nDeliverables: ${JSON.stringify(deliverables)}${cohortEvidence ? `\nComputed cohort standing (deterministic — the weakest deliverables vs the class are already identified here, with their lecture ranges): ${cohortEvidence}` : ''}`,
+      dataContext: `Course: ${JSON.stringify(stripLegacyCourseFields(course))}\nDeliverables: ${JSON.stringify(deliverables)}${engineStatus ? `\nComputed grade status (engine truth — trust these over any raw fields): ${engineStatus}` : ''}${cohortEvidence ? `\nComputed cohort standing (deterministic — the weakest deliverables vs the class are already identified here, with their lecture ranges): ${cohortEvidence}` : ''}`,
       reasoningRules: [
         ...(cohortEvidence ? ['The computed evidence already ranks the weakest deliverables against the class. Base the diagnosis on that ranking — explain WHY it is weak and what to study, do not invent a different weakness.'] : []),
         'Read the course data and the recent deliverables carefully.',
@@ -171,6 +183,7 @@ export function useAI() {
       task: 'Evaluate a student\'s project idea against the deadline, then judge whether it is realistic, where the scope is bloated, what hidden risks exist, and what minimum version would still secure a strong grade.',
       dataContext: `Deadline: ${deadline}\nProject idea: "${idea}"`,
       reasoningRules: [
+        'You are Zee in senior-tech-lead mode: ruthless about scope, obsessed with shipping a finished project before the deadline.',
         'Assume the student wants the highest grade possible with the lowest risk of failure.',
         'Be brutally honest about what is unrealistic.',
         'Distinguish between core functionality and decorative extras.',

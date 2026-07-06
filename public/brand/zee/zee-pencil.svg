@@ -1,0 +1,21 @@
+<svg viewBox="0 0 240 230" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Zee the Outlier — pencil ready</title>
+<rect x="58" y="58" width="140" height="140" fill="#1A1A1A"/>
+<rect x="80" y="190" width="14" height="24" fill="#1A1A1A"/>
+<rect x="146" y="190" width="14" height="24" fill="#1A1A1A"/>
+<rect x="66" y="212" width="28" height="12" fill="#1A1A1A"/>
+<rect x="146" y="212" width="28" height="12" fill="#1A1A1A"/>
+<rect x="50" y="50" width="140" height="140" fill="#ffde59" stroke="#1A1A1A" stroke-width="6"/>
+<path d="M52 138 L30 156" stroke="#1A1A1A" stroke-width="12" stroke-linecap="square"/>
+<path d="M188 130 L206 100" stroke="#1A1A1A" stroke-width="12" stroke-linecap="square"/>
+<path d="M84 92 L106 100 M156 92 L134 100" stroke="#1A1A1A" stroke-width="6" stroke-linecap="square" fill="none"/>
+<circle cx="95" cy="114" r="8" fill="#1A1A1A"/><circle cx="145" cy="114" r="8" fill="#1A1A1A"/>
+<path d="M108 152 H132" stroke="#1A1A1A" stroke-width="6" stroke-linecap="square"/>
+<rect x="200" y="22" width="14" height="12" fill="#a8275a" stroke="#1A1A1A" stroke-width="4"/>
+<rect x="200" y="34" width="14" height="52" fill="#FFF6E3" stroke="#1A1A1A" stroke-width="4"/>
+<polygon points="200,86 214,86 207,104" fill="#1A1A1A"/>
+<rect x="66" y="150" width="46" height="36" fill="#FFF6E3" stroke="#1A1A1A" stroke-width="4"/>
+<path d="M74 160 H104 M74 168 H104 M74 176 H96" stroke="#1A1A1A" stroke-width="2.5" fill="none"/>
+<path d="M64 44 L44 22" stroke="#1A1A1A" stroke-width="3" stroke-dasharray="6 5"/>
+<circle cx="38" cy="17" r="8" fill="#a8275a" stroke="#1A1A1A" stroke-width="4"/>
+</svg>

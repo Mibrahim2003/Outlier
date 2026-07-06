@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Loader2, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { playSound } from '../utils/sound';
+import { ZeeMascot } from './ui';
 
 export function Auth() {
   const navigate = useNavigate();
@@ -93,6 +94,9 @@ export function Auth() {
           <p className="mt-6 text-white text-lg lg:text-2xl font-bold uppercase tracking-widest opacity-80 max-w-md">
             The Industrial Archive for Academic Dominance.
           </p>
+          <div className="mt-10 hidden lg:block">
+            <ZeeMascot variant="hyped" size={140} />
+          </div>
         </div>
         
         {/* Subtle grid pattern overlay for raw technical texture */}

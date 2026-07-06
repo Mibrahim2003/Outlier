@@ -5,7 +5,7 @@ import { useCourses } from '../domain/courses/useCourses';
 import { useDeliverables } from '../domain/deliverables/useDeliverables';
 import { useDeadlines } from '../domain/deadlines/useDeadlines';
 import { useTodos } from '../domain/todos/useTodos';
-import { cardVariants } from './ui';
+import { cardVariants, ZeeMascot } from './ui';
 
 interface SearchResult {
   key: string;
@@ -183,9 +183,12 @@ export const GlobalSearch = () => {
           onMouseDown={(e) => e.preventDefault()}
         >
           {results.length === 0 ? (
-            <p className="p-4 text-sm font-bold uppercase tracking-widest text-ink/40">
-              No matches for “{query.trim()}”
-            </p>
+            <div className="p-4 flex items-center gap-3">
+              <ZeeMascot variant="cooked" size={40} className="shrink-0" />
+              <p className="text-sm font-bold uppercase tracking-widest text-ink/40">
+                No matches for “{query.trim()}”
+              </p>
+            </div>
           ) : (
             results.map((result, i) => {
               const Icon = KIND_ICONS[result.kind];

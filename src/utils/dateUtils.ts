@@ -17,6 +17,15 @@ export function parseLocalDate(dateStr: string): Date {
   return new Date(dateStr);
 }
 
+/**
+ * Format a Date as LOCAL 'YYYY-MM-DD'. The `toISOString().split('T')[0]` idiom
+ * uses UTC, so between local midnight and UTC midnight it returns yesterday —
+ * use this everywhere a calendar date is meant.
+ */
+export function toLocalISODate(date: Date = new Date()): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 export function getDeadlineStatus(dueDateStr: string): { text: string; isUrgent: boolean } {
   // Try to parse the date. If invalid, return the raw string.
   const dueDate = parseLocalDate(dueDateStr);

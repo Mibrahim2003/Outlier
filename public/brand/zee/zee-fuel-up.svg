@@ -1,0 +1,18 @@
+<svg viewBox="0 0 250 230" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>Zee the Outlier — fuel up</title>
+<rect x="58" y="58" width="140" height="140" fill="#1A1A1A"/>
+<rect x="80" y="190" width="14" height="24" fill="#1A1A1A"/>
+<rect x="146" y="190" width="14" height="24" fill="#1A1A1A"/>
+<rect x="66" y="212" width="28" height="12" fill="#1A1A1A"/>
+<rect x="146" y="212" width="28" height="12" fill="#1A1A1A"/>
+<rect x="50" y="50" width="140" height="140" fill="#ffde59" stroke="#1A1A1A" stroke-width="6"/>
+<path d="M52 140 L30 166" stroke="#1A1A1A" stroke-width="12" stroke-linecap="square"/>
+<path d="M188 142 L200 154" stroke="#1A1A1A" stroke-width="12" stroke-linecap="square"/>
+<rect x="194" y="138" width="32" height="36" fill="#FFF6E3" stroke="#1A1A1A" stroke-width="4"/>
+<path d="M226 146 Q242 156 226 168" stroke="#1A1A1A" stroke-width="4" fill="none"/>
+<path d="M202 128 Q206 118 202 108 M216 128 Q220 118 216 108" stroke="#1A1A1A" stroke-width="3" fill="none" stroke-linecap="square"/>
+<path d="M84 102 H106 M134 102 H156" stroke="#1A1A1A" stroke-width="7" stroke-linecap="square" fill="none"/>
+<path d="M106 146 Q120 155 134 146" stroke="#1A1A1A" stroke-width="6" fill="none" stroke-linecap="square"/>
+<path d="M176 44 L196 22" stroke="#1A1A1A" stroke-width="3" stroke-dasharray="6 5"/>
+<circle cx="200" cy="17" r="8" fill="#a8275a" stroke="#1A1A1A" stroke-width="4"/>
+</svg>

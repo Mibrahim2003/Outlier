@@ -5,6 +5,7 @@ import { useOnboarding } from '../domain/onboarding/useOnboarding';
 import { useProfile } from '../domain/profile/useProfile';
 import { Course } from '../types';
 import { getImpactStyles, getImpactLevelForCredits, ThemeColor, getThemeBgClass } from '../utils/impactStyles';
+import { ZeeMascot } from './ui';
 
 export const Onboarding = () => {
   const navigate = useNavigate();
@@ -227,7 +228,8 @@ export const Onboarding = () => {
 
               <div className="flex flex-col gap-3 min-h-[150px]">
                 {courses.length === 0 ? (
-                  <div className="h-full w-full flex items-center justify-center bg-background border-2 border-on-background border-dashed p-6 text-center opacity-50 font-bold uppercase text-sm tracking-widest">
+                  <div className="h-full w-full flex flex-col items-center justify-center gap-3 bg-background border-2 border-on-background border-dashed p-6 text-center opacity-50 font-bold uppercase text-sm tracking-widest">
+                    <ZeeMascot variant="locked-in" size={64} />
                     NO_DATA_REGISTERED
                   </div>
                 ) : (

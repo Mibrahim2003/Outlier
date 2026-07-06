@@ -36,15 +36,21 @@ vi.mock('../../domain/deadlines/useDeadlines', () => {
   };
 });
 
-vi.mock('../../domain/todos/useTodos', () => ({
-  useTodos: () => ({
-    todos: [
-      { id: 't1', text: 'Read Chapter 5', completed: false, dueDate: new Date().toISOString().split('T')[0], createdAt: new Date().toISOString() },
-      { id: 't2', text: 'Review notes', completed: true, dueDate: new Date().toISOString().split('T')[0], createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
-    ],
-    toggleTodo: vi.fn(),
-  })
-}));
+vi.mock('../../domain/todos/useTodos', () => {
+  // Local date, not toISOString() (UTC) — the UTC date is yesterday between
+  // local midnight and UTC midnight, which made this suite fail overnight.
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return {
+    useTodos: () => ({
+      todos: [
+        { id: 't1', text: 'Read Chapter 5', completed: false, dueDate: today, createdAt: new Date().toISOString() },
+        { id: 't2', text: 'Review notes', completed: true, dueDate: today, createdAt: new Date().toISOString(), completedAt: new Date().toISOString() },
+      ],
+      toggleTodo: vi.fn(),
+    })
+  };
+});
 
 vi.mock('../../hooks/useAI', () => ({
   useAI: () => ({

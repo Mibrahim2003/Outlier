@@ -12,7 +12,8 @@ import {
   isDateInRange, 
   isSameDay,
   formatDateShort,
-  parseLocalDate
+  parseLocalDate,
+  toLocalISODate
 } from '../utils/dateUtils';
 import { SemesterInfo, Deadline, Todo } from '../types';
 import { exportToICS } from '../utils/icsExport';
@@ -197,10 +198,7 @@ export const AcademicCalendar = () => {
     e.preventDefault();
     if (!selectedDate || !newDlTitle) return;
 
-    // ISO string handling, avoiding timezone shift
-    const d = new Date(selectedDate);
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    const dueDateStr = d.toISOString().split('T')[0];
+    const dueDateStr = toLocalISODate(new Date(selectedDate));
 
     if (eventType === 'task') {
       const newTodo: Todo = {
