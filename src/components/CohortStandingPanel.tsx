@@ -1,43 +1,21 @@
 import { Upload } from 'lucide-react';
 import { CourseDeliverable } from '../types';
 import { CohortStanding, CourseStatus, CATEGORY_LABELS, topPercentOf } from '../utils/gpaEngine';
-import { getThemeBgClass, getThemeTextClass, getThemeHexColor, ThemeColor } from '../utils/impactStyles';
-import { Card } from './ui';
+import { getThemeBgClass, getThemeTextClass, ThemeColor } from '../utils/impactStyles';
+import { Card, ZeeMascot, type ZeeVariant } from './ui';
+import { DistributionStrip } from './charts';
 
 /**
- * Neo-brutalist bell curve with three markers: class average (Z = 0), you, and
- * the topper composite. Pure presentation — every value comes from the engine.
+ * Zee reacts to the student's real weighted Z-score — the mascot literally
+ * embodies the number this panel is about (lore: public/brand/zee/README.md).
  */
-const DistributionStrip = ({ standing, themeColor }: { standing: CohortStanding; themeColor?: ThemeColor }) => {
-  const xOf = (z: number) => 12 + ((Math.min(2.8, Math.max(-2.8, z)) + 3) / 6) * 256;
-  const curve = Array.from({ length: 61 }, (_, i) => {
-    const z = -3 + i * 0.1;
-    const y = 78 - 62 * Math.exp(-(z * z) / 2);
-    return `${xOf(z).toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-
-  const youX = xOf(standing.weightedZ);
-  const themeHex = getThemeHexColor(themeColor);
-
-  return (
-    <svg viewBox="0 0 280 92" className="w-full" role="img" aria-label="Class score distribution with markers for the class average, you, and the topper">
-      <polyline points={curve} fill="none" stroke="#1A1A1A" strokeWidth="3" />
-      {/* baseline */}
-      <line x1="8" y1="80" x2="272" y2="80" stroke="#1A1A1A" strokeWidth="4" />
-      {/* class average marker (Z = 0) */}
-      <line x1={xOf(0)} y1="18" x2={xOf(0)} y2="80" stroke="#1A1A1A" strokeWidth="2" strokeDasharray="4 3" opacity="0.4" />
-      {/* topper marker */}
-      {standing.topperZ !== null && (
-        <>
-          <line x1={xOf(standing.topperZ)} y1="30" x2={xOf(standing.topperZ)} y2="80" stroke="#a8275a" strokeWidth="3" />
-          <rect x={xOf(standing.topperZ) - 4} y="76" width="8" height="8" fill="#a8275a" stroke="#1A1A1A" strokeWidth="1.5" />
-        </>
-      )}
-      {/* you marker */}
-      <line x1={youX} y1="24" x2={youX} y2="80" stroke="#1A1A1A" strokeWidth="4" />
-      <rect x={youX - 5} y="75" width="10" height="10" fill={themeHex} stroke="#1A1A1A" strokeWidth="2" />
-    </svg>
-  );
+const zeeForStanding = (standing: CohortStanding): { variant: ZeeVariant; line: string } => {
+  if (!standing.hasData) {
+    return { variant: 'big-brain', line: "Upload marks. I can't fight a curve I can't see." };
+  }
+  if (standing.weightedZ >= 1) return { variant: 'on-curve', line: 'Told you. The curve fears you.' };
+  if (standing.weightedZ >= 0) return { variant: 'on-curve', line: 'Above the mean. Keep climbing.' };
+  return { variant: 'study', line: 'Below average is a temporary address.' };
 };
 
 interface CohortStandingPanelProps {
@@ -56,6 +34,7 @@ export const CohortStandingPanel = ({ standing, courseStatus, themeColor, delive
   const gap = standing.gapToTopper;
   const showGapSentence = gap !== null && gap.points > 0.05;
   const levelWithTopper = gap !== null && gap.points <= 0.05;
+  const zee = zeeForStanding(standing);
 
   // Full-marks texture: the most recent deliverable where someone maxed the paper.
   const fullMarksEvent = [...deliverables]
@@ -74,11 +53,19 @@ export const CohortStandingPanel = ({ standing, courseStatus, themeColor, delive
 
       {standing.hasData ? (
         <div className="p-6 space-y-5">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Where you stand</p>
-            <p className="text-5xl font-black leading-none mt-1">Top {topPercentOf(standing.percentile)}%</p>
-            <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 mt-2">of your class on graded work</p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Where you stand</p>
+              <p className="text-5xl font-black leading-none mt-1">Top {topPercentOf(standing.percentile)}%</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 mt-2">of your class on graded work</p>
+            </div>
+            {/* on-curve is a landscape composition (full bell curve) — needs more width than a portrait Zee */}
+            <ZeeMascot variant={zee.variant} size={zee.variant === 'on-curve' ? 96 : 64} className="shrink-0" />
           </div>
+
+          <p className="text-[10px] font-black uppercase tracking-widest text-secondary">
+            "{zee.line}" — Zee
+          </p>
 
           <DistributionStrip standing={standing} themeColor={themeColor} />
 
@@ -138,7 +125,11 @@ export const CohortStandingPanel = ({ standing, courseStatus, themeColor, delive
               <span className="text-xl font-black">{courseStatus.projectedScore.toFixed(1)}%</span>
             </div>
           )}
-          <div className="border-2 border-dashed border-ink p-4 space-y-2">
+          <div className="border-2 border-dashed border-ink p-4 space-y-3">
+            <ZeeMascot variant={zee.variant} size={72} className="mx-auto" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-secondary text-center">
+              "{zee.line}" — Zee
+            </p>
             <p className="text-xs font-black uppercase tracking-widest flex items-center gap-2">
               <Upload size={14} /> No class data yet
             </p>

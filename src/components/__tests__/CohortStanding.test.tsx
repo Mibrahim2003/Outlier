@@ -252,15 +252,15 @@ describe('Analytics — Weak Topics', () => {
 });
 
 describe('Analytics — cohort standing chips', () => {
-  it('shows the Top X% chip and the semester standing line, without touching GPA privacy', () => {
+  it('shows the Top X% chip and the standing hero, without touching GPA privacy', () => {
     mockData.deliverables = [quizWithStats, midtermWithStats];
     renderAnalytics();
 
     // weightedZ −0.25 → percentile ≈ 40.1 → Top 60%.
     // Both are visible WITHOUT clicking Reveal — standing is not GPA.
     expect(screen.getByText(/top 60% of class/i)).toBeInTheDocument();
-    expect(screen.getByText(/averaging the/i)).toBeInTheDocument();
-    expect(screen.getByText('top 60%')).toBeInTheDocument();
+    expect(screen.getByText('Top 60%')).toBeInTheDocument();
+    expect(screen.getByText(/averaged across 1 course with class data/i)).toBeInTheDocument();
 
     // GPA is still masked: the reveal control has not been used.
     expect(screen.getByRole('button', { name: /reveal gpa and cgpa/i })).toBeInTheDocument();

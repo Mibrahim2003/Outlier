@@ -1,4 +1,5 @@
 import { TrendingUp, TrendingDown, Minus, Calendar, Target, AlertCircle, Clock, Loader2, ChevronDown, ChevronUp, Plus, Check, Zap, Eye, EyeOff, BookOpen } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useProfile } from '../domain/profile/useProfile';
 import { useCourses } from '../domain/courses/useCourses';
 import { useDeadlines } from '../domain/deadlines/useDeadlines';
@@ -7,11 +8,13 @@ import { useTodos } from '../domain/todos/useTodos';
 import { useCalendar } from '../domain/calendar/useCalendar';
 import { useAI } from '../hooks/useAI';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
-import { calculateSemesterGPA, projectCGPA, estimateGrade, calculateCohortStanding, deriveWeakTopics, topPercentOf } from '../utils/gpaEngine';
-import { isDateInRange } from '../utils/dateUtils';
+import { useState, type ReactNode } from 'react';
+import { calculateSemesterGPA, projectCGPA, estimateGrade, calculateCohortStanding, deriveWeakTopics, topPercentOf, CATEGORY_LABELS } from '../utils/gpaEngine';
+import { isDateInRange, toLocalISODate } from '../utils/dateUtils';
+import { getThemeBgClass } from '../utils/impactStyles';
 import { Todo } from '../types';
 import { Card, Button, Badge, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from './ui';
+import { DistributionStrip, ZTrendSparkline } from './charts';
 
 /** Extract the semester number from values like "3", "SEMESTER 03", or "Semester 3". */
 const semesterToNumber = (semester?: string): number => {
@@ -30,6 +33,29 @@ const semesterToNumber = (semester?: string): number => {
  */
 const GpaMask = ({ className = '' }: { className?: string }) => (
   <span className={`select-none ${className}`} aria-hidden="true">•.••</span>
+);
+
+/** Small uppercase overline used for every secondary label on this page. */
+const Overline = ({ children, className = '' }: { children: ReactNode; className?: string }) => (
+  <p className={`text-[10px] font-black uppercase tracking-widest text-ink/50 ${className}`}>{children}</p>
+);
+
+/** KPI stat tile: label → value → caption. The value slot carries any masking. */
+const StatTile = ({ label, value, caption, className = '' }: { label: string; value: ReactNode; caption: ReactNode; className?: string }) => (
+  <div className={`p-5 ${className}`}>
+    <Overline>{label}</Overline>
+    <span className="text-3xl md:text-4xl font-black tracking-tighter block mt-1">{value}</span>
+    <span className="text-[11px] font-bold text-ink/50 block mt-1 leading-snug">{caption}</span>
+  </div>
+);
+
+/** Section heading grammar shared by every zone below the header. */
+const SectionHeader = ({ overline, title, sub }: { overline: string; title: string; sub?: string }) => (
+  <div className="mb-6">
+    <Overline>{overline}</Overline>
+    <h3 className="text-2xl font-black uppercase tracking-tighter border-b-4 border-ink inline-block pr-8 mt-1">{title}</h3>
+    {sub && <p className="text-sm text-ink/60 font-medium mt-2">{sub}</p>}
+  </div>
 );
 
 export const Analytics = () => {
@@ -64,8 +90,6 @@ export const Analytics = () => {
   const [showOptimizeModal, setShowOptimizeModal] = useState(false);
   const [taskApprovals, setTaskApprovals] = useState<{ text: string; checked: boolean; date: string }[]>([]);
 
-  // Query manages lifecycle now
-
   // Use robust gpaEngine for calculations
   const { semesterGPA, courses: courseStatuses, totalCredits } = calculateSemesterGPA(courses, deliverables, userProfile?.gradingScale);
 
@@ -97,7 +121,7 @@ export const Analytics = () => {
       id: crypto.randomUUID(),
       text: `Review ${row.courseCode} ${row.title}${scope}`,
       completed: false,
-      dueDate: new Date().toISOString().split('T')[0],
+      dueDate: toLocalISODate(),
       createdAt: new Date().toISOString(),
       course: row.courseCode,
     });
@@ -165,7 +189,7 @@ export const Analytics = () => {
     if (!priorities || priorities.length === 0) return;
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const dateStr = tomorrow.toISOString().split('T')[0];
+    const dateStr = toLocalISODate(tomorrow);
 
     setTaskApprovals((priorities as any[]).map((p: any) => ({
       text: p.title || p.task || 'Study Task',
@@ -206,338 +230,411 @@ export const Analytics = () => {
   }).filter(Boolean);
 
   return (
-    <div className="space-y-10">
-      {/* Page Header Section */}
+    <div className="space-y-12">
+      {/* ── Page header ─────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-ink uppercase">📊 Semester Analytics</h2>
-          <p className="text-lg text-ink/60 font-medium mt-1">Real-time performance tracking & grade forecasting.</p>
+          <Overline>Where you stand · what's driving it · what to do next</Overline>
+          <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-ink uppercase mt-1">Analytics</h2>
         </div>
         <Badge variant="tertiary" size="lg" className="flex items-center gap-2">
           <Calendar size={16} />
-          {activeSemester?.name || userProfile?.semester ? `Semester ${semesterToNumber(userProfile?.semester)}` : 'Current Semester'}
+          {activeSemester?.name ?? (userProfile?.semester ? `Semester ${semesterToNumber(userProfile?.semester)}` : 'Current Semester')}
         </Badge>
       </div>
 
-      {/* GPA Overview & AI Insights Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* GPA Overview Card */}
-        <Card shadow="md" className="lg:col-span-2 bg-primary-container p-8 flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute -right-8 -top-8 w-48 h-48 border-3 border-ink rotate-12 opacity-10 pointer-events-none"></div>
-          <div>
-            <div className="flex justify-between items-start gap-3">
-              <span className="font-black uppercase tracking-widest text-xs bg-ink text-white px-3 py-1">Academic Standing</span>
-              <div className="flex items-center gap-2 flex-wrap justify-end">
-                <span className="bg-white border-2 border-ink px-3 py-1 text-xs font-black uppercase">
-                  Target: {gpaRevealed ? targetCGPA.toFixed(2) : <GpaMask />} CGPA
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setGpaRevealed(v => !v)}
-                  aria-pressed={gpaRevealed}
-                  aria-label={gpaRevealed ? 'Hide GPA and CGPA' : 'Reveal GPA and CGPA'}
-                  className="flex items-center gap-1.5"
-                >
-                  {gpaRevealed ? <EyeOff size={14} strokeWidth={3} /> : <Eye size={14} strokeWidth={3} />}
-                  {gpaRevealed ? 'Hide' : 'Reveal'}
-                </Button>
-              </div>
-            </div>
-            <div className="mt-8 flex items-baseline gap-4">
-              <h3 className="text-7xl md:text-8xl font-black tracking-tighter">{gpaRevealed ? semesterGPA : <GpaMask className="text-ink/30" />}</h3>
-              <div className="flex flex-col">
-                <span className="text-xl font-bold uppercase tracking-tight leading-none text-ink/60">Estimated</span>
-                <span className="text-xl font-bold uppercase tracking-tight leading-none">Semester GPA</span>
-              </div>
-            </div>
-
-            {/* Required Semester GPA — core view */}
-            {currentCGPA > 0 && (
-              <div className="mt-4 border-2 border-ink p-3 bg-white/50 flex items-center gap-3">
-                <Target size={18} className="text-tertiary shrink-0" />
-                <span className="text-sm font-bold">
-                  You need a <span className="text-xl font-black text-tertiary">{gpaRevealed ? requiredSemesterGPA.toFixed(2) : <GpaMask />}</span> semester GPA to reach your {gpaRevealed ? targetCGPA.toFixed(2) : <GpaMask />} CGPA target.
-                </span>
-              </div>
-            )}
-
-            {/* CGPA Projection Mini-Card */}
-            {currentCGPA > 0 && (
-              <div className="mt-4 border-2 border-ink p-4 bg-white/50 flex justify-between items-center">
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase text-ink/60">Projected CGPA</span>
-                  <span className="text-2xl font-black">{gpaRevealed ? projectedCGPA.toFixed(2) : <GpaMask className="text-ink/30" />}</span>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-[10px] font-black uppercase text-ink/60">Based on</span>
-                  <span className="text-sm font-bold text-ink/60">
-                    ~{estimatedPastCredits} past credit hrs
-                  </span>
-                </div>
-              </div>
+      {/* ── Zone 1 · Where do I stand? ──────────────────────────── */}
+      <Card shadow="md" className="p-0">
+        <div className="grid grid-cols-1 lg:grid-cols-5">
+          {/* Hero: class standing — explicitly not private, so the page leads with it */}
+          <div className="lg:col-span-2 bg-primary-container p-8 border-b-3 lg:border-b-0 lg:border-r-3 border-ink flex flex-col justify-center relative overflow-hidden">
+            <div className="absolute -right-10 -top-10 w-40 h-40 border-3 border-ink rotate-12 opacity-10 pointer-events-none"></div>
+            <span className="font-black uppercase tracking-widest text-xs bg-ink text-white px-3 py-1 self-start">Class Standing</span>
+            {semesterAvgPercentile !== null ? (
+              <>
+                <p className="text-6xl md:text-7xl font-black tracking-tighter leading-none mt-5">
+                  Top {topPercentOf(semesterAvgPercentile)}%
+                </p>
+                <p className="text-sm font-bold text-ink/60 mt-3">
+                  of your class, averaged across {coursesWithCohortData.length} course{coursesWithCohortData.length === 1 ? '' : 's'} with class data.
+                </p>
+              </>
+            ) : courses.length === 0 ? (
+              <>
+                <p className="text-3xl font-black tracking-tighter mt-5">No courses yet</p>
+                <p className="text-sm font-bold text-ink/60 mt-2">
+                  Add your courses to unlock grade forecasts and class standing.
+                </p>
+                <Link to="/courses" className="mt-4 self-start">
+                  <Button variant="outline" size="sm">Go to courses</Button>
+                </Link>
+              </>
+            ) : (
+              <>
+                <p className="text-3xl font-black tracking-tighter mt-5">Standing locked</p>
+                <p className="text-sm font-bold text-ink/60 mt-2">
+                  Upload a class marksheet on any graded quiz or exam (from a course page) to see where you stand against your class.
+                </p>
+              </>
             )}
           </div>
 
-          {/* Real Weight Coverage Bar */}
-          <div className="mt-12 space-y-4">
-            <div className="flex justify-between font-black uppercase text-[10px]">
-              <span>Semester Progress (Weight Graded)</span>
-              <span>{avgWeightCoverage}% of coursework evaluated</span>
-            </div>
-            <div className="w-full h-8 border-3 border-ink bg-white flex overflow-hidden">
-              <div
-                className="h-full bg-tertiary transition-all duration-500"
-                style={{ width: `${avgWeightCoverage}%` }}
-              ></div>
-              <div
-                className="h-full bg-ink/10"
-                style={{ width: `${100 - avgWeightCoverage}%` }}
-              ></div>
-            </div>
-            <div className="flex gap-4 pt-2">
-              <div className="flex items-center gap-2 text-[10px] font-bold"><div className="w-3 h-3 bg-tertiary border border-ink"></div> Graded</div>
-              <div className="flex items-center gap-2 text-[10px] font-bold"><div className="w-3 h-3 bg-ink/10 border border-ink"></div> Remaining</div>
-            </div>
-          </div>
-        </Card>
-
-        {/* AI Study Priority List */}
-        <Card shadow="sm" className="border-l-secondary border-l-[12px] p-6 flex flex-col">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-black uppercase tracking-tighter">🤖 AI Study Priorities</h3>
-            <span className="bg-secondary text-white text-[10px] px-2 py-0.5 border border-ink rotate-3 font-bold">CRITICAL</span>
-          </div>
-          <ul className="space-y-4 flex-grow min-h-[200px] flex flex-col justify-center">
-            {loading ? (
-              <div className="flex flex-col items-center gap-3 text-ink/60 font-medium w-full p-8 text-center">
-                <Loader2 size={32} className="animate-spin text-secondary" />
-                <span>Analyzing your course load and upcoming deadlines...</span>
-              </div>
-            ) : priorities ? priorities.map((item: any, i: number) => (
-              <li key={i} className="p-3 border-2 border-ink bg-background">
-                <div className="flex justify-between items-start mb-1">
-                  <span className="font-bold text-sm">{item.title || item.task}</span>
-                  {item.priority === 'critical' ? <AlertCircle size={14} className="text-secondary" /> :
-                   item.priority === 'high' ? <TrendingUp size={14} className="text-secondary" /> :
-                   <Clock size={14} className="text-tertiary" />}
-                </div>
-                <p className="text-[10px] text-ink/60 leading-tight font-medium">{item.desc || item.reason}</p>
-              </li>
-            )) : (
-              <div className="flex flex-col items-center gap-3 text-ink/40 font-medium w-full p-8 text-center">
-                <AlertCircle size={28} />
-                <span className="text-sm">Add courses and deadlines to get AI-powered study priorities.</span>
-              </div>
-            )}
-          </ul>
-          <Button
-            onClick={openOptimizeModal}
-            disabled={!priorities || priorities.length === 0}
-            variant="secondary" size="sm"
-            className="mt-6 w-full flex items-center justify-center gap-2"
-          >
-            <Zap size={14} />
-            Add to Calendar
-          </Button>
-        </Card>
-      </div>
-
-      {/* Course Performance Matrix */}
-      <div>
-        <h3 className="text-2xl font-black uppercase tracking-tighter mb-6 border-b-4 border-ink inline-block pr-8">Performance Matrix</h3>
-
-        {/* Semester-level standing: average across courses with class data. */}
-        {semesterAvgPercentile !== null && (
-          <div className="mb-6 border-2 border-ink bg-white p-4 flex items-center gap-3">
-            <TrendingUp size={18} className="text-tertiary shrink-0" />
-            <span className="text-sm font-bold">
-              Across {coursesWithCohortData.length} course{coursesWithCohortData.length === 1 ? '' : 's'} with class data, you're averaging the{' '}
-              <span className="text-xl font-black text-tertiary">top {topPercentOf(semesterAvgPercentile)}%</span> of your class.
-            </span>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {courseStatuses.map((cs) => {
-            const course = courses.find(c => c.id === cs.courseId);
-            if (!course) return null;
-            const standing = standingByCourse.get(course.id);
-            // Z trend: latest deliverable's Z vs the one before it (date order).
-            const trendPoints = standing?.hasData ? standing.deliverables : [];
-            const trendDelta = trendPoints.length >= 2
-              ? trendPoints[trendPoints.length - 1].z - trendPoints[trendPoints.length - 2].z
-              : null;
-            return (
-              <Card key={course.id} shadow="md" className="flex flex-col">
-                <div className="p-6 bg-ink text-white flex justify-between items-center">
-                  <div>
-                    <h4 className="text-2xl font-black tracking-tighter">{course.code}</h4>
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-primary-container">{course.name}</p>
-                    {standing?.hasData && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="bg-white text-ink px-2 py-0.5 text-[10px] font-black uppercase border-2 border-primary-container">
-                          Top {topPercentOf(standing.percentile)}% of class
-                        </span>
-                        {trendDelta !== null && (
-                          <span
-                            className="flex items-center gap-1 text-[10px] font-black uppercase"
-                            title={`Standing vs class on the latest graded item moved ${trendDelta >= 0 ? 'up' : 'down'} ${Math.abs(trendDelta).toFixed(2)}σ from the one before`}
-                          >
-                            {trendDelta > 0.1 ? <TrendingUp size={12} className="text-tertiary" /> :
-                             trendDelta < -0.1 ? <TrendingDown size={12} className="text-secondary" /> :
-                             <Minus size={12} className="opacity-60" />}
-                            {trendDelta > 0.1 ? 'Climbing' : trendDelta < -0.1 ? 'Slipping' : 'Steady'}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className={`text-4xl font-black ${cs.confidence === 'low' ? 'text-ink/40' : 'text-primary-container'}`}>
-                    {cs.estimatedGrade}
-                  </div>
-                </div>
-                <div className="p-6 space-y-6 flex-grow flex flex-col justify-end">
-                  <div className="pt-4 border-t-2 border-ink/10 grid grid-cols-3 gap-4">
-                    <div>
-                      <span className="text-[10px] font-black uppercase text-ink/40 block mb-1">Projected</span>
-                      <span className="text-xl font-black">{cs.projectedScore > 0 ? cs.projectedScore.toFixed(1) + '%' : 'N/A'}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-black uppercase text-ink/40 block mb-1">Weight Covered</span>
-                      <span className="text-xl font-black text-ink/60">{cs.coveredWeight}%</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-black uppercase text-ink/40 block mb-1">Confidence</span>
-                      <span className={`text-sm font-black uppercase ${cs.confidence === 'high' ? 'text-primary' : cs.confidence === 'medium' ? 'text-tertiary' : 'text-secondary'}`}>
-                        {cs.confidence}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Weak Topics — deterministic, from the engine (lowest weighted-Z deliverables) */}
-      {courses.length > 0 && (
-        <Card shadow="md" className="border-t-secondary border-t-[12px] p-8">
-          <div className="flex items-center gap-3 mb-2">
-            <BookOpen size={28} className="text-secondary" />
-            <h3 className="text-2xl font-black tracking-tighter uppercase">Weak Topics</h3>
-          </div>
-          <p className="text-sm text-ink/60 font-medium mb-6">
-            Where you scored furthest below the class, worst first — with the lectures to study before the next exam.
-          </p>
-
-          {weakTopicRows.length > 0 ? (
-            <div className="space-y-3">
-              {weakTopicRows.map(row => (
-                <div key={row.deliverableId} className="border-2 border-ink bg-background p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-black text-sm">{row.courseCode}</span>
-                      <span className="font-bold text-sm">{row.title}</span>
-                      {row.lectureRange && (
-                        <span className="text-xs font-bold text-ink/60 italic">Lectures {row.lectureRange}</span>
-                      )}
-                      {!row.lectureRange && row.topics && (
-                        <span className="text-xs font-bold text-ink/60 italic">{row.topics}</span>
-                      )}
-                    </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-secondary mt-1">
-                      Z {row.z.toFixed(1)} · bottom {Math.min(99, Math.max(1, Math.round(row.percentile)))}% of class on this one
-                    </p>
-                  </div>
-                  {addedWeakTopicIds.has(row.deliverableId) ? (
-                    <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-tertiary shrink-0">
-                      <Check size={12} strokeWidth={4} /> Task added
-                    </span>
-                  ) : (
-                    <Button
-                      onClick={() => handleAddWeakTopicTask(row)}
-                      variant="outline" size="xs"
-                      className="flex items-center gap-1 shrink-0"
-                    >
-                      <Plus size={12} /> Add study task
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : coursesWithCohortData.length > 0 ? (
-            <div className="border-2 border-dashed border-ink p-6 text-center">
-              <p className="text-sm font-bold">
-                No weak topics detected — you're at or above the class average on everything measured so far.
-              </p>
-            </div>
-          ) : (
-            <div className="border-2 border-dashed border-ink p-6 text-center space-y-1">
-              <p className="text-sm font-bold">No class data yet.</p>
-              <p className="text-sm font-medium text-ink/60">
-                Upload a class marksheet on a graded quiz or exam (from any course page) and weak topics will show up here automatically.
-              </p>
-            </div>
-          )}
-        </Card>
-      )}
-
-      {/* What-If Calculator */}
-      <Card shadow="md" className="border-t-tertiary border-t-[12px] p-8">
-        <div className="flex items-center gap-3 mb-8">
-          <Target size={32} className="text-tertiary" />
-          <h3 className="text-3xl font-black tracking-tighter uppercase">🎯 What-If Calculator</h3>
-        </div>
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black uppercase tracking-widest">Select Course</label>
-              <select
-                value={whatIfCourseId}
-                onChange={e => { setWhatIfCourseId(e.target.value); setWhatIfResult(null); }}
-                className="bg-white border-3 border-ink p-3 font-bold focus:bg-primary-container/10 appearance-none outline-none"
+          {/* GPA tiles — private, masked until the explicit reveal */}
+          <div className="lg:col-span-3 flex flex-col">
+            <div className="flex items-center justify-between gap-3 px-5 pt-4">
+              <Overline>GPA · private — hidden until you reveal it</Overline>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setGpaRevealed(v => !v)}
+                aria-pressed={gpaRevealed}
+                aria-label={gpaRevealed ? 'Hide GPA and CGPA' : 'Reveal GPA and CGPA'}
+                className="flex items-center gap-1.5 shrink-0"
               >
-                <option value="">Choose a course...</option>
-                {courses.map(c => (
-                  <option key={c.id} value={c.id}>{c.code} — {c.name}</option>
-                ))}
-              </select>
+                {gpaRevealed ? <EyeOff size={14} strokeWidth={3} /> : <Eye size={14} strokeWidth={3} />}
+                {gpaRevealed ? 'Hide' : 'Reveal'}
+              </Button>
             </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-black uppercase tracking-widest">Target Score on Remaining Work (%)</label>
-              <input
-                className="bg-white border-3 border-ink p-3 font-bold focus:bg-primary-container/10 outline-none"
-                placeholder="e.g. 85"
-                type="number"
-                min="0"
-                max="100"
-                value={whatIfScore}
-                onChange={e => { setWhatIfScore(e.target.value); setWhatIfResult(null); }}
+            <div className="grid grid-cols-1 sm:grid-cols-2 flex-grow">
+              <StatTile
+                label="Semester GPA"
+                value={gpaRevealed ? semesterGPA : <GpaMask className="text-ink/30" />}
+                caption="estimated from graded work so far"
+                className="sm:border-r-2 border-b-2 border-ink/10"
+              />
+              <StatTile
+                label="Target CGPA"
+                value={gpaRevealed ? targetCGPA.toFixed(2) : <GpaMask className="text-ink/30" />}
+                caption="the goal you set"
+                className="border-b-2 border-ink/10"
+              />
+              <StatTile
+                label="Projected CGPA"
+                value={currentCGPA > 0 ? (gpaRevealed ? projectedCGPA.toFixed(2) : <GpaMask className="text-ink/30" />) : '—'}
+                caption={currentCGPA > 0 ? `based on ~${estimatedPastCredits} past credit hrs` : 'set your current CGPA in Settings'}
+                className="sm:border-r-2 border-b-2 sm:border-b-0 border-ink/10"
+              />
+              <StatTile
+                label="Required GPA"
+                value={currentCGPA > 0 ? (gpaRevealed ? requiredSemesterGPA.toFixed(2) : <GpaMask className="text-ink/30" />) : '—'}
+                caption={currentCGPA > 0 ? 'this semester to hit your target' : 'set your current CGPA in Settings'}
               />
             </div>
           </div>
-          <Button
-            onClick={handleWhatIf}
-            disabled={!whatIfCourseId || !whatIfScore}
-            variant="primary" size="lg"
-            className="w-full"
-          >
-            Calculate Impact
-          </Button>
-          {whatIfResult && (
-            <div className="bg-background border-2 border-ink p-4 flex justify-between items-center">
-              <span className="font-bold text-sm">
-                If you score <span className="font-black">{whatIfScore}%</span> on all remaining work:
-              </span>
-              <span className="font-black text-xl text-tertiary">{whatIfResult.grade} ({whatIfResult.gpc.toFixed(2)})</span>
-            </div>
-          )}
+        </div>
+
+        {/* Coursework-graded meter — how firm every estimate above is */}
+        <div className="border-t-3 border-ink p-5">
+          <div className="flex justify-between font-black uppercase text-[10px] mb-2">
+            <span>Coursework graded</span>
+            <span>{avgWeightCoverage}%</span>
+          </div>
+          <div className="w-full h-6 border-3 border-ink bg-white flex overflow-hidden">
+            <div className="h-full bg-tertiary transition-all duration-500" style={{ width: `${avgWeightCoverage}%` }}></div>
+            <div className="h-full bg-ink/10" style={{ width: `${100 - avgWeightCoverage}%` }}></div>
+          </div>
+          <p className="text-[11px] font-bold text-ink/50 mt-2">
+            Grade estimates firm up as more of your coursework is graded.
+          </p>
         </div>
       </Card>
 
-      {/* Advanced Analytics Toggle */}
+      {/* ── Zone 2 · Which courses drive it? ────────────────────── */}
+      {courses.length > 0 && (
+        <div>
+          <SectionHeader
+            overline="Course by course"
+            title="Course Standing"
+            sub="You against the class in every course — the marker on each curve is you."
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {courseStatuses.map((cs) => {
+              const course = courses.find(c => c.id === cs.courseId);
+              if (!course) return null;
+              const standing = standingByCourse.get(course.id);
+              // Z trend: latest deliverable's Z vs the one before it (date order).
+              const trendPoints = standing?.hasData ? standing.deliverables : [];
+              const trendDelta = trendPoints.length >= 2
+                ? trendPoints[trendPoints.length - 1].z - trendPoints[trendPoints.length - 2].z
+                : null;
+              const gap = standing?.hasData ? standing.gapToTopper : null;
+              return (
+                <Card key={course.id} shadow="md" className="flex flex-col">
+                  <div className={`p-5 border-b-3 border-ink flex justify-between items-start gap-4 ${getThemeBgClass(course.themeColor)}`}>
+                    <div>
+                      <h4 className="text-2xl font-black tracking-tighter">{course.code}</h4>
+                      <p className="text-[10px] uppercase font-bold tracking-widest text-ink/60">{course.name}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-4xl font-black leading-none block">
+                        {cs.coveredWeight > 0 ? cs.estimatedGrade : '—'}
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-ink/60 block mt-1">
+                        {cs.coveredWeight > 0 ? `estimated · ${cs.coveredWeight}% graded` : 'no grades yet'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-5 space-y-4 flex-grow flex flex-col">
+                    {standing?.hasData ? (
+                      <>
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <span className="bg-ink text-white px-2 py-1 text-[10px] font-black uppercase">
+                            Top {topPercentOf(standing.percentile)}% of class
+                          </span>
+                          {trendDelta !== null && (
+                            <div
+                              className="flex items-center gap-2"
+                              title={`Standing vs class on the latest graded item moved ${trendDelta >= 0 ? 'up' : 'down'} ${Math.abs(trendDelta).toFixed(2)}σ from the one before`}
+                            >
+                              <span className="flex items-center gap-1 text-[10px] font-black uppercase">
+                                {trendDelta > 0.1 ? <TrendingUp size={12} className="text-tertiary" /> :
+                                 trendDelta < -0.1 ? <TrendingDown size={12} className="text-secondary" /> :
+                                 <Minus size={12} className="opacity-60" />}
+                                {trendDelta > 0.1 ? 'Climbing' : trendDelta < -0.1 ? 'Slipping' : 'Steady'}
+                              </span>
+                              <ZTrendSparkline points={trendPoints} themeColor={course.themeColor} />
+                            </div>
+                          )}
+                        </div>
+
+                        <DistributionStrip standing={standing} themeColor={course.themeColor} />
+
+                        <div className="grid grid-cols-3 gap-2 pt-3 border-t-2 border-ink/10">
+                          <div>
+                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-ink/50">
+                              <span className={`w-3 h-3 border-2 border-ink shrink-0 ${getThemeBgClass(course.themeColor)}`}></span> You
+                            </span>
+                            <span className="text-lg font-black block mt-0.5">
+                              {standing.yourPct !== null ? standing.yourPct.toFixed(1) + '%' : '—'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-ink/50">
+                              <span className="w-3 h-3 border-2 border-ink bg-ink/20 shrink-0"></span> Class avg
+                            </span>
+                            <span className="text-lg font-black block mt-0.5">
+                              {standing.classAvgPct !== null ? standing.classAvgPct.toFixed(1) + '%' : '—'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-ink/50">
+                              <span className="w-3 h-3 border-2 border-ink bg-secondary shrink-0"></span> Topper
+                            </span>
+                            <span className="text-lg font-black block mt-0.5">
+                              {standing.topperPct !== null ? standing.topperPct.toFixed(1) + '%' : '—'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {gap !== null && gap.points > 0.05 && (
+                          <p className="text-sm font-bold leading-snug border-2 border-ink bg-background p-3">
+                            <span className="font-black text-secondary">{gap.points.toFixed(1)} weighted points</span> behind the topper
+                            {gap.topCategory && (
+                              <> — most of it in {CATEGORY_LABELS[gap.topCategory.category]} ({gap.topCategory.weight}% of your grade)</>
+                            )}.
+                          </p>
+                        )}
+                        {gap !== null && gap.points <= 0.05 && (
+                          <p className="text-sm font-bold leading-snug border-2 border-ink bg-background p-3">
+                            Level with the topper on everything graded so far.
+                          </p>
+                        )}
+
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-ink/40 mt-auto">
+                          Based on {standing.statsCoveredWeight}% of your grade
+                          {standing.minSampleSize !== null && <> · smallest sample: {standing.minSampleSize} scores</>}
+                        </p>
+                      </>
+                    ) : (
+                      <div className="border-2 border-dashed border-ink p-5 text-center space-y-2 my-auto">
+                        <p className="text-sm font-bold">No class data yet.</p>
+                        <p className="text-xs font-medium text-ink/60">
+                          Upload a class marksheet on a graded item to unlock this course's standing.
+                        </p>
+                        <Link to={`/courses/${course.id}`} className="inline-block text-xs font-black uppercase tracking-widest underline underline-offset-4">
+                          Open course
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Zone 3 · What do I do about it? ─────────────────────── */}
+      {courses.length > 0 && (
+        <div>
+          <SectionHeader
+            overline="What to do about it"
+            title="Action Plan"
+            sub="What to study next — straight from your marks, plus what the AI flags from your workload."
+          />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            {/* Study Plan: deterministic weak topics first, AI narrative second */}
+            <Card shadow="md" className="lg:col-span-2 border-t-secondary border-t-[12px]">
+              <div className="p-6 space-y-6">
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <BookOpen size={18} className="text-secondary" />
+                    <h3 className="text-lg font-black uppercase tracking-tighter">Weak Topics</h3>
+                    <Overline>· worst first</Overline>
+                  </div>
+                  {weakTopicRows.length > 0 ? (
+                    <div className="space-y-3">
+                      {weakTopicRows.map(row => (
+                        <div key={row.deliverableId} className="border-2 border-ink bg-background p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-black text-sm">{row.courseCode}</span>
+                              <span className="font-bold text-sm">{row.title}</span>
+                              {row.lectureRange && (
+                                <span className="text-xs font-bold text-ink/60 italic">Lectures {row.lectureRange}</span>
+                              )}
+                              {!row.lectureRange && row.topics && (
+                                <span className="text-xs font-bold text-ink/60 italic">{row.topics}</span>
+                              )}
+                            </div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-secondary mt-1">
+                              Z {row.z.toFixed(1)} · bottom {Math.min(99, Math.max(1, Math.round(row.percentile)))}% of class on this one
+                            </p>
+                          </div>
+                          {addedWeakTopicIds.has(row.deliverableId) ? (
+                            <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-tertiary shrink-0">
+                              <Check size={12} strokeWidth={4} /> Task added
+                            </span>
+                          ) : (
+                            <Button
+                              onClick={() => handleAddWeakTopicTask(row)}
+                              variant="outline" size="xs"
+                              className="flex items-center gap-1 shrink-0"
+                            >
+                              <Plus size={12} /> Add study task
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : coursesWithCohortData.length > 0 ? (
+                    <div className="border-2 border-dashed border-ink p-6 text-center">
+                      <p className="text-sm font-bold">
+                        No weak topics detected — you're at or above the class average on everything measured so far.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-ink p-6 text-center space-y-1">
+                      <p className="text-sm font-bold">No class data yet.</p>
+                      <p className="text-sm font-medium text-ink/60">
+                        Upload a class marksheet on a graded quiz or exam (from any course page) and weak topics will show up here automatically.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t-2 border-ink/10 pt-5">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <h3 className="text-lg font-black uppercase tracking-tighter">AI Study Priorities</h3>
+                    <Button
+                      onClick={openOptimizeModal}
+                      disabled={!priorities || priorities.length === 0}
+                      variant="secondary" size="xs"
+                      className="flex items-center gap-1.5"
+                    >
+                      <Zap size={12} />
+                      Add to Calendar
+                    </Button>
+                  </div>
+                  {loading ? (
+                    <div className="flex flex-col items-center gap-3 text-ink/60 font-medium w-full p-6 text-center">
+                      <Loader2 size={28} className="animate-spin text-secondary" />
+                      <span className="text-sm">Analyzing your course load and upcoming deadlines...</span>
+                    </div>
+                  ) : priorities && priorities.length > 0 ? (
+                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {priorities.map((item: any, i: number) => (
+                        <li key={i} className="p-3 border-2 border-ink bg-background">
+                          <div className="flex justify-between items-start mb-1 gap-2">
+                            <span className="font-bold text-sm">{item.title || item.task}</span>
+                            {item.priority === 'critical' ? <AlertCircle size={14} className="text-secondary shrink-0" /> :
+                             item.priority === 'high' ? <TrendingUp size={14} className="text-secondary shrink-0" /> :
+                             <Clock size={14} className="text-tertiary shrink-0" />}
+                          </div>
+                          <p className="text-[10px] text-ink/60 leading-tight font-medium">{item.desc || item.reason}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-ink/40 font-medium w-full p-6 text-center">
+                      <AlertCircle size={24} />
+                      <span className="text-sm">Add courses and deadlines to get AI-powered study priorities.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Card>
+
+            {/* Grade Simulator — the What-If calculator */}
+            <Card shadow="md" className="border-t-tertiary border-t-[12px]">
+              <div className="p-6 space-y-5">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Target size={18} className="text-tertiary" />
+                    <h3 className="text-xl font-black tracking-tighter uppercase">Grade Simulator</h3>
+                  </div>
+                  <p className="text-sm text-ink/60 font-medium">
+                    If you score X% on everything left, what grade lands?
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest">Select Course</label>
+                  <select
+                    value={whatIfCourseId}
+                    onChange={e => { setWhatIfCourseId(e.target.value); setWhatIfResult(null); }}
+                    className="bg-white border-3 border-ink p-3 font-bold focus:bg-primary-container/10 appearance-none outline-none"
+                  >
+                    <option value="">Choose a course...</option>
+                    {courses.map(c => (
+                      <option key={c.id} value={c.id}>{c.code} — {c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest">Target Score on Remaining Work (%)</label>
+                  <input
+                    className="bg-white border-3 border-ink p-3 font-bold focus:bg-primary-container/10 outline-none"
+                    placeholder="e.g. 85"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={whatIfScore}
+                    onChange={e => { setWhatIfScore(e.target.value); setWhatIfResult(null); }}
+                  />
+                </div>
+                <Button
+                  onClick={handleWhatIf}
+                  disabled={!whatIfCourseId || !whatIfScore}
+                  variant="primary" size="lg"
+                  className="w-full"
+                >
+                  Calculate Impact
+                </Button>
+                {whatIfResult && (
+                  <div className="bg-background border-2 border-ink p-4 flex justify-between items-center gap-3">
+                    <span className="font-bold text-sm">
+                      If you score <span className="font-black">{whatIfScore}%</span> on all remaining work:
+                    </span>
+                    <span className="font-black text-xl text-tertiary shrink-0">{whatIfResult.grade} ({whatIfResult.gpc.toFixed(2)})</span>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* ── Advanced Analytics (owner-approved metrics only) ────── */}
       <div>
         <Button
           onClick={() => setShowAdvanced(!showAdvanced)}
@@ -552,7 +649,7 @@ export const Analytics = () => {
           <div className="mt-6 space-y-8">
             {/* Past Credit Hours Input */}
             <Card shadow="sm" className="p-6">
-              <h4 className="text-lg font-black uppercase tracking-tighter mb-4">📋 Past Credit Hours</h4>
+              <h4 className="text-lg font-black uppercase tracking-tighter mb-4">Past Credit Hours</h4>
               <p className="text-sm text-ink/60 font-medium mb-4">
                 Enter the total credit hours you've completed before this semester. This improves the accuracy of your CGPA projection.
                 Currently estimated at <span className="font-black text-ink">{estimatedPastCredits}</span> based on your semester number.
@@ -575,7 +672,7 @@ export const Analytics = () => {
             {/* Grade Sensitivity Table */}
             {gradeSensitivity.length > 0 && (
               <Card shadow="sm" className="p-6">
-                <h4 className="text-lg font-black uppercase tracking-tighter mb-2">📊 What You Need on the Final</h4>
+                <h4 className="text-lg font-black uppercase tracking-tighter mb-2">What You Need on the Final</h4>
                 <p className="text-sm text-ink/60 font-medium mb-6">
                   For each course, see how different scores on remaining work affect your final grade.
                 </p>
@@ -611,7 +708,7 @@ export const Analytics = () => {
       <Modal open={showOptimizeModal} onClose={() => setShowOptimizeModal(false)}>
         <ModalContent>
           <ModalHeader onClose={() => setShowOptimizeModal(false)}>
-            <h3 className="text-xl font-black uppercase tracking-tighter">📋 Review Tasks</h3>
+            <h3 className="text-xl font-black uppercase tracking-tighter">Review Tasks</h3>
           </ModalHeader>
           <ModalBody className="space-y-4">
             <p className="text-sm text-ink/60 font-medium">

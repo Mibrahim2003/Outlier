@@ -11,8 +11,8 @@ afterEach(cleanup);
 
 // Product rule (CLAUDE.md → "GPA & CGPA"): GPA/CGPA is private — hidden by default
 // behind an explicit reveal action, and NEVER rendered on load. These tests guard that
-// rule on the Analytics "Academic Standing" card, which is where the aggregate GPA/CGPA
-// values live (semester GPA, projected CGPA, required GPA, target CGPA).
+// rule on the Analytics GPA tile row, which is where the aggregate GPA/CGPA values
+// live (semester GPA, target CGPA, projected CGPA, required GPA).
 
 // currentCgpa > 0 so every projection block (required GPA + projected CGPA) renders.
 vi.mock('../../domain/profile/useProfile', () => ({
@@ -64,16 +64,17 @@ describe('Analytics — GPA/CGPA privacy', () => {
   it('hides every GPA/CGPA value behind a mask on load, with a reveal control', () => {
     renderAnalytics();
 
-    // Nothing is revealed on mount: each of the five sensitive slots shows the mask.
-    expect(screen.getAllByText(MASK).length).toBeGreaterThanOrEqual(5);
+    // Nothing is revealed on mount: each of the four sensitive tiles shows the mask
+    // (semester GPA, target CGPA, projected CGPA, required GPA).
+    expect(screen.getAllByText(MASK).length).toBeGreaterThanOrEqual(4);
 
     // The only affordance is an explicit "Reveal" action.
     expect(
       screen.getByRole('button', { name: /reveal gpa and cgpa/i })
     ).toBeInTheDocument();
 
-    // The card scaffolding is still visible so the user knows what can be revealed.
-    expect(screen.getByText(/academic standing/i)).toBeInTheDocument();
+    // The tile scaffolding is still visible so the user knows what can be revealed.
+    expect(screen.getByText(/semester gpa/i)).toBeInTheDocument();
   });
 
   it('reveals the values only after the explicit reveal action, and can hide them again', () => {
@@ -89,6 +90,6 @@ describe('Analytics — GPA/CGPA privacy', () => {
 
     // Hiding again restores the masks.
     fireEvent.click(screen.getByRole('button', { name: /hide gpa and cgpa/i }));
-    expect(screen.getAllByText(MASK).length).toBeGreaterThanOrEqual(5);
+    expect(screen.getAllByText(MASK).length).toBeGreaterThanOrEqual(4);
   });
 });
