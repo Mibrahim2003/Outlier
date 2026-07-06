@@ -2,21 +2,8 @@ import { Upload } from 'lucide-react';
 import { CourseDeliverable } from '../types';
 import { CohortStanding, CourseStatus, CATEGORY_LABELS, topPercentOf } from '../utils/gpaEngine';
 import { getThemeBgClass, getThemeTextClass, ThemeColor } from '../utils/impactStyles';
-import { Card, ZeeMascot, type ZeeVariant } from './ui';
-import { DistributionStrip } from './charts';
-
-/**
- * Zee reacts to the student's real weighted Z-score — the mascot literally
- * embodies the number this panel is about (lore: public/brand/zee/README.md).
- */
-const zeeForStanding = (standing: CohortStanding): { variant: ZeeVariant; line: string } => {
-  if (!standing.hasData) {
-    return { variant: 'big-brain', line: "Upload marks. I can't fight a curve I can't see." };
-  }
-  if (standing.weightedZ >= 1) return { variant: 'on-curve', line: 'Told you. The curve fears you.' };
-  if (standing.weightedZ >= 0) return { variant: 'on-curve', line: 'Above the mean. Keep climbing.' };
-  return { variant: 'study', line: 'Below average is a temporary address.' };
-};
+import { Card, ZeeMascot } from './ui';
+import { DistributionStrip, zeeForStanding } from './charts';
 
 interface CohortStandingPanelProps {
   standing: CohortStanding;
@@ -34,7 +21,7 @@ export const CohortStandingPanel = ({ standing, courseStatus, themeColor, delive
   const gap = standing.gapToTopper;
   const showGapSentence = gap !== null && gap.points > 0.05;
   const levelWithTopper = gap !== null && gap.points <= 0.05;
-  const zee = zeeForStanding(standing);
+  const zee = zeeForStanding(standing.hasData, standing.percentile);
 
   // Full-marks texture: the most recent deliverable where someone maxed the paper.
   const fullMarksEvent = [...deliverables]

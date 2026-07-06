@@ -13,8 +13,8 @@ import { calculateSemesterGPA, projectCGPA, estimateGrade, calculateCohortStandi
 import { isDateInRange, toLocalISODate } from '../utils/dateUtils';
 import { getThemeBgClass } from '../utils/impactStyles';
 import { Todo } from '../types';
-import { Card, Button, Badge, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from './ui';
-import { DistributionStrip, ZTrendSparkline } from './charts';
+import { Card, Button, Badge, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, ZeeMascot } from './ui';
+import { DistributionStrip, ZTrendSparkline, zeeForStanding } from './charts';
 
 /** Extract the semester number from values like "3", "SEMESTER 03", or "Semester 3". */
 const semesterToNumber = (semester?: string): number => {
@@ -103,6 +103,7 @@ export const Analytics = () => {
   const semesterAvgPercentile = coursesWithCohortData.length > 0
     ? coursesWithCohortData.reduce((sum, c) => sum + standingByCourse.get(c.id)!.percentile, 0) / coursesWithCohortData.length
     : null;
+  const zee = zeeForStanding(semesterAvgPercentile !== null, semesterAvgPercentile ?? 0);
 
   // Deterministic weak topics across all courses, worst first.
   const weakTopicRows = courses
@@ -231,96 +232,99 @@ export const Analytics = () => {
 
   return (
     <div className="space-y-12">
-      {/* ── Page header ─────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <Overline>Where you stand · what's driving it · what to do next</Overline>
-          <h2 className="text-3xl md:text-4xl font-black tracking-tighter text-ink uppercase mt-1">Analytics</h2>
-        </div>
-        <Badge variant="tertiary" size="lg" className="flex items-center gap-2">
-          <Calendar size={16} />
-          {activeSemester?.name ?? (userProfile?.semester ? `Semester ${semesterToNumber(userProfile?.semester)}` : 'Current Semester')}
-        </Badge>
-      </div>
+      {/* ── Standing banner — same visual grammar as the Dashboard/Courses welcome banners: hard border, hard shadow, rotated word-chip, Zee on ambassador duty ── */}
+      <div className="relative border-[4px] border-ink bg-[#FFE8A3] shadow-[8px_8px_0px_#1A1A1A] p-8 md:p-12 overflow-hidden">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+          <div className="space-y-4 min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-tight flex flex-wrap items-center gap-x-3 gap-y-2">
+                <span>Where you</span>
+                <span className="inline-block bg-white px-4 py-1 border-[4px] border-ink shadow-[4px_4px_0px_#1A1A1A] font-black -rotate-2 uppercase">
+                  Stand
+                </span>
+              </h1>
+              <Badge variant="tertiary" size="lg" className="flex items-center gap-2 shrink-0">
+                <Calendar size={16} />
+                {activeSemester?.name ?? (userProfile?.semester ? `Semester ${semesterToNumber(userProfile?.semester)}` : 'Current Semester')}
+              </Badge>
+            </div>
 
-      {/* ── Zone 1 · Where do I stand? ──────────────────────────── */}
-      <Card shadow="md" className="p-0">
-        <div className="grid grid-cols-1 lg:grid-cols-5">
-          {/* Hero: class standing — explicitly not private, so the page leads with it */}
-          <div className="lg:col-span-2 bg-primary-container p-8 border-b-3 lg:border-b-0 lg:border-r-3 border-ink flex flex-col justify-center relative overflow-hidden">
-            <div className="absolute -right-10 -top-10 w-40 h-40 border-3 border-ink rotate-12 opacity-10 pointer-events-none"></div>
-            <span className="font-black uppercase tracking-widest text-xs bg-ink text-white px-3 py-1 self-start">Class Standing</span>
             {semesterAvgPercentile !== null ? (
-              <>
-                <p className="text-6xl md:text-7xl font-black tracking-tighter leading-none mt-5">
+              <p className="text-base md:text-lg font-bold text-ink flex flex-wrap items-center gap-x-2 gap-y-3">
+                <span>You're averaging</span>
+                <span className="inline-block bg-tertiary text-white px-3 py-1 border-[3px] border-ink shadow-[3px_3px_0px_#1A1A1A] font-black rotate-1">
                   Top {topPercentOf(semesterAvgPercentile)}%
-                </p>
-                <p className="text-sm font-bold text-ink/60 mt-3">
-                  of your class, averaged across {coursesWithCohortData.length} course{coursesWithCohortData.length === 1 ? '' : 's'} with class data.
-                </p>
-              </>
+                </span>
+                <span>of class, averaged across {coursesWithCohortData.length} course{coursesWithCohortData.length === 1 ? '' : 's'} with class data.</span>
+              </p>
             ) : courses.length === 0 ? (
-              <>
-                <p className="text-3xl font-black tracking-tighter mt-5">No courses yet</p>
-                <p className="text-sm font-bold text-ink/60 mt-2">
-                  Add your courses to unlock grade forecasts and class standing.
-                </p>
-                <Link to="/courses" className="mt-4 self-start">
-                  <Button variant="outline" size="sm">Go to courses</Button>
-                </Link>
-              </>
+              <p className="text-base md:text-lg font-bold text-ink">
+                Add your first course and Zee starts tracking your curve.
+              </p>
             ) : (
-              <>
-                <p className="text-3xl font-black tracking-tighter mt-5">Standing locked</p>
-                <p className="text-sm font-bold text-ink/60 mt-2">
-                  Upload a class marksheet on any graded quiz or exam (from a course page) to see where you stand against your class.
-                </p>
-              </>
+              <p className="text-base md:text-lg font-bold text-ink">
+                Upload a class marksheet on any graded quiz or exam (from a course page) to unlock your standing.
+              </p>
+            )}
+
+            <p className="text-sm font-bold text-ink/70 italic">"{zee.line}" — Zee</p>
+
+            {courses.length === 0 && (
+              <Link to="/courses?action=add" className="inline-block">
+                <Button variant="ink" size="sm" className="flex items-center gap-2">
+                  <Plus size={14} /> Add Your First Course
+                </Button>
+              </Link>
             )}
           </div>
 
-          {/* GPA tiles — private, masked until the explicit reveal */}
-          <div className="lg:col-span-3 flex flex-col">
-            <div className="flex items-center justify-between gap-3 px-5 pt-4">
-              <Overline>GPA · private — hidden until you reveal it</Overline>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setGpaRevealed(v => !v)}
-                aria-pressed={gpaRevealed}
-                aria-label={gpaRevealed ? 'Hide GPA and CGPA' : 'Reveal GPA and CGPA'}
-                className="flex items-center gap-1.5 shrink-0"
-              >
-                {gpaRevealed ? <EyeOff size={14} strokeWidth={3} /> : <Eye size={14} strokeWidth={3} />}
-                {gpaRevealed ? 'Hide' : 'Reveal'}
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 flex-grow">
-              <StatTile
-                label="Semester GPA"
-                value={gpaRevealed ? semesterGPA : <GpaMask className="text-ink/30" />}
-                caption="estimated from graded work so far"
-                className="sm:border-r-2 border-b-2 border-ink/10"
-              />
-              <StatTile
-                label="Target CGPA"
-                value={gpaRevealed ? targetCGPA.toFixed(2) : <GpaMask className="text-ink/30" />}
-                caption="the goal you set"
-                className="border-b-2 border-ink/10"
-              />
-              <StatTile
-                label="Projected CGPA"
-                value={currentCGPA > 0 ? (gpaRevealed ? projectedCGPA.toFixed(2) : <GpaMask className="text-ink/30" />) : '—'}
-                caption={currentCGPA > 0 ? `based on ~${estimatedPastCredits} past credit hrs` : 'set your current CGPA in Settings'}
-                className="sm:border-r-2 border-b-2 sm:border-b-0 border-ink/10"
-              />
-              <StatTile
-                label="Required GPA"
-                value={currentCGPA > 0 ? (gpaRevealed ? requiredSemesterGPA.toFixed(2) : <GpaMask className="text-ink/30" />) : '—'}
-                caption={currentCGPA > 0 ? 'this semester to hit your target' : 'set your current CGPA in Settings'}
-              />
-            </div>
+          {/* Zee, reacting to the real number this banner is about */}
+          <div className="hidden md:flex flex-col items-center gap-3 shrink-0">
+            <ZeeMascot variant={zee.variant} size={zee.variant === 'on-curve' ? 144 : 100} />
           </div>
+        </div>
+      </div>
+
+      {/* ── Zone 1 · GPA — private, masked until the explicit reveal ────── */}
+      <Card shadow="md" className="p-0">
+        <div className="flex items-center justify-between gap-3 px-5 pt-4">
+          <Overline>GPA · private — hidden until you reveal it</Overline>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setGpaRevealed(v => !v)}
+            aria-pressed={gpaRevealed}
+            aria-label={gpaRevealed ? 'Hide GPA and CGPA' : 'Reveal GPA and CGPA'}
+            className="flex items-center gap-1.5 shrink-0"
+          >
+            {gpaRevealed ? <EyeOff size={14} strokeWidth={3} /> : <Eye size={14} strokeWidth={3} />}
+            {gpaRevealed ? 'Hide' : 'Reveal'}
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <StatTile
+            label="Semester GPA"
+            value={gpaRevealed ? semesterGPA : <GpaMask className="text-ink/30" />}
+            caption="estimated from graded work so far"
+            className="lg:border-r-2 sm:border-r-2 border-b-2 lg:border-b-0 border-ink/10"
+          />
+          <StatTile
+            label="Target CGPA"
+            value={gpaRevealed ? targetCGPA.toFixed(2) : <GpaMask className="text-ink/30" />}
+            caption="the goal you set"
+            className="lg:border-r-2 border-b-2 lg:border-b-0 border-ink/10"
+          />
+          <StatTile
+            label="Projected CGPA"
+            value={currentCGPA > 0 ? (gpaRevealed ? projectedCGPA.toFixed(2) : <GpaMask className="text-ink/30" />) : '—'}
+            caption={currentCGPA > 0 ? `based on ~${estimatedPastCredits} past credit hrs` : 'set your current CGPA in Settings'}
+            className="sm:border-r-2 border-b-2 sm:border-b-0 border-ink/10"
+          />
+          <StatTile
+            label="Required GPA"
+            value={currentCGPA > 0 ? (gpaRevealed ? requiredSemesterGPA.toFixed(2) : <GpaMask className="text-ink/30" />) : '—'}
+            caption={currentCGPA > 0 ? 'this semester to hit your target' : 'set your current CGPA in Settings'}
+          />
         </div>
 
         {/* Coursework-graded meter — how firm every estimate above is */}
@@ -447,6 +451,7 @@ export const Analytics = () => {
                       </>
                     ) : (
                       <div className="border-2 border-dashed border-ink p-5 text-center space-y-2 my-auto">
+                        <ZeeMascot variant="big-brain" size={56} className="mx-auto" />
                         <p className="text-sm font-bold">No class data yet.</p>
                         <p className="text-xs font-medium text-ink/60">
                           Upload a class marksheet on a graded item to unlock this course's standing.
@@ -478,6 +483,7 @@ export const Analytics = () => {
               <div className="p-6 space-y-6">
                 <div>
                   <div className="flex items-center gap-2 mb-3">
+                    <ZeeMascot variant="study" size={40} />
                     <BookOpen size={18} className="text-secondary" />
                     <h3 className="text-lg font-black uppercase tracking-tighter">Weak Topics</h3>
                     <Overline>· worst first</Overline>
@@ -518,7 +524,8 @@ export const Analytics = () => {
                       ))}
                     </div>
                   ) : coursesWithCohortData.length > 0 ? (
-                    <div className="border-2 border-dashed border-ink p-6 text-center">
+                    <div className="border-2 border-dashed border-ink p-6 text-center space-y-2">
+                      <ZeeMascot variant="smug" size={56} className="mx-auto" />
                       <p className="text-sm font-bold">
                         No weak topics detected — you're at or above the class average on everything measured so far.
                       </p>
@@ -535,7 +542,10 @@ export const Analytics = () => {
 
                 <div className="border-t-2 border-ink/10 pt-5">
                   <div className="flex items-center justify-between gap-3 mb-3">
-                    <h3 className="text-lg font-black uppercase tracking-tighter">AI Study Priorities</h3>
+                    <div className="flex items-center gap-2">
+                      <ZeeMascot variant="big-brain" size={40} />
+                      <h3 className="text-lg font-black uppercase tracking-tighter">AI Study Priorities</h3>
+                    </div>
                     <Button
                       onClick={openOptimizeModal}
                       disabled={!priorities || priorities.length === 0}
@@ -580,6 +590,7 @@ export const Analytics = () => {
               <div className="p-6 space-y-5">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
+                    <ZeeMascot variant="pencil" size={40} />
                     <Target size={18} className="text-tertiary" />
                     <h3 className="text-xl font-black tracking-tighter uppercase">Grade Simulator</h3>
                   </div>

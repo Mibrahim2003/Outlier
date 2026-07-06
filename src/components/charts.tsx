@@ -1,5 +1,24 @@
 import { CohortStanding, DeliverableStanding } from '../utils/gpaEngine';
 import { getThemeHexColor, ThemeColor } from '../utils/impactStyles';
+import type { ZeeVariant } from './ui';
+
+/**
+ * Zee reacts to the student's real standing — the mascot literally embodies
+ * the number it sits beside (lore: public/brand/zee/README.md). Single source
+ * so the same number always earns the same face and the same line, whether
+ * it's one course (CohortStandingPanel) or the semester average (Analytics).
+ * Thresholds are percentile-space equivalents of weightedZ >= 1 and >= 0
+ * (Φ(1) ≈ 84.13, Φ(0) = 50) so callers never need to hand over a raw Z.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export const zeeForStanding = (hasData: boolean, percentile: number): { variant: ZeeVariant; line: string } => {
+  if (!hasData) {
+    return { variant: 'big-brain', line: "Upload marks. I can't fight a curve I can't see." };
+  }
+  if (percentile >= 84.13) return { variant: 'on-curve', line: 'Told you. The curve fears you.' };
+  if (percentile >= 50) return { variant: 'on-curve', line: 'Above the mean. Keep climbing.' };
+  return { variant: 'study', line: 'Below average is a temporary address.' };
+};
 
 /**
  * Neo-brutalist bell curve with three markers: class average (Z = 0), you, and
