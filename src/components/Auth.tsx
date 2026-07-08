@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, Loader2, AlertTriangle } from 'lucide-react';
+import { Mail, ArrowRight, Loader2, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { playSound } from '../utils/sound';
-import { ZeeMascot } from './ui';
+import { ZeeMascot, PasswordInput } from './ui';
 
 export function Auth() {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ export function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [isForgot, setIsForgot] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [confirmSent, setConfirmSent] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
@@ -51,6 +52,8 @@ export function Auth() {
   const backToLogin = () => {
     setIsForgot(false);
     setResetSent(false);
+    setConfirmSent(false);
+    setIsLogin(true);
     setAuthError(null);
   };
 
@@ -58,32 +61,51 @@ export function Auth() {
     e.preventDefault();
     setIsLoading(true);
     setAuthError(null);
-    
-    const { error } = isLogin 
-      ? await supabase.auth.signInWithPassword({ email, password })
-      : await supabase.auth.signUp({ email, password });
-      
+
+    if (isLogin) {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      setIsLoading(false);
+      if (error) {
+        setAuthError(error.message);
+        playSound('error');
+      } else {
+        navigate('/post-auth');
+      }
+      return;
+    }
+
+    // Sign-up. When email confirmation is ON (Supabase default) the response
+    // carries a user but no session — the account isn't usable until the link
+    // is clicked. Navigating to /post-auth here would bounce them back with no
+    // explanation, so surface a "check your email" state instead.
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    setIsLoading(false);
     if (error) {
       setAuthError(error.message);
       playSound('error');
-      setIsLoading(false);
+    } else if (!data.session) {
+      setConfirmSent(true);
     } else {
-      setIsLoading(false);
       navigate('/post-auth');
     }
+  };
+
+  const toggleMode = () => {
+    setIsLogin((prev) => !prev);
+    setAuthError(null);
   };
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row font-space">
       
       {/* Left Column: Branding (Hot Pink) */}
-      <div className="w-full lg:w-1/2 bg-[#A8275A] border-b-4 lg:border-b-0 lg:border-r-4 border-black flex flex-col justify-center p-8 lg:p-20 relative overflow-hidden h-[30vh] lg:h-auto">
+      <div className="w-full lg:w-1/2 bg-secondary border-b-4 lg:border-b-0 lg:border-r-4 border-ink flex flex-col justify-center p-8 lg:p-20 relative overflow-hidden h-[30vh] lg:h-auto">
         <div className="absolute top-8 left-8">
           <button 
             onClick={() => navigate('/')}
             className="text-white hover:opacity-80 transition-opacity font-bold tracking-tight uppercase border-b-2 border-white"
           >
-            ← Back to Origin
+            ← Back
           </button>
         </div>
         
@@ -92,7 +114,7 @@ export function Auth() {
             Join<br />Outlier
           </h1>
           <p className="mt-6 text-white text-lg lg:text-2xl font-bold uppercase tracking-widest opacity-80 max-w-md">
-            The Industrial Archive for Academic Dominance.
+            Every class has an outlier. Make it you.
           </p>
           <div className="mt-10 hidden lg:block">
             <ZeeMascot variant="hyped" size={140} />
@@ -104,14 +126,14 @@ export function Auth() {
       </div>
 
       {/* Right Column: Auth Form (Electric Yellow) */}
-      <div className="w-full lg:w-1/2 bg-[#FFDE59] flex items-center justify-center p-6 lg:p-20 min-h-[70vh] lg:min-h-screen relative">
-        <div className="w-full max-w-md bg-white border-4 border-black p-8 shadow-[8px_8px_0px_#1A1A1A]">
+      <div className="w-full lg:w-1/2 bg-primary-container flex items-center justify-center p-6 lg:p-20 min-h-[70vh] lg:min-h-screen relative">
+        <div className="w-full max-w-md bg-white border-4 border-ink p-8 shadow-[8px_8px_0px_#1A1A1A]">
           <h2 className="text-3xl font-black uppercase tracking-tighter mb-8">
-            {isForgot ? 'Recover Access' : isLogin ? 'Initiate Session' : 'Establish Record'}
+            {isForgot ? 'Reset your password' : confirmSent ? 'Check your email' : isLogin ? 'Welcome back' : 'Create your account'}
           </h2>
 
           {authError && (
-            <div className="mb-6 p-4 bg-[#b02500] text-[#ffefec] border-4 border-black font-bold uppercase tracking-wider text-sm flex items-center gap-3">
+            <div className="mb-6 p-4 bg-error text-white border-4 border-ink font-bold uppercase tracking-wider text-sm flex items-center gap-3">
               <AlertTriangle className="w-5 h-5 shrink-0" />
               <p>{authError}</p>
             </div>
@@ -120,12 +142,12 @@ export function Auth() {
           {isForgot ? (
             resetSent ? (
               <div className="space-y-8">
-                <div className="p-4 bg-[#daf5bc] border-4 border-black font-bold tracking-wide text-sm">
-                  Reset link dispatched to <span className="font-black">{email}</span>. Check your inbox — the link opens a page to set a new password.
+                <div className="p-4 bg-[#daf5bc] border-4 border-ink font-bold tracking-wide text-sm">
+                  Reset link sent to <span className="font-black">{email}</span>. Check your inbox — the link opens a page to set a new password.
                 </div>
                 <button
                   onClick={backToLogin}
-                  className="w-full bg-black text-white border-4 border-black p-4 flex items-center justify-center gap-3 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_#1A1A1A] transition-all"
+                  className="w-full bg-ink text-white border-4 border-ink p-4 flex items-center justify-center gap-3 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_#1A1A1A] transition-all"
                 >
                   <span className="font-bold uppercase tracking-wider text-xl">Back to Login</span>
                 </button>
@@ -136,7 +158,7 @@ export function Auth() {
                   Enter your email and we&apos;ll send you a password reset link.
                 </p>
                 <div className="space-y-2">
-                  <label className="block text-sm font-bold uppercase tracking-wider">Operator Email</label>
+                  <label className="block text-sm font-bold uppercase tracking-wider">Email</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                       <Mail className="h-5 w-5 text-black" />
@@ -145,8 +167,8 @@ export function Auth() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-white border-4 border-black p-3 pl-12 font-medium focus:outline-none focus:bg-[#FFF6E3] focus:shadow-[4px_4px_0px_#A8275A] transition-all"
-                      placeholder="ID@outlier.com"
+                      className="w-full bg-white border-4 border-ink p-3 pl-12 font-medium focus:outline-none focus:bg-background focus:shadow-[4px_4px_0px_#A8275A] transition-all"
+                      placeholder="you@university.edu"
                       required
                     />
                   </div>
@@ -154,7 +176,7 @@ export function Auth() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-black text-white border-4 border-black p-4 flex items-center justify-center gap-3 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_#1A1A1A] transition-all disabled:opacity-50"
+                  className="w-full bg-ink text-white border-4 border-ink p-4 flex items-center justify-center gap-3 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_#1A1A1A] transition-all disabled:opacity-50"
                 >
                   {isLoading ? (
                     <Loader2 className="w-6 h-6 animate-spin text-white" />
@@ -172,12 +194,24 @@ export function Auth() {
                 </div>
               </form>
             )
+          ) : confirmSent ? (
+            <div className="space-y-8">
+              <div className="p-4 bg-[#daf5bc] border-4 border-ink font-bold tracking-wide text-sm">
+                Confirmation link sent to <span className="font-black">{email}</span>. Click it to activate your account, then come back and sign in.
+              </div>
+              <button
+                onClick={backToLogin}
+                className="w-full bg-ink text-white border-4 border-ink p-4 flex items-center justify-center gap-3 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_#1A1A1A] transition-all"
+              >
+                <span className="font-bold uppercase tracking-wider text-xl">Back to Login</span>
+              </button>
+            </div>
           ) : (
           <>
           <button
             onClick={handleGoogleLogin}
             disabled={isLoading}
-            className="w-full bg-white border-4 border-black p-4 mb-6 flex items-center justify-center gap-3 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_#1A1A1A] transition-all disabled:opacity-50 disabled:hover:transform-none disabled:hover:shadow-none"
+            className="w-full bg-white border-4 border-ink p-4 mb-6 flex items-center justify-center gap-3 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_#1A1A1A] transition-all disabled:opacity-50 disabled:hover:transform-none disabled:hover:shadow-none"
           >
             <svg className="w-6 h-6" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -189,14 +223,14 @@ export function Auth() {
           </button>
 
           <div className="relative flex items-center mb-6">
-            <div className="flex-grow border-t-4 border-black"></div>
+            <div className="flex-grow border-t-4 border-ink"></div>
             <span className="shrink-0 px-4 font-black uppercase text-xl">OR</span>
-            <div className="flex-grow border-t-4 border-black"></div>
+            <div className="flex-grow border-t-4 border-ink"></div>
           </div>
 
           <form onSubmit={handleEmailAuth} className="space-y-6">
             <div className="space-y-2">
-              <label className="block text-sm font-bold uppercase tracking-wider">Operator Email</label>
+              <label className="block text-sm font-bold uppercase tracking-wider">Email</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Mail className="h-5 w-5 text-black" />
@@ -205,8 +239,8 @@ export function Auth() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white border-4 border-black p-3 pl-12 font-medium focus:outline-none focus:bg-[#FFF6E3] focus:shadow-[4px_4px_0px_#A8275A] transition-all"
-                  placeholder="ID@outlier.com"
+                  className="w-full bg-white border-4 border-ink p-3 pl-12 font-medium focus:outline-none focus:bg-background focus:shadow-[4px_4px_0px_#A8275A] transition-all"
+                  placeholder="you@university.edu"
                   required
                 />
               </div>
@@ -214,42 +248,35 @@ export function Auth() {
 
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <label className="block text-sm font-bold uppercase tracking-wider">Access Code</label>
+                <label className="block text-sm font-bold uppercase tracking-wider">Password</label>
                 {isLogin && (
                   <button
                     type="button"
                     onClick={() => { setIsForgot(true); setAuthError(null); }}
-                    className="text-xs font-bold uppercase tracking-wider text-[#A8275A] hover:underline"
+                    className="text-xs font-bold uppercase tracking-wider text-secondary hover:underline"
                   >
-                    Forgot Key?
+                    Forgot password?
                   </button>
                 )}
               </div>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-black" />
-                </div>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-white border-4 border-black p-3 pl-12 font-medium focus:outline-none focus:bg-[#FFF6E3] focus:shadow-[4px_4px_0px_#A8275A] transition-all"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
+              <PasswordInput
+                value={password}
+                onChange={setPassword}
+                showStrength={!isLogin}
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
+              />
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-black text-white border-4 border-black p-4 mt-8 flex items-center justify-center gap-3 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_#1A1A1A] transition-all disabled:opacity-50"
+              className="w-full bg-ink text-white border-4 border-ink p-4 mt-8 flex items-center justify-center gap-3 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_#1A1A1A] transition-all disabled:opacity-50"
             >
               {isLoading ? (
                 <Loader2 className="w-6 h-6 animate-spin text-white" />
               ) : (
                 <>
-                  <span className="font-bold uppercase tracking-wider text-xl">Enter Forge</span>
+                  <span className="font-bold uppercase tracking-wider text-xl">{isLogin ? 'Sign in' : 'Create account'}</span>
                   <ArrowRight className="w-6 h-6 text-white" />
                 </>
               )}
@@ -258,19 +285,14 @@ export function Auth() {
 
           <div className="mt-8 text-center">
             <button
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={toggleMode}
               className="font-bold uppercase tracking-wider hover:underline"
             >
-              {isLogin ? "No record? Create one." : "Already an operator? Log in."}
+              {isLogin ? "New here? Create one." : "Already have an account? Sign in."}
             </button>
           </div>
           </>
           )}
-        </div>
-        
-        {/* Decorative blueprint lines */}
-        <div className="absolute bottom-4 right-4 pointer-events-none">
-          <p className="font-black uppercase text-[#A8275A] text-opacity-30 tracking-widest text-sm text-right">SEC-01<br/>AUTH PROTOCOL</p>
         </div>
       </div>
     </div>

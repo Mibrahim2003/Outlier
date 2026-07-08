@@ -20,6 +20,7 @@ import { GlobalErrorFallback } from './components/ErrorBoundary';
 import { QueryClient, QueryClientProvider, MutationCache } from '@tanstack/react-query';
 import { Toaster, toast } from 'sonner';
 import { playSound } from './utils/sound';
+import { AIQuotaError } from './lib/aiClient';
 
 // Secondary views load on demand so the initial app chunk stays small.
 // The critical path (Landing, Auth, Dashboard, CourseList) stays eager.
@@ -41,6 +42,16 @@ const queryClient = new QueryClient({
       if (mutation.meta?.silent) return;
 
       playSound('error');
+
+      // A hit daily-AI-limit isn't a sync failure — frame it as a quota notice
+      // and show the friendly message the proxy already returned.
+      if (error instanceof AIQuotaError) {
+        toast.error('Daily AI limit reached', {
+          description: error.message,
+        });
+        return;
+      }
+
       toast.error('Sync Failed', {
         description: error.message || 'Check your connection and try again.',
       });

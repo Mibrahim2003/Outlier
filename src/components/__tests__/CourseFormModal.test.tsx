@@ -90,19 +90,21 @@ describe('CourseFormModal — add mode', () => {
     expect(submit).toBeEnabled();
   });
 
-  it('submits a normalized course (uppercased, heavy impact for 4 credits, defaults) then closes', () => {
+  it('submits a normalized course (trimmed as-typed, heavy impact for 4 credits, defaults) then closes', () => {
     const { onClose, onSubmit } = renderAdd();
 
-    fireEvent.change(codeInput(), { target: { value: 'cs50' } });
-    fireEvent.change(nameInput(), { target: { value: 'intro' } });
+    // Code/name are stored as typed (only trimmed) — display uppercases via CSS,
+    // so the DB keeps proper case and AI prompts don't get shouty names.
+    fireEvent.change(codeInput(), { target: { value: '  cs50 ' } });
+    fireEvent.change(nameInput(), { target: { value: ' Intro to CS ' } });
     fireEvent.change(screen.getByDisplayValue('3'), { target: { value: '4' } }); // credits
     fireEvent.click(submitButton('Add Course'));
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
     const submitted = onSubmit.mock.calls[0][0];
     expect(submitted).toMatchObject({
-      code: 'CS50',
-      name: 'INTRO',
+      code: 'cs50',
+      name: 'Intro to CS',
       credits: 4,
       impactLevel: 'heavy',
       themeColor: 'yellow',

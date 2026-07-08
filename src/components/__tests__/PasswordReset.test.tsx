@@ -67,10 +67,10 @@ const renderAuth = () =>
     </MemoryRouter>
   );
 
-/** Renders Auth and moves it into the "Recover Access" view. */
+/** Renders Auth and moves it into the "Reset your password" view. */
 const renderRecoveryView = () => {
   const utils = renderAuth();
-  fireEvent.click(screen.getByRole('button', { name: /forgot key\?/i }));
+  fireEvent.click(screen.getByRole('button', { name: /forgot password\?/i }));
   return utils;
 };
 
@@ -95,7 +95,7 @@ const renderResetPassword = () =>
 const passwordInputs = (container: HTMLElement) =>
   container.querySelectorAll('input[type="password"]');
 
-/** Fills the two password inputs and submits the "Forge New Key" form. */
+/** Fills the two password inputs and submits the "Set a new password" form. */
 const submitNewPassword = (container: HTMLElement, newPass: string, confirmPass: string) => {
   const inputs = passwordInputs(container);
   fireEvent.change(inputs[0], { target: { value: newPass } });
@@ -106,19 +106,19 @@ const submitNewPassword = (container: HTMLElement, newPass: string, confirmPass:
 };
 
 // ---------------------------------------------------------------------------
-// A. Auth page — "Forgot Key?" recovery flow
+// A. Auth page — "Forgot password?" recovery flow
 // ---------------------------------------------------------------------------
 
-describe('Auth — Forgot Key? recovery view', () => {
+describe('Auth — Forgot password? recovery view', () => {
   it('switches from login to a recovery view without Google sign-in or a password field', () => {
     const { container } = renderAuth();
 
     // Starts in login mode.
-    expect(screen.getByRole('heading', { name: /initiate session/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /forgot key\?/i }));
+    fireEvent.click(screen.getByRole('button', { name: /forgot password\?/i }));
 
-    expect(screen.getByRole('heading', { name: /recover access/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /reset your password/i })).toBeInTheDocument();
     expect(screen.getByRole('textbox')).toBeInTheDocument(); // the email input
     expect(screen.getByRole('button', { name: /send reset link/i })).toBeInTheDocument();
 
@@ -151,7 +151,7 @@ describe('Auth — Forgot Key? recovery view', () => {
     ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /back to login/i }));
-    expect(screen.getByRole('heading', { name: /initiate session/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
   });
 
   it('on failure shows the error message and stays on the recovery form', async () => {
@@ -163,7 +163,7 @@ describe('Auth — Forgot Key? recovery view', () => {
 
     expect(await screen.findByText(/rate limit exceeded/i)).toBeInTheDocument();
     // Still on the recovery form — heading and submit button remain.
-    expect(screen.getByRole('heading', { name: /recover access/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /reset your password/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send reset link/i })).toBeInTheDocument();
   });
 
@@ -172,7 +172,7 @@ describe('Auth — Forgot Key? recovery view', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /back to login/i }));
 
-    expect(screen.getByRole('heading', { name: /initiate session/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
     expect(authApi.resetPasswordForEmail).not.toHaveBeenCalled();
   });
 });
@@ -188,15 +188,15 @@ describe('ResetPassword', () => {
 
     expect(container.querySelector('form')).toBeNull();
     expect(passwordInputs(container).length).toBe(0);
-    expect(screen.queryByRole('heading', { name: /forge new key/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /set a new password/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/link expired/i)).not.toBeInTheDocument();
   });
 
-  it('with a session renders the Forge New Key form with two password inputs', () => {
+  it('with a session renders the Set a new password form with two password inputs', () => {
     authState.current = { user: { id: 'u1' }, session: { user: { id: 'u1' } }, loading: false };
     const { container } = renderResetPassword();
 
-    expect(screen.getByRole('heading', { name: /forge new key/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /set a new password/i })).toBeInTheDocument();
     expect(passwordInputs(container).length).toBe(2);
     expect(container.querySelector('button[type="submit"]')).not.toBeNull();
   });
@@ -245,7 +245,7 @@ describe('ResetPassword', () => {
 
     expect(await screen.findByText(/recovery token invalid/i)).toBeInTheDocument();
     // Still on the reset page — no navigation happened.
-    expect(screen.getByRole('heading', { name: /forge new key/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /set a new password/i })).toBeInTheDocument();
     expect(screen.queryByText('POST_AUTH_LANDING')).not.toBeInTheDocument();
   });
 

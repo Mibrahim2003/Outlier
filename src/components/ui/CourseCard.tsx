@@ -36,7 +36,7 @@ export const CourseCard = ({ course, progress, estimatedGrade }: CourseCardProps
         <div className="p-6 md:p-8 flex flex-col h-full gap-4">
           {/* Top Row */}
           <div className="flex justify-between items-center flex-shrink-0">
-            <div className="bg-white border-[3px] border-ink px-3 py-1 font-black text-ink text-sm md:text-base">
+            <div className="bg-white border-[3px] border-ink px-3 py-1 font-black text-ink text-sm md:text-base uppercase">
               {course.code}
             </div>
             <span className="text-xs md:text-sm font-black text-ink tracking-widest">{course.credits} CREDITS</span>

@@ -6,27 +6,42 @@ import { ZeeMascot } from './ui/ZeeMascot';
 // Tier 1: Catastrophic App Failure (No Sidebar, Full Screen)
 export const GlobalErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => {
   return (
-    <div className="min-h-screen bg-bg text-ink flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-lg border-4 border-ink bg-[#FFDE59] p-8 shadow-[8px_8px_0px_#1A1A1A]">
+    <div className="min-h-screen bg-background text-ink flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-lg border-4 border-ink bg-primary-container p-8 shadow-[8px_8px_0px_#1A1A1A]">
         <div className="flex items-center gap-4 mb-6">
           <ZeeMascot variant="cooked" size={80} className="flex-shrink-0" />
           <div>
-            <h1 className="text-3xl font-black uppercase tracking-tighter">System Error</h1>
-            <p className="text-lg font-medium leading-tight">A critical error crashed the application.</p>
+            <h1 className="text-3xl font-black uppercase tracking-tighter">Something broke</h1>
+            <p className="text-lg font-medium leading-tight">Sorry — the app hit an unexpected error. Reloading usually fixes it, and your saved data is safe.</p>
           </div>
         </div>
-        
-        <div className="bg-white border-4 border-ink p-4 mb-8 overflow-auto max-h-48 text-sm font-mono whitespace-pre-wrap">
-          {(error as Error)?.message || 'Unknown error occurred'}
-        </div>
 
-        <button 
-          onClick={resetErrorBoundary}
-          className="w-full group relative flex items-center justify-center gap-2 border-4 border-ink bg-ink text-white py-4 font-black uppercase tracking-widest text-lg hover:-translate-y-1 hover:shadow-[4px_4px_0px_#1A1A1A] hover:bg-white hover:text-ink active:translate-y-0 active:shadow-none transition-all"
-        >
-          <RefreshCcw size={20} className="group-hover:rotate-180 transition-transform duration-500" />
-          Reload Application
-        </button>
+        {/* Technical detail is demoted: useful when reporting, but not the first
+            thing a stressed student sees. */}
+        <details className="mb-8">
+          <summary className="cursor-pointer text-xs font-black uppercase tracking-widest opacity-60 hover:opacity-100 select-none">
+            Technical details
+          </summary>
+          <div className="mt-3 bg-white border-4 border-ink p-4 overflow-auto max-h-48 text-sm font-mono whitespace-pre-wrap">
+            {(error as Error)?.message || 'Unknown error occurred'}
+          </div>
+        </details>
+
+        <div className="flex flex-col sm:flex-row gap-4">
+          <button
+            onClick={() => window.location.reload()}
+            className="flex-1 group relative flex items-center justify-center gap-2 border-4 border-ink bg-ink text-white py-4 font-black uppercase tracking-widest text-lg hover:-translate-y-1 hover:shadow-[4px_4px_0px_#1A1A1A] hover:bg-white hover:text-ink active:translate-y-0 active:shadow-none transition-all"
+          >
+            <RefreshCcw size={20} className="group-hover:rotate-180 transition-transform duration-500" />
+            Reload App
+          </button>
+          <button
+            onClick={resetErrorBoundary}
+            className="flex-1 flex items-center justify-center gap-2 border-4 border-ink bg-white text-ink py-4 font-black uppercase tracking-widest text-lg hover:-translate-y-1 hover:shadow-[4px_4px_0px_#1A1A1A] active:translate-y-0 active:shadow-none transition-all"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -145,17 +145,17 @@ describe('LandingPage — honest marketing', () => {
     expect(container.querySelector('#features')).not.toBeNull();
   });
 
-  it('links to the real GitHub repo in the footer and has no Twitter/Discord links', () => {
+  it('has no external social/repo links in the footer (no GitHub/Twitter/Discord)', () => {
     const { container } = renderLanding();
 
-    const githubLink = screen.getByRole('link', { name: /github/i });
-    expect(githubLink).toHaveAttribute('href', 'https://github.com/Mibrahim2003/My-dashboard');
-
+    // The product page ships no "view source" link — the repo is private and
+    // wrong-named, so a dead GitHub link would be dishonest chrome.
+    expect(screen.queryByRole('link', { name: /github/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/twitter/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/discord/i)).not.toBeInTheDocument();
     for (const anchor of Array.from(container.querySelectorAll('a'))) {
       const href = anchor.getAttribute('href') ?? '';
-      expect(href).not.toMatch(/twitter|discord/i);
+      expect(href).not.toMatch(/twitter|discord|github/i);
     }
   });
 

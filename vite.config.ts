@@ -1,10 +1,22 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { execSync } from 'node:child_process';
 import {defineConfig} from 'vite';
+
+// Real build identity, injected at build time. Updates on every commit/build —
+// no hand-edited version strings. Falls back gracefully outside a git checkout.
+const gitSha = (() => {
+  try { return execSync('git rev-parse --short HEAD').toString().trim(); }
+  catch { return 'local'; }
+})();
 
 export default defineConfig(() => {
   return {
+    define: {
+      __GIT_SHA__: JSON.stringify(gitSha),
+      __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
+    },
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

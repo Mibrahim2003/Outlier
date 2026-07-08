@@ -52,8 +52,8 @@ export const CourseFormModal = ({ onClose, course, onSubmit, onDelete, deliverab
 
     onSubmit({
       id: course?.id ?? crypto.randomUUID(),
-      code: code.trim().toUpperCase(),
-      name: name.trim().toUpperCase(),
+      code: code.trim(),
+      name: name.trim(),
       credits: Number(credits),
       impactLevel: getImpactLevelForCredits(Number(credits)),
       themeColor,

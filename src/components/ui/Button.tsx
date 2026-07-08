@@ -17,7 +17,7 @@ const buttonVariants = cva(
         ghost:
           "border-transparent shadow-none hover:bg-ink/5 active:translate-x-0 active:translate-y-0",
         danger:
-          "bg-red-600 text-white shadow-[4px_4px_0px_#1A1A1A] hover:shadow-[2px_2px_0px_#1A1A1A] hover:translate-x-[2px] hover:translate-y-[2px]",
+          "bg-error text-white shadow-[4px_4px_0px_#1A1A1A] hover:shadow-[2px_2px_0px_#1A1A1A] hover:translate-x-[2px] hover:translate-y-[2px]",
         tertiary:
           "bg-tertiary text-white shadow-[4px_4px_0px_#1A1A1A] hover:shadow-[2px_2px_0px_#1A1A1A] hover:translate-x-[2px] hover:translate-y-[2px]",
         ink:

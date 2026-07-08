@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useMemo, useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../domain/profile/useProfile';
 import { UserProfile } from '../types';
-import { Button, Input, cardVariants } from './ui';
+import { Button, Input, cardVariants, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from './ui';
 import { DEFAULT_GRADING_SCALE } from '../utils/gpaEngine';
 import {
   Trash2,
@@ -94,6 +94,31 @@ const AccountSection = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [updatingPassword, setUpdatingPassword] = useState(false);
+
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const deleteArmed = deleteConfirmText.trim().toUpperCase() === 'DELETE';
+
+  const closeDelete = () => {
+    if (deleting) return;
+    setShowDelete(false);
+    setDeleteConfirmText('');
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    // Wipes the auth.users row; every public table cascades off it. See
+    // migrations/20260708000000_add_delete_account_rpc.sql.
+    const { error } = await supabase.rpc('delete_user_account');
+    if (error) {
+      setDeleting(false);
+      toast.error('Could not delete account', { description: error.message });
+      return;
+    }
+    await supabase.auth.signOut();
+    navigate('/');
+  };
 
   const handleUpdatePassword = async (e: FormEvent) => {
     e.preventDefault();
@@ -191,33 +216,97 @@ const AccountSection = () => {
           <LogOut size={14} /> Sign Out
         </Button>
       </div>
+
+      {/* Danger zone — delete account */}
+      <div className="p-4 bg-white border-3 border-error shadow-[4px_4px_0px_#1A1A1A] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h4 className="font-black uppercase tracking-widest text-lg text-error">Delete Account</h4>
+          <p className="text-sm font-bold opacity-70 mt-1">
+            Permanently erase your account and all of its data. This cannot be undone.
+          </p>
+        </div>
+        <Button variant="danger" size="sm" onClick={() => setShowDelete(true)} className="flex items-center gap-2 shrink-0">
+          <Trash2 size={14} /> Delete Account
+        </Button>
+      </div>
+
+      {showDelete && (
+        <Modal open onClose={closeDelete}>
+          <ModalContent>
+            <ModalHeader onClose={closeDelete}>
+              <h3 className="text-2xl font-black uppercase tracking-tighter leading-none text-error">Delete account</h3>
+            </ModalHeader>
+            <ModalBody className="space-y-4">
+              <p className="text-sm font-bold">
+                This permanently deletes your account and <span className="font-black">everything in it</span> — profile,
+                courses, marks, calendar, reminders, and tasks. It cannot be undone.
+              </p>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest block">
+                  Type <span className="text-error">DELETE</span> to confirm
+                </label>
+                <Input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="DELETE"
+                  autoComplete="off"
+                />
+              </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button type="button" variant="outline" onClick={closeDelete} disabled={deleting}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={handleDeleteAccount}
+                disabled={deleting || !deleteArmed}
+                className="flex items-center gap-2"
+              >
+                {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                {deleting ? 'Deleting…' : 'Delete Forever'}
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      )}
     </div>
   );
 };
 
 // ─── Academic Profile ────────────────────────────────────────────
 
-const ProfileFormSchema = z.object({
-  name: z.string().trim().min(1, 'Your name is required'),
-  registrationNumber: z.string().trim().optional(),
-  universityName: z.string().trim().min(1, 'University name is required'),
-  degree: z.string().trim().min(1, 'Degree is required'),
-  graduationYear: z.string().trim().min(4, 'Enter your graduation year'),
-  semester: z.string().trim().min(1, 'Semester is required'),
-  currentCgpa: z.number({ error: 'Enter your current CGPA' }).min(0, 'Cannot be negative').max(4, 'Cannot exceed 4.0'),
-  targetGpa: z.number({ error: 'Enter your target CGPA' }).min(0, 'Cannot be negative').max(4, 'Cannot exceed 4.0'),
-});
+// CGPA cap follows the user's grading scale (top GPC) so 4.0 / 5.0 / 10.0
+// universities can all enter their real numbers — same rule as ProfileSetup.
+const makeProfileFormSchema = (maxGpa: number) =>
+  z.object({
+    name: z.string().trim().min(1, 'Your name is required'),
+    registrationNumber: z.string().trim().optional(),
+    universityName: z.string().trim().min(1, 'University name is required'),
+    degree: z.string().trim().min(1, 'Degree is required'),
+    graduationYear: z.string().trim().min(4, 'Enter your graduation year'),
+    semester: z.string().trim().min(1, 'Semester is required'),
+    currentCgpa: z.number({ error: 'Enter your current CGPA' }).min(0, 'Cannot be negative').max(maxGpa, `Cannot exceed ${maxGpa}`),
+    targetGpa: z.number({ error: 'Enter your target CGPA' }).min(0, 'Cannot be negative').max(maxGpa, `Cannot exceed ${maxGpa}`),
+  });
 
-type ProfileFormValues = z.infer<typeof ProfileFormSchema>;
+type ProfileFormValues = z.infer<ReturnType<typeof makeProfileFormSchema>>;
 
 const ProfileSection = ({ userProfile, onSave }: { userProfile: UserProfile; onSave: (profile: UserProfile) => Promise<void> }) => {
+  const maxGpa = useMemo(() => {
+    const scale = userProfile.gradingScale;
+    return scale && scale.length > 0 ? Math.max(...scale.map((s) => s.gpc)) : 10;
+  }, [userProfile.gradingScale]);
+  const schema = useMemo(() => makeProfileFormSchema(maxGpa), [maxGpa]);
+
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<ProfileFormValues>({
-    resolver: zodResolver(ProfileFormSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       name: userProfile.name,
       registrationNumber: userProfile.registrationNumber ?? '',
@@ -280,12 +369,12 @@ const ProfileSection = ({ userProfile, onSave }: { userProfile: UserProfile; onS
         </div>
         <div>
           <label className="text-[10px] font-black uppercase tracking-widest mb-1 block">Current CGPA</label>
-          <Input type="number" step="0.01" min="0" max="4" {...register('currentCgpa', { valueAsNumber: true })} />
+          <Input type="number" step="0.01" min="0" max={maxGpa} {...register('currentCgpa', { valueAsNumber: true })} />
           <FieldError message={errors.currentCgpa?.message} />
         </div>
         <div>
           <label className="text-[10px] font-black uppercase tracking-widest mb-1 block">Target CGPA</label>
-          <Input type="number" step="0.01" min="0" max="4" {...register('targetGpa', { valueAsNumber: true })} />
+          <Input type="number" step="0.01" min="0" max={maxGpa} {...register('targetGpa', { valueAsNumber: true })} />
           <FieldError message={errors.targetGpa?.message} />
         </div>
       </div>
@@ -571,7 +660,7 @@ export const Settings = () => {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-ink uppercase">⚙️ Control Room</h2>
+          <h2 className="text-4xl md:text-5xl font-black tracking-tighter text-ink uppercase">Control Room</h2>
           <p className="text-lg text-ink/60 font-medium mt-1">Configure your account and academic parameters.</p>
         </div>
       </div>

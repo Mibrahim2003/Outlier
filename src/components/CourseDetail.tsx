@@ -186,6 +186,9 @@ const CourseDetailContent = ({ localCourse }: { localCourse: Course }) => {
   const [extractedHighestScore, setExtractedHighestScore] = useState<number | undefined>();
   const [extractedToppersCount, setExtractedToppersCount] = useState<number | undefined>();
 
+  // Delete-deliverable confirmation (styled modal, not native window.confirm)
+  const [deletingDeliverable, setDeletingDeliverable] = useState<CourseDeliverable | null>(null);
+
   const [initProjectTitle, setInitProjectTitle] = useState('');
   const [initProjectIdea, setInitProjectIdea] = useState('');
   const [initProjectDeadline, setInitProjectDeadline] = useState('');
@@ -449,13 +452,17 @@ const CourseDetailContent = ({ localCourse }: { localCourse: Course }) => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteDeliverable = (item: CourseDeliverable) => {
-    if (!window.confirm(`Delete "${item.title}"? Its scores and reminder go with it.`)) return;
+  const handleDeleteDeliverable = (item: CourseDeliverable) => setDeletingDeliverable(item);
+
+  const confirmDeleteDeliverable = () => {
+    const item = deletingDeliverable;
+    if (!item) return;
     // Reminders are real deadline rows — remove the linked one too.
     if (item.metadata?.deadlineId) {
       setDeadlines(deadlines.filter(dl => dl.id !== item.metadata!.deadlineId));
     }
     removeDeliverable(item.id);
+    setDeletingDeliverable(null);
   };
 
   // Auto-title quizzes from the quiz number, but never clobber a custom title.
@@ -1231,6 +1238,9 @@ const CourseDetailContent = ({ localCourse }: { localCourse: Course }) => {
                     placeholder="e.g., 72.5"
                     required
                   />
+                  <p className="text-[11px] font-bold opacity-60">
+                    Class average alone gives your gap to the mean. Switch to <span className="font-black">Bulk Paste</span> and paste the class scores to unlock your Z-score & percentile.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1283,6 +1293,33 @@ const CourseDetailContent = ({ localCourse }: { localCourse: Course }) => {
           onDelete={handleDeleteCourse}
           deliverableCount={courseDeliverables.length}
         />
+      )}
+
+      {/* Delete Deliverable Confirmation */}
+      {deletingDeliverable && (
+        <Modal open onClose={() => setDeletingDeliverable(null)}>
+          <ModalContent>
+            <ModalHeader onClose={() => setDeletingDeliverable(null)}>
+              <h3 className="text-2xl font-black uppercase tracking-tighter leading-none">
+                Delete {deletingDeliverable.title}?
+              </h3>
+            </ModalHeader>
+            <ModalBody>
+              <p className="text-sm font-bold">
+                Its recorded score{deletingDeliverable.metadata?.deadlineId ? ' and its reminder' : ''} will be
+                permanently deleted. This cannot be undone.
+              </p>
+            </ModalBody>
+            <ModalFooter>
+              <Button type="button" variant="outline" onClick={() => setDeletingDeliverable(null)}>
+                Keep
+              </Button>
+              <Button type="button" variant="danger" onClick={confirmDeleteDeliverable} className="flex items-center gap-2">
+                <Trash2 size={14} /> Yes, Delete
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
       )}
     </div>
   );

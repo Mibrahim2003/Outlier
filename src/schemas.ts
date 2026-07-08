@@ -44,7 +44,6 @@ export const TodoSchema = z.object({
 export const StatSchema = z.object({
   label: z.string(),
   value: z.string(),
-  color: z.string(),
 });
 
 export const UserProfileSchema = z.object({

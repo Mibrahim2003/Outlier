@@ -1,6 +1,9 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/cn';
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /* ─── Modal overlay + centering ────────────────────────────────── */
 interface ModalProps {
@@ -12,23 +15,61 @@ interface ModalProps {
 }
 
 export const Modal = ({ open, onClose, children, closeOnBackdrop = true }: ModalProps) => {
-  const handleEscape = useCallback(
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Escape to close + Tab/Shift+Tab kept inside the dialog (focus trap).
+  const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      const container = contentRef.current;
+      if (!container) return;
+      const focusables = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      if (focusables.length === 0) {
+        e.preventDefault();
+        container.focus();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (e.shiftKey) {
+        if (active === first || !container.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !container.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      }
     },
     [onClose]
   );
 
   useEffect(() => {
-    if (open) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
-    }
+    if (!open) return;
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
     return () => {
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, [open, handleEscape]);
+  }, [open, handleKeyDown]);
+
+  // Move focus into the dialog on open, restore it to the trigger on close.
+  useEffect(() => {
+    if (!open) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const container = contentRef.current;
+    const focusables = container?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+    (focusables && focusables.length > 0 ? focusables[0] : container)?.focus();
+    return () => previouslyFocused?.focus?.();
+  }, [open]);
 
   if (!open) return null;
 
@@ -45,7 +86,7 @@ export const Modal = ({ open, onClose, children, closeOnBackdrop = true }: Modal
       />
       {/* Content floats above backdrop. dvh, not vh: on mobile Safari vh
           ignores the browser chrome, so a 90vh modal clips behind the toolbar. */}
-      <div className="relative z-10 w-full max-w-2xl max-h-[90dvh] overflow-y-auto">
+      <div ref={contentRef} tabIndex={-1} className="relative z-10 w-full max-w-2xl max-h-[90dvh] overflow-y-auto outline-none">
         {children}
       </div>
     </div>

@@ -26,12 +26,14 @@ interface SidebarItemProps {
   icon: React.ElementType;
   label: string;
   active?: boolean;
+  onNavigate?: () => void;
   key?: string | number;
 }
 
-const SidebarItem = ({ to, icon: Icon, label, active }: SidebarItemProps) => (
-  <Link 
+const SidebarItem = ({ to, icon: Icon, label, active, onNavigate }: SidebarItemProps) => (
+  <Link
     to={to}
+    onClick={onNavigate}
     className={`flex items-center gap-4 p-4 transition-all active:scale-95 duration-75 ${
       active 
         ? `${cardVariants({ shadow: 'sm' })} bg-primary-container text-ink font-bold !border-b-4` 
@@ -48,6 +50,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const { userProfile } = useProfile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const closeSidebar = () => setIsSidebarOpen(false);
 
   const initials = (userProfile?.name ?? '')
     .split(/\s+/)
@@ -72,10 +75,10 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top Navigation */}
-      <nav className={`fixed top-0 w-full z-50 bg-background flex items-center justify-between px-6 h-20 ${cardVariants({ shadow: 'sm' })} !border-b-4 !border-t-0 !border-x-0 !rounded-none`}>
+      <nav className="fixed top-0 w-full z-50 bg-background flex items-center justify-between px-6 h-20 border-b-4 border-ink">
         <div className="flex items-center gap-8">
-          <button 
-            className="md:hidden p-2 border-2 border-ink neo-brutal-shadow bg-white"
+          <button
+            className="md:hidden p-2 border-3 border-ink neo-brutal-shadow bg-white"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           >
             {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
@@ -100,6 +103,15 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
       </nav>
 
       <div className="flex flex-1 pt-20">
+        {/* Mobile backdrop — tap anywhere off the drawer to dismiss it. Sits
+            under the drawer (z-40) and the top nav (z-50) but over content. */}
+        {isSidebarOpen && (
+          <div
+            className="fixed inset-0 top-20 z-30 bg-ink/40 md:hidden"
+            onClick={closeSidebar}
+            aria-hidden="true"
+          />
+        )}
         {/* Sidebar */}
         <aside className={`
           fixed md:sticky top-20 h-[calc(100vh-80px)] w-64 border-r-4 border-ink bg-background overflow-y-auto shrink-0 z-40 transition-transform duration-300
@@ -116,12 +128,13 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
           <nav className="flex-1 px-4 py-8 space-y-2">
             {navItems.map((item) => (
-              <SidebarItem 
-                key={item.to} 
+              <SidebarItem
+                key={item.to}
                 to={item.to}
                 icon={item.icon}
                 label={item.label}
-                active={location.pathname === item.to} 
+                active={location.pathname === item.to}
+                onNavigate={closeSidebar}
               />
             ))}
           </nav>
@@ -129,7 +142,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             <Button
               variant="tertiary" size="default"
               className="w-full flex items-center justify-center gap-2"
-              onClick={() => navigate('/courses?action=add')}
+              onClick={() => { closeSidebar(); navigate('/courses?action=add'); }}
             >
               <PlusCircle size={18} />
               <span>Add Course</span>

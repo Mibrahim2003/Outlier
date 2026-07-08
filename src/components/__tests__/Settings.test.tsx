@@ -148,18 +148,31 @@ describe('Settings — Academic Profile form', () => {
     expect(h.setUserProfileAsync).not.toHaveBeenCalled();
   });
 
-  it('rejects a CGPA above 4.0 with "Cannot exceed 4.0" and does not save', async () => {
+  it('rejects a CGPA above the grading-scale cap (default 10) and does not save', async () => {
     renderSettings();
     const section = sectionOf('Academic Profile');
 
-    fireEvent.change(within(section).getByDisplayValue('3.2'), { target: { value: '4.5' } });
-    // Submit the form directly: the input also carries a native max="4", whose
+    fireEvent.change(within(section).getByDisplayValue('3.2'), { target: { value: '11' } });
+    // Submit the form directly: the input also carries a native max, whose
     // constraint validation would otherwise intercept a submit-button click
     // before the zod resolver gets to render its message.
     fireEvent.submit(section.querySelector('form')!);
 
-    expect(await within(section).findByText('Cannot exceed 4.0')).toBeInTheDocument();
+    expect(await within(section).findByText('Cannot exceed 10')).toBeInTheDocument();
     expect(h.setUserProfileAsync).not.toHaveBeenCalled();
+  });
+
+  it('accepts a CGPA above 4.0 when no 4.0 scale is set (5.0/10.0 universities)', async () => {
+    renderSettings();
+    const section = sectionOf('Academic Profile');
+    const saveBtn = within(section).getByRole('button', { name: /save changes/i });
+
+    // PROFILE has no gradingScale, so the cap is 10 — a 4.5 CGPA is valid.
+    fireEvent.change(within(section).getByDisplayValue('3.2'), { target: { value: '4.5' } });
+    await waitFor(() => expect(saveBtn).toBeEnabled());
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => expect(h.setUserProfileAsync).toHaveBeenCalledTimes(1));
   });
 
   it('saves a valid edit exactly once with the full merged profile', async () => {

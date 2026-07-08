@@ -48,12 +48,12 @@ export const CourseList = () => {
   return (
     <div className="space-y-12 pb-20">
       {/* Header Banner — same visual grammar as the Dashboard welcome banner */}
-      <div className="relative border-[4px] border-ink bg-[#FFE8A3] shadow-[8px_8px_0px_#1A1A1A] p-8 md:p-12 overflow-hidden">
+      <div className="relative border-4 border-ink bg-primary-container shadow-[8px_8px_0px_#1A1A1A] p-8 md:p-12 overflow-hidden">
         <div className="flex items-center justify-between gap-8">
           <div className="space-y-5 min-w-0">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-tight flex flex-wrap items-center gap-x-3 gap-y-4">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-ink tracking-tighter leading-tight flex flex-wrap items-center gap-x-3 gap-y-4">
               <span>My</span>
-              <span className="inline-block bg-white px-4 py-1 border-[4px] border-ink shadow-[4px_4px_0px_#1A1A1A] font-black -rotate-2 uppercase">
+              <span className="inline-block bg-white px-4 py-1 border-4 border-ink shadow-[4px_4px_0px_#1A1A1A] font-black -rotate-2 uppercase">
                 Courses
               </span>
             </h1>
@@ -61,12 +61,12 @@ export const CourseList = () => {
             {courses.length > 0 && (
               <p className="text-base md:text-lg font-bold text-ink flex flex-wrap items-center gap-x-2 gap-y-3">
                 <span>You're carrying</span>
-                <span className="inline-block bg-[#68D391] px-3 py-1 border-[3px] border-ink shadow-[3px_3px_0px_#1A1A1A] font-black rotate-1">
+                <span className="inline-block bg-tertiary text-white px-3 py-1 border-3 border-ink shadow-[3px_3px_0px_#1A1A1A] font-black rotate-1">
                   <span className="text-white px-1.5 py-0.5 bg-ink mr-2">{courses.length}</span>
                   {courses.length === 1 ? 'course' : 'courses'}
                 </span>
                 <span>worth</span>
-                <span className="inline-block bg-[#A2D9F9] px-3 py-1 border-[3px] border-ink shadow-[3px_3px_0px_#1A1A1A] font-black -rotate-1">
+                <span className="inline-block bg-[#A2D9F9] px-3 py-1 border-3 border-ink shadow-[3px_3px_0px_#1A1A1A] font-black -rotate-1">
                   {totalCredits} credit hours
                 </span>
                 <span>this semester.</span>

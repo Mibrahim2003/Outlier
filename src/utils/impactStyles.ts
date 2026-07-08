@@ -12,7 +12,7 @@ export const getImpactLevelForCredits = (credits: number): ImpactLevel => {
 };
 
 export const getImpactStyles = (impactLevel: ImpactLevel = 'standard'): string => {
-  if (impactLevel === 'heavy') return 'bg-secondary-container text-white border-on-background';
+  if (impactLevel === 'heavy') return 'bg-secondary text-white border-on-background';
   if (impactLevel === 'standard') return 'bg-primary-container text-on-background border-on-background';
   return 'bg-white text-on-background border-on-background';
 };

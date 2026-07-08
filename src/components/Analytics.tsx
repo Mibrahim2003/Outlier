@@ -233,13 +233,13 @@ export const Analytics = () => {
   return (
     <div className="space-y-12">
       {/* ── Standing banner — same visual grammar as the Dashboard/Courses welcome banners: hard border, hard shadow, rotated word-chip, Zee on ambassador duty ── */}
-      <div className="relative border-[4px] border-ink bg-[#FFE8A3] shadow-[8px_8px_0px_#1A1A1A] p-8 md:p-12 overflow-hidden">
+      <div className="relative border-4 border-ink bg-primary-container shadow-[8px_8px_0px_#1A1A1A] p-8 md:p-12 overflow-hidden">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
           <div className="space-y-4 min-w-0 flex-1">
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-tight flex flex-wrap items-center gap-x-3 gap-y-2">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-ink tracking-tighter leading-tight flex flex-wrap items-center gap-x-3 gap-y-2">
                 <span>Where you</span>
-                <span className="inline-block bg-white px-4 py-1 border-[4px] border-ink shadow-[4px_4px_0px_#1A1A1A] font-black -rotate-2 uppercase">
+                <span className="inline-block bg-white px-4 py-1 border-4 border-ink shadow-[4px_4px_0px_#1A1A1A] font-black -rotate-2 uppercase">
                   Stand
                 </span>
               </h1>
@@ -252,7 +252,7 @@ export const Analytics = () => {
             {semesterAvgPercentile !== null ? (
               <p className="text-base md:text-lg font-bold text-ink flex flex-wrap items-center gap-x-2 gap-y-3">
                 <span>You're averaging</span>
-                <span className="inline-block bg-tertiary text-white px-3 py-1 border-[3px] border-ink shadow-[3px_3px_0px_#1A1A1A] font-black rotate-1">
+                <span className="inline-block bg-tertiary text-white px-3 py-1 border-3 border-ink shadow-[3px_3px_0px_#1A1A1A] font-black rotate-1">
                   Top {topPercentOf(semesterAvgPercentile)}%
                 </span>
                 <span>of class, averaged across {coursesWithCohortData.length} course{coursesWithCohortData.length === 1 ? '' : 's'} with class data.</span>
@@ -366,7 +366,7 @@ export const Analytics = () => {
                 <Card key={course.id} shadow="md" className="flex flex-col">
                   <div className={`p-5 border-b-3 border-ink flex justify-between items-start gap-4 ${getThemeBgClass(course.themeColor)}`}>
                     <div>
-                      <h4 className="text-2xl font-black tracking-tighter">{course.code}</h4>
+                      <h4 className="text-2xl font-black tracking-tighter uppercase">{course.code}</h4>
                       <p className="text-[10px] uppercase font-bold tracking-widest text-ink/60">{course.name}</p>
                     </div>
                     <div className="text-right shrink-0">
@@ -646,6 +646,8 @@ export const Analytics = () => {
       )}
 
       {/* ── Advanced Analytics (owner-approved metrics only) ────── */}
+      {/* Hidden with no courses — every panel inside needs course data to say anything. */}
+      {courses.length > 0 && (
       <div>
         <Button
           onClick={() => setShowAdvanced(!showAdvanced)}
@@ -691,7 +693,7 @@ export const Analytics = () => {
                   {gradeSensitivity.map((item: any) => (
                     <div key={item.courseId}>
                       <div className="flex items-center gap-3 mb-3">
-                        <span className="font-black text-lg">{item.code}</span>
+                        <span className="font-black text-lg uppercase">{item.code}</span>
                         <span className="text-xs text-ink/50 font-bold">{item.name}</span>
                         <span className="ml-auto text-[10px] font-black uppercase bg-background border border-ink px-2 py-0.5">
                           {item.remainingWeight.toFixed(0)}% remaining
@@ -714,6 +716,7 @@ export const Analytics = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Optimize Schedule Approval Modal */}
       <Modal open={showOptimizeModal} onClose={() => setShowOptimizeModal(false)}>

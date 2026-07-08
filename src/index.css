@@ -1,5 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+/* Fonts are loaded via <link> in index.html (faster than @import, which the
+   browser can't discover until the CSS itself has downloaded). */
 @import "tailwindcss";
 
 @theme {
@@ -15,7 +15,6 @@
   --color-error: #b02500;
   
   --color-on-background: #1A1A1A;
-  --color-secondary-container: #A8275A;
   --font-headline: "Space Grotesk", sans-serif;
   --font-body: "Space Grotesk", sans-serif;
   --font-luxury: "Playfair Display", Georgia, serif;
@@ -39,24 +38,8 @@
   box-shadow: 6px 6px 0px #1A1A1A;
 }
 
-@utility neo-brutal-shadow-pink {
-  box-shadow: 3px 3px 0px #a8275a;
-}
-
-@utility neo-brutal-card {
-  @apply border-3 border-ink bg-white neo-brutal-shadow;
-}
-
-@utility neo-brutal-button {
-  @apply border-3 border-ink px-5 py-1.5 font-black uppercase tracking-tighter shadow-[3px_3px_0px_#1A1A1A] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none;
-}
-
 @utility neo-shadow-aggressive {
   box-shadow: 12px 12px 0px 0px var(--color-on-background);
-}
-
-@utility neo-shadow-sm {
-  box-shadow: 6px 6px 0px 0px var(--color-on-background);
 }
 
 @utility bg-hatching-past {
@@ -72,10 +55,6 @@
 @utility industrial-grid {
   background-image: linear-gradient(#e5e2e1 1px, transparent 1px), linear-gradient(90deg, #e5e2e1 1px, transparent 1px);
   background-size: 50px 50px;
-}
-
-@utility text-vertical {
-  writing-mode: vertical-rl;
 }
 
 @keyframes hazard-scroll {
@@ -113,4 +92,12 @@
 
 .marquee-pause:hover .animate-marquee {
   animation-play-state: paused;
+}
+
+/* Respect the OS "reduce motion" setting for the app's looping CSS animations. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  .hazard-stripes {
+    animation: none !important;
+  }
 }

@@ -3,12 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Outlier // Dashboard</title>
+
+    <!-- SEO -->
+    <title>Outlier — See your real class standing</title>
+    <meta name="description" content="Outlier turns your raw university marks into your exact class standing — class average, Z-score, gap to the topper — predicts your GPA, and shows the weak topics to study next." />
+    <meta name="theme-color" content="#FFF6E3" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Open Graph / social preview. og:image is root-relative; some scrapers
+         (Facebook) want an absolute URL — swap to https://yourdomain/og-image.png at deploy. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Outlier" />
+    <meta property="og:title" content="Outlier — See your real class standing" />
+    <meta property="og:description" content="Turn your raw marks into your exact class standing, a predicted GPA, and a plan to climb the curve." />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Outlier — see your real class standing. Class average, Z-score, gap to the topper, predicted GPA." />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Outlier — See your real class standing" />
+    <meta name="twitter:description" content="Turn your raw marks into your exact class standing, a predicted GPA, and a plan to climb the curve." />
+    <meta name="twitter:image" content="/og-image.png" />
+
+    <!-- Fonts: loaded here (not via CSS @import) so the browser fetches them in parallel with the app -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
   </head>
   <body>
     <div id="root"></div>

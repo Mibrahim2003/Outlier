@@ -34,7 +34,7 @@ const PhysicsAsset = ({ children, className, index, registerAsset }: { children:
   const y = useMotionValue(0);
   const isDragging = React.useRef(false);
   const ref = React.useRef<HTMLDivElement>(null);
-  
+
   const vx = React.useRef(0);
   const vy = React.useRef(0);
   const baseX = React.useRef(0);
@@ -98,7 +98,7 @@ const AssetCluster = () => {
          for (let j = i + 1; j < assets.length; j++) {
             const a1 = assets[i];
             const a2 = assets[j];
-            
+
             const cx1 = a1.baseX.current + a1.x.get();
             const cy1 = a1.baseY.current + a1.y.get();
             const cx2 = a2.baseX.current + a2.x.get();
@@ -107,13 +107,13 @@ const AssetCluster = () => {
             const dx = cx2 - cx1;
             const dy = cy2 - cy1;
             const distSq = dx*dx + dy*dy;
-            const radius = 25; 
+            const radius = 25;
             const minDistSq = (radius * 2) * (radius * 2);
 
             if (distSq < minDistSq && distSq > 0.1) {
                const dist = Math.sqrt(distSq);
                const overlap = (radius * 2) - dist;
-               
+
                const nx = dx / dist;
                const ny = dy / dist;
 
@@ -152,13 +152,13 @@ const AssetCluster = () => {
 
          const currentX = asset.x.get();
          const currentY = asset.y.get();
-         
+
          // Friction
          asset.vx.current *= 0.90;
          asset.vy.current *= 0.90;
 
          // Home Gravity (pull towards 0, 0 offset)
-         const k = 0.001; 
+         const k = 0.001;
          asset.vx.current -= currentX * k;
          asset.vy.current -= currentY * k;
 
@@ -214,6 +214,16 @@ export const Dashboard = () => {
   const todayStr = toLocalISODate();
   const [insight, setInsight] = useLocalStorage<string | null>(`daily-insight-${todayStr}`, null);
 
+  // A `daily-insight-<date>` key is written once per day and never reused; drop
+  // every stale one so localStorage doesn't accrete a key per day forever.
+  React.useEffect(() => {
+    const keep = `daily-insight-${todayStr}`;
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('daily-insight-') && k !== keep) localStorage.removeItem(k);
+    }
+  }, [todayStr]);
+
   const insightMutation = useMutation({
     mutationFn: () => getDashboardInsight(courses, deadlines),
     onSuccess: (data) => {
@@ -266,14 +276,14 @@ export const Dashboard = () => {
   // Deadlines counts the same next-7-days window as the banner above it,
   // so the two numbers can never contradict each other.
   const dynamicStats: (Stat & { to: string })[] = [
-    { label: 'Pending Tasks', value: uncompletedTodayTodos.length.toString(), color: 'bg-[#4299E1]', to: '/calendar' },
-    { label: 'Deadlines', value: upcomingDeadlines.length.toString(), color: 'bg-[#FF69B4]', to: '/calendar' },
+    { label: 'Pending Tasks', value: uncompletedTodayTodos.length.toString(), to: '/calendar' },
+    { label: 'Deadlines', value: upcomingDeadlines.length.toString(), to: '/calendar' },
   ];
 
   return (
     <div className="space-y-12">
       {/* Welcome Banner */}
-      <div className="relative border-[4px] border-ink bg-[#FFE8A3] shadow-[8px_8px_0px_#1A1A1A] flex flex-col overflow-hidden mb-12 p-8 md:p-12 min-h-[200px] justify-center cursor-default">
+      <div className="relative border-4 border-ink bg-primary-container shadow-[8px_8px_0px_#1A1A1A] flex flex-col overflow-hidden mb-12 p-8 md:p-12 min-h-[200px] justify-center cursor-default">
         
         {/* Scattered Background Assets (Tossable Physics) */}
         <div className="absolute inset-0 z-0 pointer-events-auto">
@@ -282,16 +292,16 @@ export const Dashboard = () => {
 
         {/* Foreground Content */}
         <div className="z-10 relative space-y-4 max-w-4xl pointer-events-none">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-ink tracking-tight leading-tight pointer-events-auto flex flex-wrap items-center gap-x-2 gap-y-4">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-ink tracking-tighter leading-tight pointer-events-auto flex flex-wrap items-center gap-x-2 gap-y-4">
             <span>{greeting},</span>
-            <span className="inline-block bg-white px-4 py-1 border-[4px] border-ink shadow-[4px_4px_0px_#1A1A1A] font-black -rotate-2">
+            <span className="inline-block bg-white px-4 py-1 border-4 border-ink shadow-[4px_4px_0px_#1A1A1A] font-black -rotate-2">
               {userName}
             </span>
           </h1>
           
           <p className="text-base md:text-lg font-bold text-ink pointer-events-auto flex flex-wrap items-center gap-x-2 mt-4">
             <span>You have</span>
-            <span className="inline-block bg-[#68D391] px-3 py-1 border-[3px] border-ink shadow-[3px_3px_0px_#1A1A1A] font-black rotate-1">
+            <span className="inline-block bg-tertiary text-white px-3 py-1 border-3 border-ink shadow-[3px_3px_0px_#1A1A1A] font-black rotate-1">
               <span className="text-white px-1.5 py-0.5 bg-ink mr-2">{upcomingDeadlines.length}</span>
               upcoming {upcomingDeadlines.length === 1 ? 'deadline' : 'deadlines'}
             </span>
@@ -309,7 +319,7 @@ export const Dashboard = () => {
               <Link
                 key={stat.label}
                 to={stat.to}
-                className="group relative block border-[4px] border-ink bg-[#FFF5E1] shadow-[8px_8px_0px_#1A1A1A] hover:shadow-[0px_0px_0px_#1A1A1A] hover:translate-x-[8px] hover:translate-y-[8px] transition-all duration-150 ease-out cursor-pointer p-[6px]"
+                className="group relative block border-4 border-ink bg-background shadow-[8px_8px_0px_#1A1A1A] hover:shadow-[0px_0px_0px_#1A1A1A] hover:translate-x-[8px] hover:translate-y-[8px] transition-all duration-150 ease-out cursor-pointer p-[6px]"
               >
                 <div className="border-[3px] border-ink bg-white flex flex-col justify-center items-center py-6 h-full">
                   <p className="text-[12px] md:text-sm font-black uppercase tracking-widest text-ink mb-2">
@@ -371,7 +381,7 @@ export const Dashboard = () => {
                 {loading ? (
                   <div className="flex items-center gap-3 text-ink/60 font-medium w-full justify-center">
                     <Loader2 className="animate-spin" />
-                    <span>Connecting to Gemini 2.5 Flash...</span>
+                    <span>Zee is analyzing your semester…</span>
                   </div>
                 ) : insight ? (
                   <div className="w-full">
@@ -414,7 +424,7 @@ export const Dashboard = () => {
                 <Plus size={18} />
               </Button>
             </div>
-            <div className="p-6 space-y-3 bg-[#FFF6E3]">
+            <div className="p-6 space-y-3 bg-background">
               {todayTodos.length === 0 ? (
                 <div className="text-center p-6 font-bold">
                   <ZeeMascot variant="fuel-up" size={96} className="mx-auto mb-3" />
@@ -446,7 +456,7 @@ export const Dashboard = () => {
                       onClick={() => toggleTodo(todo.id)}
                       className="flex items-center gap-3 p-3 bg-white/50 border-2 border-ink/15 cursor-pointer hover:border-ink/30 transition-all"
                     >
-                      <div className="w-5 h-5 border-3 border-ink/30 flex-shrink-0 flex items-center justify-center bg-[#FFDE59]/50">
+                      <div className="w-5 h-5 border-3 border-ink/30 flex-shrink-0 flex items-center justify-center bg-primary-container/50">
                         <span className="text-[10px] font-black">✓</span>
                       </div>
                       <span className="font-bold text-sm flex-1 line-through opacity-30">{todo.text}</span>
@@ -459,7 +469,7 @@ export const Dashboard = () => {
                     </span>
                     <div className="w-24 h-2 bg-white border-2 border-ink">
                       <div 
-                        className="h-full bg-[#FFDE59] transition-all" 
+                        className="h-full bg-primary-container transition-all" 
                         style={{ width: `${todayTodos.length > 0 ? (completedTodayTodos.length / todayTodos.length) * 100 : 0}%` }}
                       />
                     </div>

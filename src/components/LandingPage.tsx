@@ -975,14 +975,6 @@ export const LandingPage = () => {
               For students who refuse the average.
             </p>
           </div>
-          <a
-            className="text-sm font-bold uppercase tracking-widest text-ink transition-colors hover:text-secondary"
-            href="https://github.com/Mibrahim2003/My-dashboard"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            GitHub
-          </a>
           <p className="text-xs font-bold uppercase tracking-tighter text-ink/40">
             © 2026 Outlier — every curve has a right tail.
           </p>

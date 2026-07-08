@@ -17,6 +17,7 @@ import {
 } from '../utils/dateUtils';
 import { SemesterInfo, Deadline, Todo } from '../types';
 import { exportToICS } from '../utils/icsExport';
+import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Card, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from './ui';
 
@@ -130,7 +131,18 @@ export const AcademicCalendar = () => {
 
   const grid = useMemo(() => getCalendarGrid(viewYear, viewMonth), [viewYear, viewMonth]);
 
+  // The proxy rejects base64 payloads over ~10M chars (~7.8 MB raw); cap the raw
+  // file below that so an oversized upload fails here with a clear message
+  // instead of downstream with a generic one.
+  const MAX_FILE_BYTES = 7 * 1024 * 1024;
+
   const handleFile = async (file: File) => {
+    if (file.size > MAX_FILE_BYTES) {
+      toast.error('File too large', {
+        description: `“${file.name}” is ${(file.size / 1024 / 1024).toFixed(1)} MB. Max is 7 MB — compress it or upload a smaller screenshot.`,
+      });
+      return;
+    }
     const semesters = await parseCalendarImage(file);
     if (semesters && semesters.length > 0) {
       setAcademicCalendar({
@@ -269,15 +281,15 @@ export const AcademicCalendar = () => {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div
-          className={`bg-white border-4 ${dragOver ? 'border-[#FFDE59]' : 'border-[#1A1A1A]'} border-dashed shadow-[8px_8px_0px_#1A1A1A] p-16 max-w-xl w-full text-center space-y-8 transition-all ${dragOver ? 'translate-x-[-3px] translate-y-[-3px] shadow-[10px_10px_0px_#FFDE59]' : ''}`}
+          className={`bg-white border-4 ${dragOver ? 'border-primary-container' : 'border-ink'} border-dashed shadow-[8px_8px_0px_#1A1A1A] p-16 max-w-xl w-full text-center space-y-8 transition-all ${dragOver ? 'translate-x-[-3px] translate-y-[-3px] shadow-[10px_10px_0px_#FFDE59]' : ''}`}
           onDragOver={e => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
         >
-          <div className="inline-block bg-[#FFDE59] border-4 border-[#1A1A1A] p-5 shadow-[4px_4px_0px_#1A1A1A]">
-            <Upload size={56} strokeWidth={3} className="text-[#1A1A1A]" />
+          <div className="inline-block bg-primary-container border-4 border-ink p-5 shadow-[4px_4px_0px_#1A1A1A]">
+            <Upload size={56} strokeWidth={3} className="text-ink" />
           </div>
-          <h2 className="text-4xl font-black tracking-[-0.03em] uppercase leading-none">
+          <h2 className="text-4xl font-black tracking-tighter uppercase leading-none">
             Upload Your<br />Academic Calendar
           </h2>
           <p className="text-lg font-bold opacity-60 leading-relaxed max-w-sm mx-auto">
@@ -286,8 +298,8 @@ export const AcademicCalendar = () => {
           <Button
             onClick={() => fileInputRef.current?.click()}
             disabled={parsing}
-            variant="secondary" size="lg"
-            className="px-10 py-5 mx-auto flex items-center gap-3 bg-[#FFDE59]"
+            variant="primary" size="lg"
+            className="px-10 py-5 mx-auto flex items-center gap-3"
           >
             {parsing ? (
               <>
@@ -309,7 +321,7 @@ export const AcademicCalendar = () => {
             onChange={onFileSelect}
           />
           <p className="text-[11px] font-black uppercase tracking-[0.15em] opacity-30">
-            PNG • JPG • PDF Screenshots • Max 10 MB
+            PNG • JPG • PDF Screenshots • Max 7 MB
           </p>
           <div className="pt-4 border-t-3 border-ink/10 flex flex-col items-center">
             <Button
@@ -321,7 +333,7 @@ export const AcademicCalendar = () => {
             </Button>
           </div>
           {parseError && (
-            <div className="bg-[#A8275A] text-white border-4 border-[#1A1A1A] p-4 flex items-center gap-3 font-black text-sm shadow-[4px_4px_0px_#1A1A1A]">
+            <div className="bg-secondary text-white border-4 border-ink p-4 flex items-center gap-3 font-black text-sm shadow-[4px_4px_0px_#1A1A1A]">
               <AlertCircle size={20} strokeWidth={3} />
               {parseError}
             </div>
@@ -331,13 +343,13 @@ export const AcademicCalendar = () => {
         {/* Manual Setup Modal */}
         <Modal open={isManualSetupOpen} onClose={() => setIsManualSetupOpen(false)}>
           <ModalContent>
-            <ModalHeader onClose={() => setIsManualSetupOpen(false)} className="bg-[#1A1A1A] text-white">
+            <ModalHeader onClose={() => setIsManualSetupOpen(false)} className="bg-ink text-white">
               <h2 className="text-2xl font-black uppercase tracking-widest">Manual Setup</h2>
             </ModalHeader>
             <form onSubmit={handleManualSubmit}>
               <ModalBody className="space-y-6">
                 {manualError && (
-                  <div className="bg-[#A8275A] text-white border-4 border-[#1A1A1A] p-4 flex items-center gap-3 font-black text-sm shadow-[4px_4px_0px_#1A1A1A]">
+                  <div className="bg-secondary text-white border-4 border-ink p-4 flex items-center gap-3 font-black text-sm shadow-[4px_4px_0px_#1A1A1A]">
                     <AlertCircle size={20} strokeWidth={3} />
                     {manualError}
                   </div>
@@ -348,7 +360,7 @@ export const AcademicCalendar = () => {
                     required
                     value={manualName}
                     onChange={e => setManualName(e.target.value)}
-                    className="w-full bg-[#FFF6E3] border-3 border-[#1A1A1A] p-3 font-bold focus:outline-none focus:ring-4 focus:ring-[#A8275A]/30" 
+                    className="w-full bg-background border-3 border-ink p-3 font-bold focus:outline-none focus:ring-4 focus:ring-secondary/30" 
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -359,7 +371,7 @@ export const AcademicCalendar = () => {
                       type="date"
                       value={manualStart}
                       onChange={e => setManualStart(e.target.value)}
-                      className="w-full bg-[#FFF6E3] border-3 border-[#1A1A1A] p-3 font-bold focus:outline-none focus:ring-4 focus:ring-[#A8275A]/30" 
+                      className="w-full bg-background border-3 border-ink p-3 font-bold focus:outline-none focus:ring-4 focus:ring-secondary/30" 
                     />
                   </div>
                   <div className="space-y-2">
@@ -369,7 +381,7 @@ export const AcademicCalendar = () => {
                       type="date"
                       value={manualEnd}
                       onChange={e => setManualEnd(e.target.value)}
-                      className="w-full bg-[#FFF6E3] border-3 border-[#1A1A1A] p-3 font-bold focus:outline-none focus:ring-4 focus:ring-[#A8275A]/30" 
+                      className="w-full bg-background border-3 border-ink p-3 font-bold focus:outline-none focus:ring-4 focus:ring-secondary/30" 
                     />
                   </div>
                 </div>
@@ -401,8 +413,8 @@ export const AcademicCalendar = () => {
                 checked={showExams} 
                 onChange={(e) => setShowExams(e.target.checked)} 
               />
-              <div className={`w-12 h-6 border-3 border-[#1A1A1A] transition-colors ${showExams ? 'bg-[#FFDE59]' : 'bg-[#1A1A1A]/10'}`}></div>
-              <div className={`absolute top-0 w-6 h-6 border-3 border-[#1A1A1A] bg-white transition-transform ${showExams ? 'translate-x-6' : 'translate-x-0'}`}></div>
+              <div className={`w-12 h-6 border-3 border-ink transition-colors ${showExams ? 'bg-primary-container' : 'bg-ink/10'}`}></div>
+              <div className={`absolute top-0 w-6 h-6 border-3 border-ink bg-white transition-transform ${showExams ? 'translate-x-6' : 'translate-x-0'}`}></div>
             </div>
             <span className="font-black text-xs uppercase tracking-widest">Show Exams</span>
           </label>
@@ -414,8 +426,8 @@ export const AcademicCalendar = () => {
                 checked={hideNormalPriority} 
                 onChange={(e) => setHideNormalPriority(e.target.checked)} 
               />
-              <div className={`w-12 h-6 border-3 border-[#1A1A1A] transition-colors ${hideNormalPriority ? 'bg-[#A8275A]' : 'bg-[#1A1A1A]/10'}`}></div>
-              <div className={`absolute top-0 w-6 h-6 border-3 border-[#1A1A1A] bg-white transition-transform ${hideNormalPriority ? 'translate-x-6' : 'translate-x-0'}`}></div>
+              <div className={`w-12 h-6 border-3 border-ink transition-colors ${hideNormalPriority ? 'bg-secondary' : 'bg-ink/10'}`}></div>
+              <div className={`absolute top-0 w-6 h-6 border-3 border-ink bg-white transition-transform ${hideNormalPriority ? 'translate-x-6' : 'translate-x-0'}`}></div>
             </div>
             <span className="font-black text-xs uppercase tracking-widest">Hide Normal Priority</span>
           </label>
@@ -444,24 +456,24 @@ export const AcademicCalendar = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h1 className="text-5xl md:text-6xl font-black tracking-[-0.04em] uppercase leading-none">
+          <h1 className="text-5xl md:text-6xl font-black tracking-tighter uppercase leading-none">
             {activeSemester?.name || monthLabel}
           </h1>
           {activeSemester && (
             <div className="flex items-center gap-3 mt-3">
-              <span className="bg-[#1A1A1A] text-white px-3 py-1 font-black text-xs uppercase tracking-[0.1em]">
+              <span className="bg-ink text-white px-3 py-1 font-black text-xs uppercase tracking-[0.1em]">
                 {formatDateShort(new Date(activeSemester.startDate))} — {formatDateShort(new Date(activeSemester.endDate))}
               </span>
             </div>
           )}
         </div>
         <div className="flex items-center gap-4">
-          <h2 className="text-3xl font-black tracking-[-0.04em] uppercase text-ink hidden md:block mr-2">
+          <h2 className="text-3xl font-black tracking-tighter uppercase text-ink hidden md:block mr-2">
             {monthLabel}
           </h2>
           <Button
             onClick={goToday}
-            variant="secondary" size="sm" className="bg-[#FFDE59]"
+            variant="primary" size="sm"
           >
             Today
           </Button>
@@ -487,12 +499,12 @@ export const AcademicCalendar = () => {
         <div className="lg:col-span-8">
           <Card shadow="md" className="overflow-hidden p-0">
             {/* Day headers */}
-            <div className="grid grid-cols-8 border-b-4 border-[#1A1A1A]">
-              <div className="p-3 text-center border-r border-ink/15 bg-[#1A1A1A] text-[#FFDE59]">
+            <div className="grid grid-cols-8 border-b-4 border-ink">
+              <div className="p-3 text-center border-r border-ink/15 bg-ink text-primary-container">
                 <span className="text-xs font-black uppercase tracking-[0.15em]">WEEK</span>
               </div>
               {DAY_LABELS.map(day => (
-                <div key={day} className="p-3 text-center border-r border-ink/15 last:border-r-0 bg-[#FFF6E3]">
+                <div key={day} className="p-3 text-center border-r border-ink/15 last:border-r-0 bg-background">
                   <span className="text-xs font-black uppercase tracking-[0.1em]">{day}</span>
                 </div>
               ))}
@@ -505,17 +517,17 @@ export const AcademicCalendar = () => {
               const isCurrentWeek = week.some(d => d && isSameDay(d, today));
 
               return (
-                <div key={wi} className={`grid grid-cols-8 border-b border-ink/15 last:border-b-0 ${isCurrentWeek ? 'bg-[#FFDE59]/25' : ''}`}>
+                <div key={wi} className={`grid grid-cols-8 border-b border-ink/15 last:border-b-0 ${isCurrentWeek ? 'bg-primary-container/25' : ''}`}>
                   {/* Week number column */}
                   <div className={`text-center border-r border-ink/15 flex items-center justify-center min-h-[90px] ${
                     weekNum !== null
                       ? isCurrentWeek
-                        ? 'bg-[#FFDE59]'
-                        : 'bg-[#1A1A1A]/5'
-                      : 'bg-[#1A1A1A]/3'
+                        ? 'bg-primary-container'
+                        : 'bg-ink/5'
+                      : 'bg-ink/3'
                   }`}>
                     {weekNum !== null ? (
-                      <span className={`text-lg font-black ${isCurrentWeek ? 'text-[#1A1A1A]' : 'opacity-50'}`}>
+                      <span className={`text-lg font-black ${isCurrentWeek ? 'text-ink' : 'opacity-50'}`}>
                         {weekNum}
                       </span>
                     ) : (
@@ -548,29 +560,29 @@ export const AcademicCalendar = () => {
                         onClick={() => setSelectedDate(date)}
                         className={`flex flex-col items-center justify-between pb-1 pt-3 border-r border-ink/15 last:border-r-0 min-h-[90px] cursor-pointer transition-all relative group
                           ${isPast ? 'bg-hatching-past' : !isInSemester && !breakName && !isExamDay ? 'bg-[#F5F0E3]/50' : 'bg-white'}
-                          ${isToday && !isSelected ? 'bg-[#FFDE59]/10' : ''}
-                          ${isSelected ? '!z-20 bg-[#FFDE59] shadow-[0_0_0_3px_#1A1A1A]' : 'hover:bg-[#FFDE59]/20 hover:z-10 hover:shadow-[0_0_0_3px_#1A1A1A]'}
+                          ${isToday && !isSelected ? 'bg-primary-container/10' : ''}
+                          ${isSelected ? '!z-20 bg-primary-container shadow-[0_0_0_3px_#1A1A1A]' : 'hover:bg-primary-container/20 hover:z-10 hover:shadow-[0_0_0_3px_#1A1A1A]'}
                           ${breakName && !isSelected && !isPast ? 'bg-ink/5' : ''}
-                          ${isExamDay && !breakName && !isSelected && !isPast ? 'bg-[#A8275A]/5' : ''}
+                          ${isExamDay && !breakName && !isSelected && !isPast ? 'bg-secondary/5' : ''}
                         `}
                       >
                         {/* + Icon on Hover/Selected */}
                         <div className={`absolute top-0 right-0 p-1 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
-                          <div className="bg-white border-2 border-[#1A1A1A] w-5 h-5 flex items-center justify-center">
-                            <Plus size={14} strokeWidth={4} className="text-[#1A1A1A]" />
+                          <div className="bg-white border-2 border-ink w-5 h-5 flex items-center justify-center">
+                            <Plus size={14} strokeWidth={4} className="text-ink" />
                           </div>
                         </div>
 
                         {/* Centered Date Number */}
                         <div className="flex-1 flex items-center justify-center w-full">
                           {isToday ? (
-                            <div className="w-9 h-9 rounded-full bg-ink text-[#FFDE59] flex items-center justify-center shadow-[2px_2px_0px_#A8275A] font-luxury font-extrabold text-base">
+                            <div className="w-9 h-9 rounded-full bg-ink text-primary-container flex items-center justify-center shadow-[2px_2px_0px_#A8275A] font-luxury font-extrabold text-base">
                               {date.getDate()}
                             </div>
                           ) : (
                             <span className={`font-luxury text-3xl font-extrabold tracking-tight ${
                               isExamDay 
-                                ? 'text-[#A8275A]' 
+                                ? 'text-secondary' 
                                 : !isInSemester && !breakName && !isExamDay
                                   ? 'text-ink/45'
                                   : 'text-ink'
@@ -587,7 +599,7 @@ export const AcademicCalendar = () => {
                           )}
                           
                           {isExamDay && !breakName && (
-                            <div title="Exam Period" className="w-full h-[5px] bg-[#A8275A]" />
+                            <div title="Exam Period" className="w-full h-[5px] bg-secondary" />
                           )}
 
                           {dayDeadlines.slice(0, 2).map(dl => (
@@ -595,8 +607,8 @@ export const AcademicCalendar = () => {
                               key={dl.id}
                               title={`[${dl.course}] ${dl.title}`}
                               className={`w-full h-[5px] ${
-                                dl.priority === 'urgent' ? 'bg-[#A8275A]' :
-                                dl.priority === 'moderate' ? 'bg-[#FF8A00]' : 'bg-[#006761]'
+                                dl.priority === 'urgent' ? 'bg-secondary' :
+                                dl.priority === 'moderate' ? 'bg-primary-container' : 'bg-tertiary'
                               }`}
                             />
                           ))}
@@ -605,7 +617,7 @@ export const AcademicCalendar = () => {
                             <div
                               key={todo.id}
                               title={todo.text}
-                              className="w-full h-[5px] bg-[#3182CE]"
+                              className="w-full h-[5px] bg-ink"
                             />
                           ))}
                           
@@ -626,19 +638,19 @@ export const AcademicCalendar = () => {
         <div className="lg:col-span-4 flex flex-col sticky top-28">
           <Card shadow="md" className="flex-1 flex flex-col min-h-[400px] overflow-hidden p-0">
             {/* Sidebar Header */}
-            <div className="bg-[#1A1A1A] text-white p-6 border-b-4 border-[#1A1A1A]">
+            <div className="bg-ink text-white p-6 border-b-4 border-ink">
               {selectedDate ? (
                 <>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FFDE59]">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-container">
                     {selectedDate.toLocaleDateString('en-US', { weekday: 'long' })}
                   </p>
-                  <h3 className="text-4xl font-black tracking-[-0.04em] mt-1 leading-none">
+                  <h3 className="text-4xl font-black tracking-tighter mt-1 leading-none">
                     {formatDateShort(selectedDate)}
                   </h3>
                   {(() => {
                     const wk = getWeekForDate(selectedDate);
                     return wk !== null ? (
-                      <span className="inline-block mt-3 bg-[#FFDE59] text-[#1A1A1A] border-2 border-white px-3 py-1 text-xs font-black uppercase tracking-[0.1em] shadow-[3px_3px_0px_rgba(255,255,255,0.3)]">
+                      <span className="inline-block mt-3 bg-primary-container text-ink border-2 border-white px-3 py-1 text-xs font-black uppercase tracking-[0.1em] shadow-[3px_3px_0px_rgba(255,255,255,0.3)]">
                         Week {wk}
                       </span>
                     ) : (
@@ -654,20 +666,25 @@ export const AcademicCalendar = () => {
             </div>
 
             {/* Sidebar Content */}
-            <div className="p-6 space-y-4 bg-[#FFF6E3] flex-1 overflow-y-auto">
+            <div className="p-6 space-y-4 bg-background flex-1 overflow-y-auto">
               {selectedDate && (() => {
                 const dayDeadlines = getDeadlinesForDate(selectedDate);
                 const dayTodos = getTodosForDate(selectedDate);
                 const breakName = allSemesters.reduce<string | null>((found, s) => found || isBreakDay(selectedDate, s.breaks), null);
-                const isExamDay = showExams && allSemesters.some(s =>
-                  s.examPeriod && isDateInRange(selectedDate, new Date(s.examPeriod.startDate), new Date(s.examPeriod.endDate))
-                );
+                // The parsed exam period carries no midterm/final label, so name
+                // it after its semester instead of always claiming "Finals".
+                const examSemester = showExams
+                  ? allSemesters.find(s =>
+                      s.examPeriod && isDateInRange(selectedDate, new Date(s.examPeriod.startDate), new Date(s.examPeriod.endDate))
+                    )
+                  : undefined;
+                const isExamDay = !!examSemester;
 
                 const hasAnything = dayDeadlines.length > 0 || dayTodos.length > 0 || breakName || isExamDay;
 
                 if (!hasAnything) {
                   return (
-                    <div className="text-center p-6 border-4 border-dashed border-[#1A1A1A] opacity-30 font-black text-sm uppercase tracking-[0.15em]">
+                    <div className="text-center p-6 border-4 border-dashed border-ink opacity-30 font-black text-sm uppercase tracking-[0.15em]">
                       No events
                     </div>
                   );
@@ -685,12 +702,12 @@ export const AcademicCalendar = () => {
                       </div>
                     )}
                     {isExamDay && (
-                      <div className="bg-[#A8275A] text-white p-5 border-4 border-[#1A1A1A] shadow-[5px_5px_0px_#1A1A1A]">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FFDE59]">
+                      <div className="bg-secondary text-white p-5 border-4 border-ink shadow-[5px_5px_0px_#1A1A1A]">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-container">
                           <Flame className="inline -mt-0.5 mr-1" size={12} />
                           Exam Period
                         </p>
-                        <h4 className="text-xl font-black tracking-tight mt-1">Finals</h4>
+                        <h4 className="text-xl font-black tracking-tight mt-1">{examSemester?.name ? `${examSemester.name} Exams` : 'Exam Week'}</h4>
                       </div>
                     )}
 
@@ -717,7 +734,7 @@ export const AcademicCalendar = () => {
                             className="flex items-center gap-3 p-4 bg-white/50 border-2 border-ink/20 cursor-pointer hover:border-ink/40 transition-all"
                             onClick={() => toggleTodo(todo.id)}
                           >
-                            <div className="w-5 h-5 border-3 border-ink/40 flex-shrink-0 flex items-center justify-center bg-[#FFDE59]/60">
+                            <div className="w-5 h-5 border-3 border-ink/40 flex-shrink-0 flex items-center justify-center bg-primary-container/60">
                               <span className="text-[10px] font-black">✓</span>
                             </div>
                             <span className="font-bold text-sm flex-1 line-through opacity-40">{todo.text}</span>
@@ -736,8 +753,8 @@ export const AcademicCalendar = () => {
                         )}
                         {dayDeadlines.map(dl => (
                           <div key={dl.id} className={`p-5 border-3 border-ink border-l-[10px] shadow-[4px_4px_0px_#1A1A1A] bg-white ${
-                            dl.priority === 'urgent' ? 'border-l-[#A8275A]' :
-                            dl.priority === 'moderate' ? 'border-l-[#FFDE59]' :
+                            dl.priority === 'urgent' ? 'border-l-secondary' :
+                            dl.priority === 'moderate' ? 'border-l-primary-container' :
                             'border-l-ink'
                           }`}>
                             <p className="text-[10px] font-black uppercase tracking-[0.15em] opacity-50">{dl.course}</p>
@@ -753,12 +770,12 @@ export const AcademicCalendar = () => {
             </div>
 
             {/* Add Event Button at bottom of sidebar */}
-            <div className="p-4 bg-white border-t-4 border-[#1A1A1A]">
+            <div className="p-4 bg-white border-t-4 border-ink">
               <Button
                 onClick={() => setIsAddModalOpen(true)}
                 disabled={!selectedDate}
-                variant="secondary" size="lg"
-                className="w-full bg-[#FFDE59] flex items-center justify-center gap-2"
+                variant="primary" size="lg"
+                className="w-full flex items-center justify-center gap-2"
               >
                 <Plus strokeWidth={3} size={20} />
                 Add Event
@@ -771,20 +788,20 @@ export const AcademicCalendar = () => {
       {/* Unified Add Event Modal */}
       <Modal open={isAddModalOpen && !!selectedDate} onClose={() => setIsAddModalOpen(false)}>
         <ModalContent>
-          <ModalHeader onClose={() => setIsAddModalOpen(false)} className="bg-[#1A1A1A] text-white">
+          <ModalHeader onClose={() => setIsAddModalOpen(false)} className="bg-ink text-white">
             <h2 className="text-2xl font-black uppercase tracking-widest">New Event</h2>
           </ModalHeader>
           <form onSubmit={handleAddEvent}>
             <ModalBody className="space-y-6">
               {/* Task / Deadline Toggle */}
-              <div className="flex border-3 border-[#1A1A1A]">
+              <div className="flex border-3 border-ink">
                 <button
                   type="button"
                   onClick={() => setEventType('task')}
                   className={`flex-1 py-3 font-black text-xs uppercase tracking-widest transition-all ${
                     eventType === 'task'
-                      ? 'bg-[#FFDE59] text-[#1A1A1A] shadow-[inset_0_-3px_0px_#1A1A1A]'
-                      : 'bg-white text-ink/40 hover:bg-[#FFF6E3]'
+                      ? 'bg-primary-container text-ink shadow-[inset_0_-3px_0px_#1A1A1A]'
+                      : 'bg-white text-ink/40 hover:bg-background'
                   }`}
                 >
                   📋 Task
@@ -792,17 +809,17 @@ export const AcademicCalendar = () => {
                 <button
                   type="button"
                   onClick={() => setEventType('deadline')}
-                  className={`flex-1 py-3 font-black text-xs uppercase tracking-widest border-l-3 border-[#1A1A1A] transition-all ${
+                  className={`flex-1 py-3 font-black text-xs uppercase tracking-widest border-l-3 border-ink transition-all ${
                     eventType === 'deadline'
-                      ? 'bg-[#A8275A] text-white shadow-[inset_0_-3px_0px_#1A1A1A]'
-                      : 'bg-white text-ink/40 hover:bg-[#FFF6E3]'
+                      ? 'bg-secondary text-white shadow-[inset_0_-3px_0px_#1A1A1A]'
+                      : 'bg-white text-ink/40 hover:bg-background'
                   }`}
                 >
                   📅 Deadline
                 </button>
               </div>
 
-              <div className="bg-[#FFDE59]/30 p-3 border-l-4 border-[#FFDE59]">
+              <div className="bg-primary-container/30 p-3 border-l-4 border-primary-container">
                 <p className="text-[10px] font-black uppercase tracking-[0.1em] opacity-60">Selected Date</p>
                 <p className="text-lg font-black">{selectedDate ? formatDateShort(selectedDate) : ''}</p>
               </div>
@@ -815,7 +832,7 @@ export const AcademicCalendar = () => {
                   required
                   value={newDlTitle}
                   onChange={e => setNewDlTitle(e.target.value)}
-                  className="w-full bg-[#FFF6E3] border-3 border-[#1A1A1A] p-3 font-bold focus:outline-none focus:ring-4 focus:ring-[#FFDE59]/50" 
+                  className="w-full bg-background border-3 border-ink p-3 font-bold focus:outline-none focus:ring-4 focus:ring-primary-container/50" 
                   placeholder={eventType === 'task' ? 'e.g. Read Chapter 3' : 'e.g. Midterm Report'}
                 />
               </div>
@@ -828,7 +845,7 @@ export const AcademicCalendar = () => {
                   required={eventType === 'deadline'}
                   value={newDlCourse}
                   onChange={e => setNewDlCourse(e.target.value)}
-                  className="w-full bg-[#FFF6E3] border-3 border-[#1A1A1A] p-3 font-bold focus:outline-none focus:ring-4 focus:ring-[#FFDE59]/50"
+                  className="w-full bg-background border-3 border-ink p-3 font-bold focus:outline-none focus:ring-4 focus:ring-primary-container/50"
                 >
                   <option value="">{eventType === 'task' ? 'No course (general)' : 'Select a course'}</option>
                   {courses.map(c => <option key={c.id} value={c.code}>{c.code} - {c.name}</option>)}
@@ -844,7 +861,7 @@ export const AcademicCalendar = () => {
                     <input 
                       value={newDlTopic}
                       onChange={e => setNewDlTopic(e.target.value)}
-                      className="w-full bg-[#FFF6E3] border-3 border-[#1A1A1A] p-3 font-bold focus:outline-none focus:ring-4 focus:ring-[#FFDE59]/50" 
+                      className="w-full bg-background border-3 border-ink p-3 font-bold focus:outline-none focus:ring-4 focus:ring-primary-container/50" 
                       placeholder="e.g. Binary Trees"
                     />
                   </div>
@@ -861,10 +878,10 @@ export const AcademicCalendar = () => {
                             checked={newDlPriority === p}
                             onChange={() => setNewDlPriority(p)}
                           />
-                          <div className={`text-center py-2 border-3 border-[#1A1A1A] font-black text-xs uppercase tracking-widest transition-all
+                          <div className={`text-center py-2 border-3 border-ink font-black text-xs uppercase tracking-widest transition-all
                             peer-checked:shadow-[3px_3px_0px_#1A1A1A] peer-checked:translate-x-[-3px] peer-checked:translate-y-[-3px]
-                            ${p === 'urgent' ? 'peer-checked:bg-[#A8275A] peer-checked:text-white' : 
-                              p === 'moderate' ? 'peer-checked:bg-[#FFDE59]' : 
+                            ${p === 'urgent' ? 'peer-checked:bg-secondary peer-checked:text-white' : 
+                              p === 'moderate' ? 'peer-checked:bg-primary-container' : 
                               'peer-checked:bg-ink peer-checked:text-white'}
                             bg-white opacity-60 peer-checked:opacity-100
                           `}>
@@ -882,7 +899,7 @@ export const AcademicCalendar = () => {
                 type="submit" 
                 variant={eventType === 'task' ? 'secondary' : 'ink'} 
                 size="lg"
-                className={`w-full ${eventType === 'task' ? 'bg-[#FFDE59]' : 'bg-[#A8275A] text-white'}`}
+                className={`w-full ${eventType === 'task' ? 'bg-primary-container' : 'bg-secondary text-white'}`}
               >
                 {eventType === 'task' ? 'Add Task' : 'Commit Deadline'}
               </Button>
@@ -894,7 +911,7 @@ export const AcademicCalendar = () => {
       {/* Edit Semester Modal */}
       <Modal open={isEditModalOpen && !!activeSemester} onClose={() => setIsEditModalOpen(false)}>
         <ModalContent>
-          <ModalHeader onClose={() => setIsEditModalOpen(false)} className="bg-[#1A1A1A] text-white">
+          <ModalHeader onClose={() => setIsEditModalOpen(false)} className="bg-ink text-white">
             <h2 className="text-2xl font-black uppercase tracking-widest">Edit Semester</h2>
           </ModalHeader>
           <form onSubmit={handleEditSemester}>
@@ -906,7 +923,7 @@ export const AcademicCalendar = () => {
                   required
                   value={editSemName}
                   onChange={e => setEditSemName(e.target.value)}
-                  className="w-full bg-[#FFF6E3] border-3 border-[#1A1A1A] p-3 font-bold focus:outline-none focus:ring-4 focus:ring-[#A8275A]/30" 
+                  className="w-full bg-background border-3 border-ink p-3 font-bold focus:outline-none focus:ring-4 focus:ring-secondary/30" 
                 />
               </div>
 
@@ -918,7 +935,7 @@ export const AcademicCalendar = () => {
                     type="date"
                     value={editSemStart}
                     onChange={e => setEditSemStart(e.target.value)}
-                    className="w-full bg-[#FFF6E3] border-3 border-[#1A1A1A] p-3 font-bold focus:outline-none focus:ring-4 focus:ring-[#A8275A]/30" 
+                    className="w-full bg-background border-3 border-ink p-3 font-bold focus:outline-none focus:ring-4 focus:ring-secondary/30" 
                   />
                 </div>
                 <div className="space-y-2">
@@ -928,7 +945,7 @@ export const AcademicCalendar = () => {
                     type="date"
                     value={editSemEnd}
                     onChange={e => setEditSemEnd(e.target.value)}
-                    className="w-full bg-[#FFF6E3] border-3 border-[#1A1A1A] p-3 font-bold focus:outline-none focus:ring-4 focus:ring-[#A8275A]/30" 
+                    className="w-full bg-background border-3 border-ink p-3 font-bold focus:outline-none focus:ring-4 focus:ring-secondary/30" 
                   />
                 </div>
               </div>
