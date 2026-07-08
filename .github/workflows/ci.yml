@@ -1,4 +1,4 @@
-name: Continuous Integration — Code Quality, Tests & Build Verification
+name: CI/CD — Test, Build & Deploy
 
 on:
   push:
@@ -9,30 +9,100 @@ on:
       - main
 
 jobs:
-  code-quality-and-build-verification:
+  # ---------------------------------------------------------------------------
+  # Gate: runs on every push AND every pull request. Nothing deploys unless
+  # this job is green.
+  # ---------------------------------------------------------------------------
+  ci:
+    name: Lint, Test & Build
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository source code into workflow workspace
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js version 20 runtime with npm caching enabled
+      - name: Setup Node.js 20 with npm cache
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - name: Install project dependencies using clean install
+      - name: Install dependencies (clean)
         run: npm ci
 
-      - name: Execute static code analysis and enforce coding standards
+      - name: Lint (typecheck + eslint)
         run: npm run lint
 
-      - name: Run automated unit test suite
+      - name: Unit tests
         run: npm test
 
-      - name: Verify production build compiles successfully
+      - name: Verify production build
         run: npm run build
         env:
           VITE_SUPABASE_URL: https://placeholder-ci.supabase.co
           VITE_SUPABASE_ANON_KEY: placeholder-ci-key
+
+  # ---------------------------------------------------------------------------
+  # Deploy backend first: push DB migrations + deploy the edge function.
+  # Runs ONLY on push to main, ONLY after `ci` passes.
+  # ---------------------------------------------------------------------------
+  deploy-supabase:
+    name: Deploy Supabase (DB + functions)
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Push database migrations
+        run: supabase db push
+
+      - name: Deploy edge functions
+        run: supabase functions deploy gemini-proxy
+
+  # ---------------------------------------------------------------------------
+  # Deploy frontend to Vercel, after the backend is up so the schema the new
+  # UI expects already exists. VITE_* env vars come from the Vercel project
+  # settings (Production), pulled by `vercel pull`.
+  # ---------------------------------------------------------------------------
+  deploy-frontend:
+    name: Deploy Frontend (Vercel)
+    needs: deploy-supabase
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20 with npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel production environment
+        run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Build with Vercel
+        run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Deploy to Vercel (production)
+        run: vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"
