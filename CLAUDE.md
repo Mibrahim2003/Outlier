@@ -30,7 +30,7 @@ Outlier is a web app for university students. It tracks course grades, predicts 
 | Animation | `motion` (Framer Motion) |
 | Toasts | `sonner` |
 | Package manager | npm |
-| Hosting | Not configured in-repo — confirm with the owner before assuming a target |
+| Hosting | Vercel — production at https://outlier-fawn.vercel.app, deployed by GitHub Actions on push to `main` ([.github/workflows/ci.yml](.github/workflows/ci.yml)) |
 
 ## Commands
 
