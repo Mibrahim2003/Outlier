@@ -15,7 +15,7 @@
 #   VERCEL_ORG_ID          — from .vercel/project.json ("orgId")
 #   VERCEL_PROJECT_ID      — from .vercel/project.json ("projectId")
 #
-# The live site: https://outlier-fawn.vercel.app
+# The live site: https://outlierlabs.tech (also https://outlier-fawn.vercel.app)
 # =============================================================================
 name: CI/CD — Test, Build & Deploy
 
