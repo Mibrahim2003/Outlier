@@ -18,15 +18,17 @@ interface AIClientOptions {
   mimeType?: string;
   data?: string; // base64
   retries?: number;
+  /** Ask the proxy to run Gemini in native JSON mode (responseMimeType: application/json). */
+  json?: boolean;
 }
 
 const backoff = (attempt: number) =>
   new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 3000));
 
-export async function invokeAI({ prompt, mimeType, data: base64Data, retries = MAX_RETRIES }: AIClientOptions): Promise<string> {
+export async function invokeAI({ prompt, mimeType, data: base64Data, retries = MAX_RETRIES, json }: AIClientOptions): Promise<string> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     const { data, error } = await supabase.functions.invoke('gemini-proxy', {
-      body: { prompt, mimeType, data: base64Data },
+      body: { prompt, mimeType, data: base64Data, json },
     });
 
     if (!error) {

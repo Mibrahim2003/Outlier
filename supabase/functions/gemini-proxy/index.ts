@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
       return json({ error: 'Invalid JSON body' }, 400);
     }
 
-    const { prompt, mimeType, data } = payloadObj;
+    const { prompt, mimeType, data, json: wantsJson } = payloadObj;
 
     if (!prompt || typeof prompt !== 'string') {
       return json({ error: 'Prompt is required and must be a string' }, 400);
@@ -157,7 +157,13 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts }],
-        generationConfig: { temperature: 0.2 }, // keep it analytical and deterministic
+        generationConfig: {
+          temperature: 0.2, // keep it analytical and deterministic
+          // JSON tasks opt in to Gemini's native JSON mode: the model is then
+          // constrained to emit syntactically valid JSON — no prose wrappers,
+          // no code fences — which the client would otherwise have to salvage.
+          ...(wantsJson === true ? { responseMimeType: 'application/json' } : {}),
+        },
       }),
     });
 

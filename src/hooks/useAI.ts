@@ -61,7 +61,7 @@ export function useAI() {
       voice: userPersona
     });
     
-    const res = await invokeAI({ prompt });
+    const res = await invokeAI({ prompt, json: true });
     const schema = schemas.AIStudyPrioritySchema;
     return parseAIResponse(res, schema) as any;
   }, [userPersona]);
@@ -81,7 +81,7 @@ export function useAI() {
       brand: false
     });
 
-    const result = await invokeAI({ prompt, mimeType, data: base64Data });
+    const result = await invokeAI({ prompt, mimeType, data: base64Data, json: true });
     const schema = schemas.AIClassMarksSchema;
     return parseAIResponse(result, schema);
   };
@@ -143,7 +143,7 @@ export function useAI() {
       voice: userPersona
     });
     
-    const res = await invokeAI({ prompt });
+    const res = await invokeAI({ prompt, json: true });
     const schema = schemas.AICourseCriticalActionSchema;
     return parseAIResponse(res, schema);
   };
@@ -173,7 +173,7 @@ export function useAI() {
       voice: userPersona
     });
     
-    const res = await invokeAI({ prompt });
+    const res = await invokeAI({ prompt, json: true });
     const schema = schemas.AICourseStudyPlanSchema;
     return parseAIResponse(res, schema);
   };
@@ -207,7 +207,7 @@ export function useAI() {
       voice: userPersona
     });
     
-    const res = await invokeAI({ prompt });
+    const res = await invokeAI({ prompt, json: true });
     const schema = schemas.AIProjectScopeAnalysisSchema;
     return parseAIResponse(res, schema);
   };
@@ -241,7 +241,7 @@ export function useAI() {
       },
       voice: userPersona
     });
-    const res = await invokeAI({ prompt });
+    const res = await invokeAI({ prompt, json: true });
     const schema = schemas.AIProjectMilestoneSchema;
     return parseAIResponse(res, schema);
   };

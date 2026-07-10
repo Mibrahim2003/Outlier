@@ -43,7 +43,7 @@ export function useCalendarParser() {
         }
       });
 
-      const textResult = await invokeAI({ prompt, mimeType, data: base64 });
+      const textResult = await invokeAI({ prompt, mimeType, data: base64, json: true });
       
       const schema = schemas.AICalendarSemesterListSchema;
       const semesters = parseAIResponse(textResult, schema);

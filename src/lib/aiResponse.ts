@@ -55,17 +55,20 @@ export function parseAIResponse<T>(text: string, schema: z.ZodType<T>): T {
     // first complete JSON value and parse that instead.
     const snippet = extractJsonSnippet(defenced);
     if (!snippet) {
+      console.error('AI response had no parseable JSON. Raw response:', text);
       throw new Error('The AI response was not valid JSON. Please try again.');
     }
     try {
       raw = JSON.parse(snippet);
     } catch {
+      console.error('AI response JSON failed to parse. Raw response:', text);
       throw new Error('The AI response was not valid JSON. Please try again.');
     }
   }
 
   const result = schema.safeParse(raw);
   if (!result.success) {
+    console.error('AI response failed schema validation:', result.error.issues, 'Raw response:', text);
     throw new Error('The AI response did not match the expected format. Please try again.');
   }
   return result.data;
