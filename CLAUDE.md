@@ -50,6 +50,14 @@ Tests use Vitest + Testing Library in `jsdom` (configured inline in [vite.config
 
 Local dev needs a `.env.local` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. [src/lib/supabase.ts](src/lib/supabase.ts) throws at import time if either is missing, so the app will not boot without them. The Gemini key (`GEMINI_API_KEY`) lives **only** as a Supabase Edge Function secret — never in the frontend. Set it with `npx supabase secrets set GEMINI_API_KEY="..."`.
 
+## Deployment
+
+- **Production: https://outlierlabs.tech** (Vercel alias: https://outlier-fawn.vercel.app). URLs shaped like `outlier-xxxxx-outlierlabs.vercel.app` are per-deployment URLs behind Vercel SSO — never share or test against those.
+- **Everything ships via GitHub Actions on push to `main`** ([.github/workflows/ci.yml](.github/workflows/ci.yml)): lint/test/build gate → Supabase (DB migrations + `gemini-proxy`) → Vercel frontend. Do not deploy the edge function manually unless iterating outside a commit; a push deploys it.
+- Required GitHub secrets are documented in the workflow header comment.
+- **Supabase auth URL config lives in [supabase/config.toml](supabase/config.toml)** (`site_url`, `additional_redirect_urls`) and is applied with `npx supabase config push`. Beware: `config push` applies immediately with **no confirmation prompt** and pushes every field declared in config.toml — keep the file in sync with intended remote values or you will silently clobber dashboard settings (undeclared sections like `[auth.external.google]` are left alone).
+- The `gemini-proxy` CORS allow-list is the `ALLOWED_ORIGINS` secret (comma-separated exact origins; localhost always allowed). Adding a domain means updating **three** places: `config.toml` redirect URLs (+ push), `ALLOWED_ORIGINS`, and the Vercel domain.
+
 ## Project structure
 
 - [src/components/](src/components/) — both top-level views and presentational components. Views: `Dashboard`, `Analytics`, `CourseList`, `CourseDetail`, `AcademicCalendar`, `Settings`, `Onboarding`, `ProfileSetup`, `Auth`, `LandingPage`. Reusable primitives live in [src/components/ui/](src/components/ui/).
@@ -98,8 +106,8 @@ The frontend never calls Gemini directly. Flow:
 
 1. **`useAI()`** ([src/hooks/useAI.ts](src/hooks/useAI.ts)) and **`useCalendarParser()`** define each AI feature (dashboard insight, study priorities, course insight/critical action, project scope + milestones, calendar OCR, class-mark extraction).
 2. **`buildPrompt()`** ([src/lib/promptBuilder.ts](src/lib/promptBuilder.ts)) assembles structured prompts (`[TASK]`, `[INPUT DATA]`, `[REASONING RULES]`, `[OUTPUT CONTRACT]`, `[VOICE PROFILE]`). The user's `aiPersona` (`tactical` / `supportive` / `bare_minimum`) selects a voice; for JSON output the voice is swapped for a strict data-only persona to protect the JSON.
-3. **`invokeAI()`** ([src/lib/aiClient.ts](src/lib/aiClient.ts)) calls the `gemini-proxy` Edge Function, retries 500/502/503 with exponential backoff, and throws a non-retryable `AIQuotaError` on HTTP 429.
-4. JSON responses are stripped of code fences and **validated with the matching Zod schema** before use.
+3. **`invokeAI()`** ([src/lib/aiClient.ts](src/lib/aiClient.ts)) calls the `gemini-proxy` Edge Function, retries 500/502/503 with exponential backoff, and throws a non-retryable `AIQuotaError` on HTTP 429. **Structured tasks pass `json: true`**, which the proxy maps to Gemini's native JSON mode (`responseMimeType: application/json`) — any new JSON-returning AI feature must do the same.
+4. JSON responses are stripped of code fences, salvaged from stray prose if needed ([src/lib/aiResponse.ts](src/lib/aiResponse.ts)), and **validated with the matching Zod schema** before use. Parse failures log the raw model output to the console.
 
 The proxy ([supabase/functions/gemini-proxy/index.ts](supabase/functions/gemini-proxy/index.ts), Deno) verifies the caller's JWT, validates the body, enforces per-user + global daily quotas via the `consume_ai_quota` Postgres RPC (fails **closed** — no quota check, no paid call), then calls `gemini-2.5-flash` at `temperature: 0.2`. CORS allows any localhost port plus origins in the `ALLOWED_ORIGINS` secret. Quotas and origins are tunable via secrets without redeploying, but **code changes to the proxy require `npx supabase functions deploy gemini-proxy`** to take effect.
 
