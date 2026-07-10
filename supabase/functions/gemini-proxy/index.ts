@@ -168,7 +168,20 @@ Deno.serve(async (req) => {
     }
 
     const result = await response.json();
-    const generatedText = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    // Gemini may split one reply across several parts (long JSON payloads do
+    // this routinely) — taking only parts[0] truncates the response mid-value.
+    // Join every text part, skipping thought parts if the model emits them.
+    const candidate = result.candidates?.[0];
+    const generatedText = (candidate?.content?.parts ?? [])
+      .filter((p: { text?: string; thought?: boolean }) => typeof p.text === 'string' && !p.thought)
+      .map((p: { text: string }) => p.text)
+      .join('');
+
+    if (!generatedText) {
+      const reason = candidate?.finishReason ?? result.promptFeedback?.blockReason ?? 'no_output';
+      console.error('Gemini returned no text. Reason:', reason, JSON.stringify(result).slice(0, 2000));
+      return json({ error: `The AI returned no usable output (${reason}). Please try again.` }, 502, rateHeaders);
+    }
 
     return json({ text: generatedText }, 200, rateHeaders);
 
